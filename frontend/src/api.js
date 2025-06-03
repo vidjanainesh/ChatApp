@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:3000/api';
+// const API_BASE = 'http://localhost:3000/api';
+const API_BASE = 'https://chatapp-ebgg.onrender.com/api';
 
 export const registerUser = (data) => {
     return axios.post(`${API_BASE}/authenticate/register`, data);
