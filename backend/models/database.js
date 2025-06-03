@@ -1,21 +1,16 @@
 const { Sequelize } = require('sequelize');
-require('dotenv').config(); 
+require('dotenv').config();
 
-const db = process.env.DB;
-const config = require('../config/config')[db];
-
-// console.log(`DB: ${db}`);
-// console.log('Config:', config);
-
-const sequelize = new Sequelize(
-    config.database,
-    config.username,
-    config.password,
-    {
-        host: config.host,
-        dialect: config.dialect,
-        logging: false
+const sequelize = new Sequelize(process.env.INT_DATABASE_URL, {
+  dialect: 'postgres',
+  protocol: 'postgres',
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false,  // needed for some hosted DB SSL configs
     }
-);
+  },
+  logging: false
+});
 
 module.exports = sequelize;
