@@ -48,8 +48,8 @@ app.use(morgan('dev'));
 
 app.use('/api', indexRoutes);
 
-// sequelize.sync({force: true})
-sequelize.authenticate()
+sequelize.sync()
+// sequelize.authenticate()
   .then(() => {
     console.log('Connected to the Database');
     server.listen(3000, () => console.log('Server Listening on PORT 3000'));
