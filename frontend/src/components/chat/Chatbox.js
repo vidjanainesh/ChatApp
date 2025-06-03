@@ -34,7 +34,7 @@ export default function Chatbox() {
   useEffect(() => {
     if (!token) return;
 
-    socketRef.current = io("http://localhost:3000", {
+    socketRef.current = io("https://chatapp-ebgg.onrender.com", {
       auth: { token },
     });
 
