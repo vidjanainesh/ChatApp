@@ -36,6 +36,51 @@ const sendMessage = async (req, res) => {
     }
 }
 
+// const getUsers = async (req, res) => {
+//     try {
+//         const user = req.user;
+//         console.log(user);
+//         if(user.id === 2){
+//             const users = await User.findAll({
+//                 where: {
+//                     id: {
+//                         [Op.ne]: user.id 
+//                     }
+//                 },
+//                 attributes: ['id', 'name', 'email'],  
+//             });
+
+//             return res.status(201).json({
+//                 status: "success",
+//                 message: "Fetched all users",
+//                 data: users
+//             });
+//         }
+//         else{
+//             const users = await User.findAll({
+//                 where: {
+//                     id: {
+//                         [Op.notIn]: [user.id, 1]
+//                     }
+//                 },
+//                 attributes: ['id', 'name', 'email'],  
+//             });
+
+//             return res.status(201).json({
+//                 status: "success",
+//                 message: "Fetched all users",
+//                 data: users
+//             });
+//         }
+        
+//     } catch (error) {
+//         return res.status(500).json({
+//             status: "error",
+//             message: error.message
+//         });
+//     }
+// }
+
 const getUsers = async (req, res) => {
     try {
         const user = req.user;
