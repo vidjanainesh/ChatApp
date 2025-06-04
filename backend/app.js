@@ -48,7 +48,7 @@ app.use(morgan('dev'));
 
 app.use('/api', indexRoutes);
 
-// sequelize.sync({force: true})
+// sequelize.sync()
 sequelize.authenticate()
   .then(() => {
     console.log('Connected to the Database');

@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { Message, User } = require("../../models");
+const { Message, User, Friends } = require("../../models");
 
 const sendMessage = async (req, res) => {
     try {
@@ -40,13 +40,29 @@ const getUsers = async (req, res) => {
     try {
         const user = req.user;
 
+        const friendships = await Friends.findAll({
+            where: {
+                status: true,
+                [Op.or]: [
+                    { sender_id: user.id },
+                    { receiver_id: user.id }
+                ]
+            }
+        });
+
+        // Extract friend user IDs (the ones that are NOT the current user)
+        const friendIds = friendships.map(f => 
+            f.sender_id === user.id ? f.receiver_id : f.sender_id
+        );
+
+        // Fetch those users
         const users = await User.findAll({
             where: {
                 id: {
-                    [Op.ne]: user.id 
+                    [Op.in]: friendIds
                 }
             },
-            attributes: ['id', 'name', 'email'],  
+            attributes: ['id', 'name', 'email']
         });
 
         return res.status(201).json({
