@@ -34,7 +34,7 @@ export default function Chatbox() {
   useEffect(() => {
     if (!token) return;
 
-    socketRef.current = io("https://chatapp-ebgg.onrender.com", {
+    socketRef.current = io(process.env.REACT_APP_API_BASE, {
       auth: { token },
     });
 
@@ -153,6 +153,17 @@ export default function Chatbox() {
       }, 1500);
     }
   };
+  // Helper to format time as HH:mm
+  const formatTime = (timestamp) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Helper to format date (yyyy-mm-dd) to group messages by day
+  const formatDate = (timestamp) => {
+    const date = new Date(timestamp);
+    return date.toISOString().split('T')[0];
+  };
 
   return (
     <>
@@ -164,23 +175,30 @@ export default function Chatbox() {
       <div className="chat-container">
         <h2 className="chat-title">Chat with {name}</h2>
         <div className="chat-window" ref={chatWindowRef}>
-          {messages.map((msg) => {
+          {messages.length > 0 && messages.map((msg, idx) => {
             const isSender = msg.sender_id === loggedInUserId;
+            const currentDate = formatDate(msg.timestamp);
+            const prevDate = idx > 0 ? formatDate(messages[idx - 1].timestamp) : null;
+
             return (
-              <div
-                key={msg.id}
-                className={`chat-message ${isSender ? "sender" : "receiver"}`}
-              >
-                <div>{msg.message}</div>
-                <div className="chat-timestamp">
-                  {new Date(msg.timestamp).toLocaleTimeString()}
+              <React.Fragment key={msg.id}>
+                {prevDate && currentDate !== prevDate && (
+                  <div className="date-separator-container">
+                    <hr className="date-separator-line left" />
+                    <span className="date-separator-text">{currentDate}</span>
+                    <hr className="date-separator-line right" />
+                  </div>
+                )}
+                <div className={`chat-message ${isSender ? "sender" : "receiver"}`}>
+                  <div>{msg.message}</div>
+                  <div className="chat-timestamp">{formatTime(msg.timestamp)}</div>
                 </div>
-              </div>
+              </React.Fragment>
             );
           })}
           {isTyping && <div className="typing-indicator">Typing...</div>}
         </div>
-        <br />
+
         <form onSubmit={submitHandler} className="chat-input-form">
           <input
             type="text"
@@ -190,10 +208,21 @@ export default function Chatbox() {
             onChange={handleInputChange}
             className="chat-input"
             autoComplete="off"
-            />
-            
-          <button type="submit" className="chat-send-button">
-            Send
+          />
+          <button type="submit" className="chat-send-button" aria-label="Send message">
+            {/* SVG Send Icon */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              style={{ display: 'block' }}
+            >
+              <path d="M2 21l21-9L2 3v7l15 2-15 2v7z" />
+            </svg>
           </button>
         </form>
       </div>
