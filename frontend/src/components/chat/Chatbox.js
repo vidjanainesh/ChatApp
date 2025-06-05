@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { getMessages, sendMessage } from "../../api";
-import { io } from "socket.io-client";
 import { toast } from "react-toastify";
 import { jwtDecode } from "jwt-decode";
+import useSocket from "../../hooks/useSocket";
 
 export default function Chatbox() {
   const navigate = useNavigate();
@@ -27,50 +27,16 @@ export default function Chatbox() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const socketRef = useRef(null);
   const chatWindowRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
-  useEffect(() => {
-    if (!token) return;
-
-    socketRef.current = io(process.env.REACT_APP_API_BASE, {
-      auth: { token },
-    });
-
-    socketRef.current.on("connect", () => {
-      console.log("Socket connected:", socketRef.current.id);
-    });
-
-    socketRef.current.on("newMessage", (newMessage) => {
-      const receiverIdStr = String(newMessage.receiver_id);
-      const senderIdStr = String(newMessage.sender_id);
-
-      if (
-        (senderIdStr === String(loggedInUserId) && receiverIdStr === id) ||
-        (receiverIdStr === String(loggedInUserId) && senderIdStr === id)
-      ) {
-        setMessages((prev) => [...prev, newMessage]);
-      }
-    });
-
-    socketRef.current.on("disconnect", (reason) => {
-      console.warn("Socket disconnected:", reason);
-    });
-
-    socketRef.current.on("typing", ({ senderId, receiverId, isTyping }) => {
-      // Only show typing if the typing user is the one we're chatting with
-      if (senderId === parseInt(id) && receiverId === loggedInUserId) {
-        setIsTyping(isTyping);
-      }
-    });
-
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
-    };
-  }, [id, loggedInUserId, token]);
+  const socketRef = useSocket({
+    id,
+    token,
+    loggedInUserId,
+    setMessages,
+    setIsTyping,
+  });
 
   const fetchMessages = async () => {
     try {
@@ -100,7 +66,7 @@ export default function Chatbox() {
 
   useEffect(() => {
     fetchMessages();
-  }, [id]); // refetch messages if id changes
+  }, [id]);
 
   const submitHandler = async (e) => {
     e.preventDefault();
@@ -112,8 +78,6 @@ export default function Chatbox() {
         toast.error("Could not send message", { autoClose: 3000 });
       } else {
         setInput("");
-        // Optionally you can push the sent message optimistically, but the socket will add it anyway
-        // setMessages(prev => [...prev, response.data.sentMessage]);
       }
     } catch (error) {
       const errorMessage = error.response?.data?.message || "Something went wrong while sending message";
@@ -153,13 +117,12 @@ export default function Chatbox() {
       }, 1500);
     }
   };
-  // Helper to format time as HH:mm
+
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Helper to format date (yyyy-mm-dd) to group messages by day
   const formatDate = (timestamp) => {
     const date = new Date(timestamp);
     return date.toISOString().split('T')[0];
@@ -210,7 +173,6 @@ export default function Chatbox() {
             autoComplete="off"
           />
           <button type="submit" className="chat-send-button" aria-label="Send message">
-            {/* SVG Send Icon */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
