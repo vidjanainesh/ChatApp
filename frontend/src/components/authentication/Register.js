@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { registerUser } from '../../api';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import './auth.css';
 
 export default function Register() {
 
@@ -32,11 +33,11 @@ export default function Register() {
   }
 
   return (
-    <div className="register-container">
+    <div className="auth-container">
       <h2>Create Your Account</h2>
       <p>Fill in the details below to register</p>
 
-      <form onSubmit={handleSubmit} className="register-form">
+      <form onSubmit={handleSubmit} className="auth-form">
         <div className="form-group">
           <label htmlFor="name">Full Name</label>
           <input 
@@ -73,12 +74,13 @@ export default function Register() {
           />
         </div>
 
-        <button type="submit" className="register-button">Register</button>
+        <button type="submit" className="auth-button">Register</button>
 
-        <div className="register-links">
+        <div className="auth-links">
           <p>Already registered? <Link to="/">Sign in here</Link></p>
         </div>
       </form>
     </div>
   );
+
 }

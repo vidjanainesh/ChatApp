@@ -47,7 +47,7 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-wrapper">
-      <h1 className="dashboard-title">Welcome back!</h1>
+      <h1 className="dashboard-title">Good to see you!</h1>
       <h2 className="dashboard-subtitle">Stay connected — your friends are just a message away</h2>
 
       <h2 className="users-title">People You Can Chat With:</h2>

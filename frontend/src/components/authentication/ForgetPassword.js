@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import {forgetPassword} from '../../api.js'
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import './auth.css';
 
 export default function ForgetPassword() {
 
@@ -30,27 +31,28 @@ export default function ForgetPassword() {
     }
 
     return (
-    <div className="forgot-password-container">
-        <h2>Forgot Your Password?</h2>
-        <p>Enter your email to receive a verification code (OTP)</p>
+        <div className="auth-container">
+            <h2>Forgot Your Password?</h2>
+            <p>Enter your email to receive a verification code (OTP)</p>
 
-        <form onSubmit={submitHandler} className="forgot-password-form">
-        <div className="form-group">
-            <label htmlFor="email">Email Address</label>
-            <input 
-            type="text" 
-            id="email"
-            name="email" 
-            placeholder="Enter your email" 
-            value={email} 
-            onChange={handleChange} 
-            required 
-            />
+            <form onSubmit={submitHandler} className="auth-form">
+            <div className="form-group">
+                <label htmlFor="email">Email Address</label>
+                <input 
+                type="text" 
+                id="email"
+                name="email" 
+                placeholder="Enter your email" 
+                value={email} 
+                onChange={handleChange} 
+                required 
+                />
+            </div>
+
+            <button type="submit" className="auth-button">Send OTP</button>
+            </form>
         </div>
-
-        <button type="submit" className="send-otp-button">Send OTP</button>
-        </form>
-    </div>
     );
+
 
 }
