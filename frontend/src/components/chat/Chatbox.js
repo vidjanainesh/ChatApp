@@ -160,7 +160,7 @@ export default function Chatbox() {
             );
           })}
         </div>
-        {isTyping && <div className="typing-indicator">Typing...</div>}
+        <div className="typing-indicator">{isTyping ? "Typing..." : "\u00A0"}</div>
 
         <form onSubmit={submitHandler} className="chat-input-form">
           <input
