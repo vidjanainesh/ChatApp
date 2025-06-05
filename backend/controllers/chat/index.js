@@ -26,8 +26,8 @@ const sendMessage = async (req, res) => {
 
         // Add sender_name to the emitted message
         const messageWithSender = {
-        ...sentMessage.toJSON(),
-        sender_name: user.name || user.email || "Unknown",
+            ...sentMessage.toJSON(),
+            sender_name: user.name || user.email || "Unknown",
         };
 
         io.to(receiverRoom).emit("newMessage", messageWithSender);

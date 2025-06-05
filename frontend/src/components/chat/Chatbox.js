@@ -159,8 +159,8 @@ export default function Chatbox() {
               </React.Fragment>
             );
           })}
-          {isTyping && <div className="typing-indicator">Typing...</div>}
         </div>
+        {isTyping && <div className="typing-indicator">Typing...</div>}
 
         <form onSubmit={submitHandler} className="chat-input-form">
           <input
