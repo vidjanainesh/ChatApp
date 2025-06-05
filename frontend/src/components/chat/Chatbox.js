@@ -38,12 +38,6 @@ export default function Chatbox() {
     setIsTyping,
   });
 
-  useEffect(() => {
-    if ("Notification" in window && Notification.permission !== "granted") {
-      Notification.requestPermission();
-    }
-  }, []);
-
   const fetchMessages = async () => {
     try {
       const response = await getMessages(id, token);

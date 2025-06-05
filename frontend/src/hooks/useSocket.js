@@ -39,7 +39,7 @@ export default function useSocket({ id, token, loggedInUserId, setMessages, setI
 
         notification.onclick = () => {
           window.focus();
-          navigate(`/chat/${newMessage.sender_id}?name=${encodeURIComponent(newMessage.sender_name)}`);
+          navigate(`/chatbox/${newMessage.sender_id}?name=${encodeURIComponent(newMessage.sender_name)}`);
         };
       }
     });
