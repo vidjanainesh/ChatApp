@@ -46,7 +46,7 @@ export default function VerifyToken() {
             type="text" 
             id="token"
             name="token" 
-            placeholder="Enter the 6-digit OTP" 
+            placeholder="Enter the 4-digit OTP" 
             value={token} 
             onChange={handleChange} 
             required 

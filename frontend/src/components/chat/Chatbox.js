@@ -155,41 +155,48 @@ export default function Chatbox() {
   };
 
   return (
-    <div className="chat-container">
-      <h2 className="chat-title">Chat with {name}</h2>
-      <div className="chat-window" ref={chatWindowRef}>
-        {messages.map((msg) => {
-          const isSender = msg.sender_id === loggedInUserId;
-          return (
-            <div
-              key={msg.id}
-              className={`chat-message ${isSender ? "sender" : "receiver"}`}
-            >
-              <div>{msg.message}</div>
-              <div className="chat-timestamp">
-                {new Date(msg.timestamp).toLocaleTimeString()}
-              </div>
-            </div>
-          );
-        })}
-        {isTyping && <div className="typing-indicator">Typing...</div>}
-      </div>
-      <br />
-      <form onSubmit={submitHandler} className="chat-input-form">
-        <input
-          type="text"
-          placeholder="Start typing..."
-          name="input"
-          value={input}
-          onChange={handleInputChange}
-          className="chat-input"
-          autoComplete="off"
-          />
-          
-        <button type="submit" className="chat-send-button">
-          Send
+    <>
+      <div>
+        <button onClick={() => navigate('/dashboard')} className="back-button">
+          ← Back
         </button>
-      </form>
-    </div>
+      </div>
+      <div className="chat-container">
+        <h2 className="chat-title">Chat with {name}</h2>
+        <div className="chat-window" ref={chatWindowRef}>
+          {messages.map((msg) => {
+            const isSender = msg.sender_id === loggedInUserId;
+            return (
+              <div
+                key={msg.id}
+                className={`chat-message ${isSender ? "sender" : "receiver"}`}
+              >
+                <div>{msg.message}</div>
+                <div className="chat-timestamp">
+                  {new Date(msg.timestamp).toLocaleTimeString()}
+                </div>
+              </div>
+            );
+          })}
+          {isTyping && <div className="typing-indicator">Typing...</div>}
+        </div>
+        <br />
+        <form onSubmit={submitHandler} className="chat-input-form">
+          <input
+            type="text"
+            placeholder="Start typing..."
+            name="input"
+            value={input}
+            onChange={handleInputChange}
+            className="chat-input"
+            autoComplete="off"
+            />
+            
+          <button type="submit" className="chat-send-button">
+            Send
+          </button>
+        </form>
+      </div>
+    </>
   );
 }
