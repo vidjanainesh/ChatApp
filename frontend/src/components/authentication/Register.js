@@ -16,7 +16,7 @@ export default function Register() {
       const response = await registerUser(form);
       if(response.data.status === 'success'){
 
-        toast.success('Registraton successful!', {autoClose: 3000});
+        // toast.success('Registraton successful!', {autoClose: 3000});
         navigate('/')
       }
       else toast.error(response.data.message || 'Registraton Failed!', {autoClose: 3000});

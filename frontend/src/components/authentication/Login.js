@@ -37,7 +37,7 @@ export default function Login() {
     try {
       const response = await loginUser(form);
       if(response.data.status === 'success') {
-        toast.success('Login Successful', {autoClose: 3000});
+        // toast.success('Login Successful', {autoClose: 3000});
         localStorage.setItem('jwt', response.data?.userToken);
         navigate('/dashboard');
       }

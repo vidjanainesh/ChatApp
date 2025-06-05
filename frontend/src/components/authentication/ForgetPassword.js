@@ -15,7 +15,7 @@ export default function ForgetPassword() {
             const response = await forgetPassword({email});
             // console.log(response);
             if(response.data.status === 'success'){
-                toast.success('OTP Sent', {autoClose: 3000});
+                // toast.success('OTP Sent', {autoClose: 3000});
                 sessionStorage.setItem('email', email);
                 navigate('/verify-token')
             }
