@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { getUsers } from '../../api';
+import './Dashboard.css';  // Import your CSS here
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ export default function Dashboard() {
         if(errorMessage === 'Invalid or expired token'){
           toast.error('Invalid session. Please log in again.', { autoClose: 3000 });
           localStorage.removeItem('jwt');
-          navigate('/')
+          navigate('/');
         }
         else{
           toast.error(errorMessage, { autoClose: 3000 });
@@ -32,7 +33,7 @@ export default function Dashboard() {
       }
     };
     fetchUsers();
-  }, []);
+  }, [token, navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem('jwt');
@@ -41,86 +42,42 @@ export default function Dashboard() {
   };
 
   const handleUserClick = (user) => {
-    // console.log('User clicked:', user);
     navigate(`/chatbox/${user.id}?name=${encodeURIComponent(user.name)}`);
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h1>Dashboard</h1>
-      <h3>You have successfully signed in!</h3>
-      <button
-        onClick={handleLogout}
-        style={{
-          backgroundColor: '#ff4d4f',
-          color: '#fff',
-          padding: '10px 20px',
-          fontSize: '16px',
-          border: 'none',
-          borderRadius: '5px',
-          cursor: 'pointer',
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-          transition: 'background-color 0.3s ease, transform 0.2s ease',
-          marginBottom: '20px'
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = '#d9363e';
-          e.currentTarget.style.transform = 'scale(1.05)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = '#ff4d4f';
-          e.currentTarget.style.transform = 'scale(1)';
-        }}
-      >
-        Logout
-      </button>
+    <div className="dashboard-wrapper">
+      <h1 className="dashboard-title">Welcome back!</h1>
+      <h2 className="dashboard-subtitle">Stay connected — your friends are just a message away</h2>
 
-      <h2>All Users:</h2>
+      <h2 className="users-title">People You Can Chat With:</h2>
       {users.length === 0 ? (
-        <p>No users found.</p>
+        <p className="no-users-text">No users found.</p>
       ) : (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
+        <div className="users-grid">
           {users.map((user) => (
             <div
               key={user.id}
               onClick={() => handleUserClick(user)}
-              style={{
-                cursor: 'pointer',
-                padding: '15px',
-                border: '1px solid #e0e0e0',
-                borderRadius: '8px',
-                backgroundColor: '#fff',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                width: '250px',
-                transition: 'transform 0.2s',
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              className="user-card"
+              title={`Chat with ${user.name}`}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  backgroundColor: '#ccc',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 'bold',
-                  color: '#fff',
-                  fontSize: '18px'
-                }}>
-                  {user.name?.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <div style={{ fontWeight: 'bold', fontSize: '16px' }}>{user.name}</div>
-                  <div style={{ color: '#777' }}>{user.email}</div>
-                </div>
+              <div className="user-avatar">{user.name?.charAt(0).toUpperCase()}</div>
+              <div className="user-info">
+                <div className="user-name">{user.name}</div>
+                <div className="user-email">{user.email}</div>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <button
+        onClick={handleLogout}
+        className="logout-button"
+      >
+        Logout
+      </button>
     </div>
   );
 }
