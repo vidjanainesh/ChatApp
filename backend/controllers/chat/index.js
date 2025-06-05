@@ -20,9 +20,19 @@ const sendMessage = async (req, res) => {
             message
         });
 
-        const io = req.app.get('io');
-        io.emit('newMessage', sentMessage.toJSON());
+        const io = req.app.get("io");
+        const receiverRoom = `user_${receiverId}`;
+        const senderRoom = `user_${user.id}`;
 
+        // Add sender_name to the emitted message
+        const messageWithSender = {
+        ...sentMessage.toJSON(),
+        sender_name: user.name || user.email || "Unknown",
+        };
+
+        io.to(receiverRoom).emit("newMessage", messageWithSender);
+        io.to(senderRoom).emit("newMessage", messageWithSender);
+        
         return res.status(201).json({
             status: "success",
             message: "Message sent",
