@@ -3,6 +3,7 @@ import { loginUser } from '../../api';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {jwtDecode} from 'jwt-decode';
+import './auth.css';
 
 export default function Login() {
 
@@ -54,11 +55,11 @@ export default function Login() {
   }
 
   return (
-    <div className="login-container">
+    <div className="auth-container">
       <h2>Welcome Back!</h2>
       <p>Please log in to continue</p>
 
-      <form onSubmit={handleSubmit} className="login-form">
+      <form onSubmit={handleSubmit} className="auth-form">
         <div className="form-group">
           <label htmlFor="email">Email Address</label>
           <input 
@@ -83,9 +84,9 @@ export default function Login() {
           />
         </div>
 
-        <button type="submit" className="login-button">Log In</button>
+        <button type="submit" className="auth-button">Log In</button>
 
-        <div className="login-links">
+        <div className="auth-links">
           <p>
             New here? <Link to="/register">Sign up</Link>
           </p>

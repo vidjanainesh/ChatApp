@@ -1,0 +1,120 @@
+/* Auth Page Shared Styles: Login, Register, Forgot, etc. */
+
+.auth-container {
+  max-width: 500px;
+  margin: 4rem auto;
+  padding: 3rem;
+  background: linear-gradient(145deg, #1a1a1a, #1f1f1f);
+  border: 1px solid #2a2a2a;
+  border-radius: 16px;
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.6);
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.auth-container h2 {
+  text-align: center;
+  margin-bottom: 1rem;
+  color: #ffffff;
+  font-size: 1.8rem;
+}
+
+.auth-container p {
+  text-align: center;
+  color: #bbbbbb;
+  margin-bottom: 1.75rem;
+  font-size: 0.95rem;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group {
+  margin-bottom: 1.75rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #cccccc;
+  font-size: 0.9rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.85rem;
+  border: none;
+  border-radius: 10px;
+  background-color: #2a2a2a;
+  color: #ffffff;
+  font-size: 1rem;
+  transition: background-color 0.3s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  background-color: #333333;
+  box-shadow: 0 0 0 2px #007bff;
+}
+
+.auth-button {
+  width: 100%;
+  padding: 0.85rem;
+  background-color: #007bff;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.auth-button:hover {
+  background-color: #0056b3;
+  transform: translateY(-1px);
+}
+
+.auth-links {
+  margin-top: 1.25rem;
+  text-align: center;
+}
+
+.auth-links p {
+  margin-bottom: 0.5rem;
+}
+
+.auth-links a {
+  color: #61dafb;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.auth-links a:hover {
+  color: #1fa2ff;
+}
+
+/* Responsive tweaks */
+@media (max-width: 480px) {
+  .auth-container {
+    margin: 2rem 1rem;
+    padding: 2rem 1.5rem;
+  }
+
+  .form-group input,
+  .auth-button {
+    font-size: 0.95rem;
+  }
+
+  .auth-button {
+    padding: 0.75rem;
+  }
+
+  .auth-container h2 {
+    font-size: 1.5rem;
+  }
+}
