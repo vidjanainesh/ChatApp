@@ -17,10 +17,7 @@ export default function ResetPassword() {
       const response = await resetPassword({ password }, jwt);
       console.log(response);
       if (response.data.status === "success") {
-        toast.success(
-          response.data.message || "Password changed successfully",
-          { autoClose: 3000 }
-        );
+        // toast.success(response.data.message || "Password changed successfully", { autoClose: 3000 });
         sessionStorage.removeItem("reset_jwt");
         navigate("/");
       } else

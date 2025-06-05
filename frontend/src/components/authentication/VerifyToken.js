@@ -18,7 +18,7 @@ export default function VerifyToken() {
       const response = await verifyToken({ token, email });
       if (response.data.status === "success") {
         const jwt = response.data.jsonToken;
-        toast.success("OTP Verified", { autoClose: 3000 });
+        // toast.success("OTP Verified", { autoClose: 3000 });
         sessionStorage.removeItem("email");
         sessionStorage.setItem("reset_jwt", jwt);
         navigate("/reset-password");
