@@ -6,7 +6,7 @@ export default function useSocket(onNewMessage) {
 
   useEffect(() => {
     if (!socketRef.current) {
-      socketRef.current = io('http://localhost:3000', {
+      socketRef.current = io(process.env.REACT_APP_API_BASE, {
         reconnectionAttempts: 3,
         timeout: 10000,
         transports: ['websocket', 'polling'],

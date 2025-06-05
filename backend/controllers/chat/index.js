@@ -39,7 +39,6 @@ const sendMessage = async (req, res) => {
 const getUsers = async (req, res) => {
     try {
         const user = req.user;
-        console.log(user);
         if(user.id === 2){
             const users = await User.findAll({
                 where: {
