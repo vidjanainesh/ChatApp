@@ -33,7 +33,8 @@ export default function useSocket({ id, token, loggedInUserId, setMessages, setI
         document.visibilityState !== "visible"
       ) {
         const notification = new Notification("New Message", {
-          body: `${newMessage.sender_name}: ${newMessage.message}`,
+          // body: `${newMessage.sender_name}: ${newMessage.message}`,
+          body: 'New Message',
           icon: "/icon.png",
         });
 

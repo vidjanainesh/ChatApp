@@ -20,7 +20,8 @@ export default function useGlobalNotifications(token) {
     socketRef.current.on("newMessage", (message) => {
       if (Notification.permission === "granted" && document.visibilityState !== "visible") {
         const notification = new Notification("New Message", {
-          body: `${message.sender_name}: ${message.message}`,
+          // body: `${message.sender_name}: ${message.message}`,
+          body: 'New Message',
           icon: "/icon.png",
         });
 

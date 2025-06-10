@@ -27,7 +27,7 @@ body {
   padding: 3rem;
   border-radius: 16px;
   width: 100%;
-  max-width: 500px;
+  max-width: 400px;
   box-shadow: 0 12px 25px rgba(0, 0, 0, 0.6);
 }
 
@@ -89,7 +89,7 @@ a:hover {
 
 /* Chat container */
 .chat-container {
-  max-width: 700px;
+  max-width: 400px;
   width: 100%;
   margin: auto;
   background-color: #1a1a1a;
@@ -132,6 +132,9 @@ a:hover {
 /* Individual message */
 .chat-message {
   max-width: 70%;
+  width: fit-content; /* optional */
+  white-space: pre-wrap; /* ensures long words and line breaks wrap properly */
+  overflow-wrap: break-word; /* wraps long words */
   padding: 0.75rem 1rem;
   border-radius: 12px;
   word-break: break-word;
