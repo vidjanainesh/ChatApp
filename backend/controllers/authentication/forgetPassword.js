@@ -89,7 +89,7 @@ const verifyToken = async (req, res) => {
         console.log(user);
 
         if(user.token == token && user.token_expires > new Date()){
-            const jsonToken = jwt.sign(
+            const emailToken = jwt.sign(
                 {email}, 
                 process.env.JWT_SECRET, 
                 {expiresIn: '15m'},
@@ -97,7 +97,7 @@ const verifyToken = async (req, res) => {
             res.status(200).json({
                 "status": "success",
                 "message": "OTP verified",
-                jsonToken
+                emailToken
             })
         }
         else{
@@ -119,7 +119,8 @@ const resetPassword = async (req, res) => {
 
         const {password} = req.body;
         const token = req.headers.authorization?.split(' ')[1]; // Bearer <token>
-
+        console.log(password);
+        console.log(token);
         if(!token) {
             return res.status(401).json({ 
                 status: "error", 

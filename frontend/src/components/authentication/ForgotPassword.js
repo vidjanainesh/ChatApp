@@ -1,28 +1,23 @@
-// src/components/authentication/VerifyToken.js
+// src/components/authentication/ForgetPassword.js
 import React, { useState } from "react";
-import { verifyToken } from "../../api";
+import { forgetPassword } from "../../api";
 import { toast } from "react-toastify";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
-export default function VerifyToken() {
+export default function ForgotPassword() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const email = location.state?.email;
-  // console.log("Email: ",email);
-  const [token, setToken] = useState("");
+  const [email, setEmail] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await verifyToken({email, token});
+      const res = await forgetPassword({ email });
       if (res.data.status === "success") {
-        const emailToken = res.data.emailToken;
-        localStorage.setItem('reset-jwt', emailToken); 
-        // toast.success("Token verified", { autoClose: 3000 });
-        navigate("/reset-password");
+        // toast.success("Token sent to email", { autoClose: 3000 });
+        navigate("/verify-token", { state: { email: email } });
       } else {
-        toast.error(res.data.message || "Token verification failed", {
+        toast.error(res.data.message || "Failed to send token", {
           autoClose: 3000,
         });
       }
@@ -40,23 +35,21 @@ export default function VerifyToken() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
-        <h2 className="text-2xl font-bold text-center text-indigo-700 mb-2">Verify Token</h2>
-        <p className="text-sm text-gray-500 text-center mb-6">
-          Enter the token sent to your email
-        </p>
+        <h2 className="text-2xl font-bold text-center text-indigo-700 mb-2">Forgot Password?</h2>
+        <p className="text-sm text-gray-500 text-center mb-6">Enter your registered email address</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="token" className="text-sm text-gray-600 block mb-1">
-              Token
+            <label htmlFor="email" className="text-sm text-gray-600 block mb-1">
+              Email Address
             </label>
             <input
-              type="text"
-              name="token"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
+              type="email"
+              name="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="Enter 4-digit token"
+              placeholder="you@example.com"
               required
             />
           </div>
@@ -65,7 +58,7 @@ export default function VerifyToken() {
             type="submit"
             className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition duration-300"
           >
-            Verify Token
+            Send Reset Token
           </button>
         </form>
 
