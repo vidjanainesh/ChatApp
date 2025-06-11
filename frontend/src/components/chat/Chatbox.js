@@ -4,6 +4,7 @@ import { getMessages, sendMessage } from "../../api";
 import { toast } from "react-toastify";
 import { jwtDecode } from "jwt-decode";
 import useSocket from "../../hooks/useSocket";
+import { motion } from "framer-motion";
 
 export default function Chatbox() {
   const navigate = useNavigate();
@@ -12,13 +13,15 @@ export default function Chatbox() {
   const queryParams = new URLSearchParams(location.search);
   const name = queryParams.get("name");
 
-  let loggedInUserId = null;
   const token = localStorage.getItem("jwt");
+  const chatWindowRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
+  let loggedInUserId = null;
   try {
     const decoded = jwtDecode(token);
     loggedInUserId = decoded.id;
-  } catch (error) {
+  } catch {
     localStorage.removeItem("jwt");
     toast.error("Invalid session. Please log in again.", { autoClose: 3000 });
     navigate("/");
@@ -27,8 +30,6 @@ export default function Chatbox() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const chatWindowRef = useRef(null);
-  const typingTimeoutRef = useRef(null);
 
   const socketRef = useSocket({
     id,
@@ -40,26 +41,19 @@ export default function Chatbox() {
 
   const fetchMessages = async () => {
     try {
-      const response = await getMessages(id, token);
-      if (response.data.status !== "success") {
-        toast.error(response.data.message || "Failed to retrieve messages", {
-          autoClose: 3000,
-        });
+      const res = await getMessages(id, token);
+      if (res.data.status === "success") {
+        setMessages(res.data.data);
       } else {
-        setMessages(response.data.data);
+        toast.error(res.data.message || "Failed to get messages", { autoClose: 3000 });
       }
-    } catch (error) {
-      const errorMessage =
-        error.response?.data?.message || "Failed to retrieve messages";
-
-      if (errorMessage === "Invalid or expired token") {
-        toast.error("Invalid session. Please log in again.", {
-          autoClose: 3000,
-        });
+    } catch (err) {
+      const msg = err.response?.data?.message || "Error getting messages";
+      if (msg === "Invalid or expired token") {
         localStorage.removeItem("jwt");
         navigate("/");
       } else {
-        toast.error(errorMessage, { autoClose: 3000 });
+        toast.error(msg, { autoClose: 3000 });
       }
     }
   };
@@ -67,28 +61,6 @@ export default function Chatbox() {
   useEffect(() => {
     fetchMessages();
   }, [id]);
-
-  const submitHandler = async (e) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-
-    try {
-      const response = await sendMessage(input, id, token);
-      if (response.data.status !== "success") {
-        toast.error("Could not send message", { autoClose: 3000 });
-      } else {
-        setInput("");
-      }
-    } catch (error) {
-      const errorMessage = error.response?.data?.message || "Something went wrong while sending message";
-      if (errorMessage === "Invalid or expired token") {
-        localStorage.removeItem("jwt");
-        navigate("/");
-      } else {
-        toast.error(errorMessage, { autoClose: 3000 });
-      }
-    }
-  };
 
   useEffect(() => {
     if (chatWindowRef.current) {
@@ -118,61 +90,107 @@ export default function Chatbox() {
     }
   };
 
-  const formatTime = (timestamp) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+
+    try {
+      const res = await sendMessage(input, id, token);
+      if (res.data.status === "success") {
+        setInput("");
+      } else {
+        toast.error("Could not send message", { autoClose: 3000 });
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || "Failed to send message";
+      if (msg === "Invalid or expired token") {
+        localStorage.removeItem("jwt");
+        navigate("/");
+      } else {
+        toast.error(msg, { autoClose: 3000 });
+      }
+    }
   };
 
-  const formatDate = (timestamp) => {
-    const date = new Date(timestamp);
-    return date.toISOString().split('T')[0];
-  };
+  const formatTime = (ts) =>
+    new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+  const formatDate = (ts) => new Date(ts).toISOString().split("T")[0];
 
   return (
-    <>
-      <div>
-        <button onClick={() => navigate('/dashboard')} className="back-button">
-          ← Back
-        </button>
-      </div>
-      <div className="chat-container">
-        <h2 className="chat-title">Chat with {name}</h2>
-        <div className="chat-window" ref={chatWindowRef}>
-          {messages.length > 0 && messages.map((msg, idx) => {
+    <div className="min-h-screen bg-gradient-to-tr from-white to-indigo-50 p-4">
+      <div className="max-w-md mx-auto flex flex-col h-[90vh]">
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="text-indigo-600 hover:underline text-sm"
+          >
+            ← Back
+          </button>
+          <h2 className="text-xl font-semibold text-gray-800">Chat with {name}</h2>
+          <div className="w-12" />
+        </div>
+
+        <div
+          className="flex-1 overflow-y-auto overflow-x-hidden space-y-2 px-2 pb-4 scrollbar-thin scrollbar-thumb-indigo-400 scrollbar-track-transparent"
+          ref={chatWindowRef}
+        >
+          {messages.map((msg, i) => {
             const isSender = msg.sender_id === loggedInUserId;
             const currentDate = formatDate(msg.timestamp);
-            const prevDate = idx > 0 ? formatDate(messages[idx - 1].timestamp) : null;
+            const prevDate = i > 0 ? formatDate(messages[i - 1].timestamp) : null;
 
             return (
               <React.Fragment key={msg.id}>
-                {prevDate && currentDate !== prevDate && (
-                  <div className="date-separator-container">
-                    <hr className="date-separator-line left" />
-                    <span className="date-separator-text">{currentDate}</span>
-                    <hr className="date-separator-line right" />
+                {prevDate !== currentDate && (
+                  <div className="flex items-center justify-center my-4">
+                    <hr className="flex-1 border-gray-300" />
+                    <span className="px-3 text-xs text-gray-500">{currentDate}</span>
+                    <hr className="flex-1 border-gray-300" />
                   </div>
                 )}
-                <div className={`chat-message ${isSender ? "sender" : "receiver"}`}>
-                  <div>{msg.message}</div>
-                  <div className="chat-timestamp">{formatTime(msg.timestamp)}</div>
+                <div className={`flex ${isSender ? "justify-end" : "justify-start"}`}>
+                  <motion.div
+                    initial={{ opacity: 0, x: isSender ? 50 : -50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className={`p-3 rounded-xl text-sm shadow-md max-w-[75%] break-words ${
+                      isSender
+                        ? "bg-indigo-100 text-right"
+                        : "bg-white text-left"
+                    }`}
+                  >
+                    <div>{msg.message}</div>
+                    <div className="text-[10px] text-gray-400 mt-1">
+                      {formatTime(msg.timestamp)}
+                    </div>
+                  </motion.div>
                 </div>
               </React.Fragment>
             );
           })}
         </div>
-        <div className="typing-indicator">{isTyping ? "Typing..." : "\u00A0"}</div>
 
-        <form onSubmit={submitHandler} className="chat-input-form">
+        <div className="text-sm text-gray-500 mb-2 h-5 px-1">
+          {isTyping ? "Typing..." : "\u00A0"}
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="flex items-center gap-2 bg-white p-2 rounded-lg shadow-md"
+        >
           <input
             type="text"
-            placeholder="Start typing..."
-            name="input"
             value={input}
             onChange={handleInputChange}
-            className="chat-input"
+            placeholder="Type your message..."
+            className="flex-1 px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
             autoComplete="off"
           />
-          <button type="submit" className="chat-send-button" aria-label="Send message">
+          <button
+            type="submit"
+            className="bg-indigo-500 hover:bg-indigo-600 text-white p-2 rounded-full transition"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -181,13 +199,12 @@ export default function Chatbox() {
               viewBox="0 0 24 24"
               width="20"
               height="20"
-              style={{ display: 'block' }}
             >
               <path d="M2 21l21-9L2 3v7l15 2-15 2v7z" />
             </svg>
           </button>
         </form>
       </div>
-    </>
+    </div>
   );
 }

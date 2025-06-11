@@ -1,100 +1,120 @@
-import { useEffect, useState } from 'react'
-import { loginUser } from '../../api';
-import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
-import {jwtDecode} from 'jwt-decode';
-import './auth.css';
+// src/components/authentication/Login.js
+import React, { useState } from "react";
+import { loginUser } from "../../api";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
-
-  const [form, setForm] = useState({email: '', password: ''}); 
   const navigate = useNavigate();
+  const [user, setUser] = useState({ email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
 
-  useEffect(() => {
-    const token = localStorage.getItem('jwt');
-    
-    if(token){
-      try {
-        const decoded = jwtDecode(token);
-        const isExpired = decoded.exp * 1000 < Date.now();
+  const handleChange = (e) =>
+    setUser({ ...user, [e.target.name]: e.target.value });
 
-      if (!isExpired) {
-        navigate('/dashboard');
-      } else {
-        localStorage.removeItem('jwt');
-        navigate('/');
-      }
-      } catch (err) {
-        localStorage.removeItem('jwt');
-        toast.error('Invalid session. Please log in again.', { autoClose: 3000 });
-        navigate('/');
-      }
-    }
-  }, [])
+  const togglePassword = () => setShowPassword((prev) => !prev);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await loginUser(form);
-      if(response.data.status === 'success') {
-        // toast.success('Login Successful', {autoClose: 3000});
-        localStorage.setItem('jwt', response.data?.userToken);
-        navigate('/dashboard');
+      const response = await loginUser(user);
+      if (response.data.status === "success") {
+        localStorage.setItem("jwt", response.data.userToken);
+        navigate("/dashboard");
+      } else {
+        toast.error(response.data.message || "Login failed", {
+          autoClose: 3000,
+        });
       }
-      // else throw new Error(response.data.message);
-      else toast.error(response.data.message || 'Login Failed!', { autoClose: 3000 });
-
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Login Failed!';
-      toast.error(errorMessage, { autoClose: 3000 });
+      const message = error.response?.data?.message || "Login failed";
+      toast.error(message, { autoClose: 3000 });
     }
-  }
-
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value});
-  }
+  };
 
   return (
-    <div className="auth-container">
-      <h2>Welcome Back!</h2>
-      <p>Please log in to continue</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-blue-100 via-white to-purple-100 px-4">
+      <motion.div
+        className="w-full max-w-md bg-white shadow-lg rounded-2xl p-8"
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h2 className="text-2xl font-semibold text-center mb-2 text-gray-800">Welcome Back</h2>
+        <p className="text-sm text-center text-gray-500 mb-6">
+          Login to your account to continue
+        </p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="email" className="text-gray-700 text-sm font-medium">
+              Email
+            </label>
+            <input
+              type="email"
+              name="email"
+              id="email"
+              value={user.email}
+              onChange={handleChange}
+              required
+              className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none"
+              placeholder="example@email.com"
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="text-gray-700 text-sm font-medium">
+              Password
+            </label>
+            <div className="relative mt-1">
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                id="password"
+                value={user.password}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none pr-10"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={togglePassword}
+                className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
+          <button
+            type="submit"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-xl transition duration-300"
+          >
+            Log In
+          </button>
+        </form>
 
-      <form onSubmit={handleSubmit} className="auth-form">
-        <div className="form-group">
-          <label htmlFor="email">Email Address</label>
-          <input 
-            type="text" 
-            id="email"
-            name="email" 
-            placeholder="Enter your email" 
-            onChange={handleChange} 
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="password">Password</label>
-          <input 
-            type="password" 
-            id="password"
-            name="password" 
-            placeholder="Enter your password" 
-            onChange={handleChange} 
-            required
-          />
-        </div>
-
-        <button type="submit" className="auth-button">Log In</button>
-
-        <div className="auth-links">
+        <div className="text-sm text-center mt-4 space-y-1">
           <p>
-            New here? <Link to="/register">Sign up</Link>
+            <button
+              onClick={() => navigate("/forgot-password")}
+              className="text-blue-500 hover:underline transition"
+            >
+              Forgot Password?
+            </button>
           </p>
           <p>
-            <Link to="/forget-password">Forgot Password?</Link>
+            Don’t have an account?{" "}
+            <button
+              onClick={() => navigate("/register")}
+              className="text-blue-500 hover:underline transition"
+            >
+              Register
+            </button>
           </p>
         </div>
-      </form>
+      </motion.div>
     </div>
   );
 }
