@@ -1,4 +1,4 @@
-const { Op } = require("sequelize");
+const { Op, Sequelize } = require("sequelize");
 const { Message, User, Friends } = require("../../models");
 
 const sendMessage = async (req, res) => {
@@ -13,6 +13,22 @@ const sendMessage = async (req, res) => {
                 message: "Message content and Receiver ID are required"
             })
         };
+
+        const friendship = await Friends.findOne({
+            where: {
+                status: "accepted",
+                [Op.or] : [
+                    {sender_id: user.id, receiver_id: receiverId},
+                    {sender_id: receiverId, receiver_id: user.id}
+                ]
+            }
+        });
+
+        if(!friendship) {
+            return res.status(400).json({
+                message: "Not friends with this user"
+            })
+        }
         
         const sentMessage = await Message.create({
             sender_id: user.id,
@@ -46,84 +62,42 @@ const sendMessage = async (req, res) => {
     }
 }
 
-const getUsers = async (req, res) => {
-    try {
-        const user = req.user;
-        if(user.id === 2){
-            const users = await User.findAll({
-                where: {
-                    id: {
-                        [Op.ne]: user.id 
-                    }
-                },
-                attributes: ['id', 'name', 'email'],  
-            });
-
-            return res.status(201).json({
-                status: "success",
-                message: "Fetched all users",
-                data: users
-            });
-        }
-        else{
-            const users = await User.findAll({
-                where: {
-                    id: {
-                        [Op.notIn]: [user.id, 1]
-                    }
-                },
-                attributes: ['id', 'name', 'email'],  
-            });
-
-            return res.status(201).json({
-                status: "success",
-                message: "Fetched all users",
-                data: users
-            });
-        }
-        
-    } catch (error) {
-        return res.status(500).json({
-            status: "error",
-            message: error.message
-        });
-    }
-}
-
 // const getUsers = async (req, res) => {
 //     try {
 //         const user = req.user;
+//         if(user.id === 2){
+//             const users = await User.findAll({
+//                 where: {
+//                     id: {
+//                         [Op.ne]: user.id 
+//                     }
+//                 },
+//                 attributes: ['id', 'name', 'email'],  
+//             });
 
-//         const friendships = await Friends.findAll({
-//             where: {
-//                 status: true,
-//                 [Op.or]: [
-//                     { sender_id: user.id },
-//                     { receiver_id: user.id }
-//                 ]
-//             }
-//         });
+//             return res.status(201).json({
+//                 status: "success",
+//                 message: "Fetched all users",
+//                 data: users
+//             });
+//         }
+//         else{
+//             const users = await User.findAll({
+//                 where: {
+//                     id: {
+//                         [Op.notIn]: [user.id, 1]
+//                     }
+//                 },
+//                 attributes: ['id', 'name', 'email'],  
+//             });
 
-//         // Extract friend user IDs (the ones that are NOT the current user)
-//         const friendIds = friendships.map(f => 
-//             f.sender_id === user.id ? f.receiver_id : f.sender_id
-//         );
-
-//         // Fetch those users
-//         const users = await User.findAll({
-//             where: {
-//                 id: {
-//                     [Op.in]: friendIds
-//                 }
-//             },
-//             attributes: ['id', 'name', 'email']
-//         });
-
-//         return res.status(201).json({
-//             status: "success",
-//             message: "Fetched all users",
-//             data: users
-//         });
+//             return res.status(201).json({
+//                 status: "success",
+//                 message: "Fetched all users",
+//                 data: users
+//             });
+//         }
+        
 //     } catch (error) {
 //         return res.status(500).json({
 //             status: "error",
@@ -131,6 +105,46 @@ const getUsers = async (req, res) => {
 //         });
 //     }
 // }
+
+const getUsers = async (req, res) => {
+    try {
+        const currentUserId = req.user.id;
+
+        const baseExclusions = [currentUserId];
+        if (currentUserId !== 2) {
+            baseExclusions.push(1); 
+        }
+
+        const users = await User.findAll({
+            where: {
+                id: {
+                [Op.notIn]: baseExclusions
+                },
+                [Op.and]: Sequelize.literal(`NOT EXISTS (
+                SELECT 1 FROM Friends f
+                WHERE (
+                    (f.sender_id = ${currentUserId} AND f.receiver_id = User.id) OR
+                    (f.sender_id = User.id AND f.receiver_id = ${currentUserId})
+                ) AND f.status IN ('pending', 'accepted')
+                )`)
+            },
+            attributes: ['id', 'name', 'email']
+        });
+
+        return res.status(200).json({
+            status: "success",
+            message: "Fetched eligible users",
+            data: users
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: "error",
+            message: error.message
+        });
+    }
+};
 
 const getMessages = async (req, res) => {
     try {

@@ -60,3 +60,45 @@ export const getUsers = (token) => {
         }
     );
 }
+// ---------------------------------------------------------
+export const getFriends = (token) => {
+    return axios.get(`${API_BASE}/friend`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
+
+export const getFriendReq = (token) => {
+    return axios.get(`${API_BASE}/friend/requests`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
+
+export const sendFriendReq = (id, token) => {
+    return axios.post(`${API_BASE}/friend/send`,
+        { id }, 
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
+
+export const manageFriendReq = (id, status, token) => {
+    return axios.post(`${API_BASE}/friend/update`,
+        { id, status }, 
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}

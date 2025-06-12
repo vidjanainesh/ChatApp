@@ -10,6 +10,8 @@ import ResetPassword from './components/authentication/ResetPassword';
 import Chatbox from './components/chat/Chatbox';
 import { useEffect } from 'react';
 import useGlobalNotifications from './hooks/useGlobalNotifications';
+import FindPeople from './components/chat/FindPeople';
+import FriendRequests from './components/chat/FriendRequests';
 
 function App() {
 
@@ -33,6 +35,8 @@ function App() {
           <Route path='/verify-token' element={<VerifyToken/>} />
           <Route path='/reset-password' element={<ResetPassword/>} />
           <Route path='/chatbox/:id' element={<Chatbox/>} />
+          <Route path='/find-people' element={<FindPeople/>} />
+          <Route path='/friend-requests' element={<FriendRequests/>} />
         </Routes>          
       </header>
       <ToastContainer 
