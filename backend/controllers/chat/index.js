@@ -120,6 +120,7 @@ const getUsers = async (req, res) => {
                 id: {
                     [Op.notIn]: baseExclusions
                 },
+                // For local mySQL
                 // [Op.and]: Sequelize.literal(`NOT EXISTS (
                 //     SELECT 1 FROM Friends f
                 //     WHERE (
@@ -127,6 +128,8 @@ const getUsers = async (req, res) => {
                 //         (f.sender_id = User.id AND f.receiver_id = ${currentUserId})
                 //     ) AND f.status IN ('pending', 'accepted')
                 // )`)
+
+                // For deployed postgreSQL
                 [Op.and]: Sequelize.literal(`
                     NOT EXISTS (
                         SELECT 1 FROM "Friends" f

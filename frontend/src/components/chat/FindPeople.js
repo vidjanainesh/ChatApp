@@ -8,6 +8,7 @@ export default function FindPeople() {
   const navigate = useNavigate();
   const token = localStorage.getItem("jwt");
   const [users, setUsers] = useState([]);
+  const [requestedIds, setRequestedIds] = useState([]);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -35,8 +36,8 @@ export default function FindPeople() {
     try {
       const response = await sendFriendReq(id, token);
       if (response.data.status === "success") {
-        toast.success("Friend request sent!", { autoClose: 2000 });
-        setUsers((prev) => prev.filter((user) => user.id !== id));
+        // toast.success("Friend request sent!", { autoClose: 2000 });
+        setRequestedIds((prev) => [...prev, id]);
       } else {
         toast.error(response.data.message || "Failed to send request");
       }
@@ -44,6 +45,8 @@ export default function FindPeople() {
       toast.error(error.response?.data?.message || "Error sending request");
     }
   };
+
+  // const visibleUsers = users.filter((user) => !requestedIds.includes(user.id));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white py-8 px-4">
@@ -81,9 +84,14 @@ export default function FindPeople() {
                 </div>
                 <button
                   onClick={() => handleSendRequest(user.id)}
-                  className="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-4 rounded-lg transition duration-300"
+                  disabled={requestedIds.includes(user.id)}
+                  className={`w-full ${
+                    requestedIds.includes(user.id)
+                      ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                      : "bg-indigo-500 hover:bg-indigo-600 text-white"
+                  } py-2 px-4 rounded-lg transition duration-300`}
                 >
-                  Send Friend Request
+                  {requestedIds.includes(user.id) ? "Request Sent" : "Send Friend Request"}
                 </button>
               </motion.div>
             ))}

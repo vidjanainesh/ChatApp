@@ -35,7 +35,7 @@ export default function FriendRequests() {
     try {
       const response = await manageFriendReq(id, status, token);
       if (response.data.status === "success") {
-        toast.success(`Request ${status}`, { autoClose: 2000 });
+        // toast.success(`Request ${status}`, { autoClose: 2000 });
         setRequests((prev) => prev.filter((req) => req.senderId !== id));
       } else {
         toast.error(response.data.message || "Action failed");
