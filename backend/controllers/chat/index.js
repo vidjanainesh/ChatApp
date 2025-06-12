@@ -118,15 +118,26 @@ const getUsers = async (req, res) => {
         const users = await User.findAll({
             where: {
                 id: {
-                [Op.notIn]: baseExclusions
+                    [Op.notIn]: baseExclusions
                 },
-                [Op.and]: Sequelize.literal(`NOT EXISTS (
-                SELECT 1 FROM Friends f
-                WHERE (
-                    (f.sender_id = ${currentUserId} AND f.receiver_id = User.id) OR
-                    (f.sender_id = User.id AND f.receiver_id = ${currentUserId})
-                ) AND f.status IN ('pending', 'accepted')
-                )`)
+                // [Op.and]: Sequelize.literal(`NOT EXISTS (
+                //     SELECT 1 FROM Friends f
+                //     WHERE (
+                //         (f.sender_id = ${currentUserId} AND f.receiver_id = User.id) OR
+                //         (f.sender_id = User.id AND f.receiver_id = ${currentUserId})
+                //     ) AND f.status IN ('pending', 'accepted')
+                // )`)
+                [Op.and]: Sequelize.literal(`
+                    NOT EXISTS (
+                        SELECT 1 FROM "Friends" f
+                        WHERE (
+                        (f.sender_id = ${currentUserId} AND f.receiver_id = "User".id)
+                        OR
+                        (f.sender_id = "User".id AND f.receiver_id = ${currentUserId})
+                        )
+                        AND f.status IN ('pending', 'accepted')
+                    )
+                `)
             },
             attributes: ['id', 'name', 'email']
         });
