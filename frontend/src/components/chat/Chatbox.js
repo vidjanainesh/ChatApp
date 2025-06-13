@@ -121,8 +121,8 @@ export default function Chatbox() {
   const formatDate = (ts) => new Date(ts).toISOString().split("T")[0];
 
   return (
-    <div className="min-h-screen bg-gradient-to-tr from-white to-indigo-50 p-4">
-      <div className="w-full max-w-md mx-auto flex flex-col h-[90vh] px-2 sm:px-4">
+    <div className="h-screen flex flex-col bg-gradient-to-tr from-white to-indigo-50 p-4">
+      <div className="w-full max-w-md mx-auto flex flex-col flex-grow px-2 sm:px-4 min-h-0">
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => navigate("/dashboard")}
