@@ -121,8 +121,8 @@ export default function Chatbox() {
   const formatDate = (ts) => new Date(ts).toISOString().split("T")[0];
 
   return (
-    <div className="h-screen overflow-hidden bg-gradient-to-tr from-white to-indigo-50 p-4">
-      <div className="w-full max-w-md mx-auto flex flex-col h-full px-2 sm:px-4">
+    <div className="h-screen flex justify-center bg-gradient-to-tr from-white to-indigo-50 p-4 overflow-hidden">
+      <div className="flex flex-col w-full max-w-md h-full min-h-0 px-2 sm:px-4 overflow-hidden">
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => navigate("/dashboard")}
@@ -131,7 +131,7 @@ export default function Chatbox() {
             ← Back
           </button>
           <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
-            Chat with {name.split(' ')[0]}
+            Chat with {name.split(" ")[0]}
           </h2>
           <div className="w-12" />
         </div>
@@ -143,8 +143,7 @@ export default function Chatbox() {
           {messages.map((msg, i) => {
             const isSender = msg.sender_id === loggedInUserId;
             const currentDate = formatDate(msg.timestamp);
-            const prevDate =
-              i > 0 ? formatDate(messages[i - 1].timestamp) : null;
+            const prevDate = i > 0 ? formatDate(messages[i - 1].timestamp) : null;
 
             return (
               <React.Fragment key={msg.id}>
@@ -158,9 +157,7 @@ export default function Chatbox() {
                   </div>
                 )}
                 <div
-                  className={`flex ${
-                    isSender ? "justify-end" : "justify-start"
-                  }`}
+                  className={`flex ${isSender ? "justify-end" : "justify-start"}`}
                 >
                   <motion.div
                     initial={{ opacity: 0, x: isSender ? 50 : -50 }}
@@ -168,11 +165,11 @@ export default function Chatbox() {
                     transition={{ duration: 0.2 }}
                     className={`p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap ${
                       isSender
-                        ? "bg-indigo-100 self-end" // removed text-right
+                        ? "bg-indigo-100 self-end"
                         : "bg-white self-start"
                     }`}
                   >
-                    <div className="text-left">{msg.message}</div> {/* ✅ force left text alignment */}
+                    <div className="text-left">{msg.message}</div>
                     <div className="text-[10px] text-gray-400 mt-1 text-right">
                       {formatTime(msg.timestamp)}
                     </div>
@@ -201,7 +198,7 @@ export default function Chatbox() {
               }
             }}
             placeholder="Type your message..."
-            className="flex-1 px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none min-h-[4rem] max-h-[10rem] overflow-y-auto"
+            className="flex-1 px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none min-h-[4rem] max-h-[30vh] overflow-y-auto"
             autoComplete="off"
           />
           <button
