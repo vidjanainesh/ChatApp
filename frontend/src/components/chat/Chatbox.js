@@ -45,7 +45,9 @@ export default function Chatbox() {
       if (res.data.status === "success") {
         setMessages(res.data.data);
       } else {
-        toast.error(res.data.message || "Failed to get messages", { autoClose: 3000 });
+        toast.error(res.data.message || "Failed to get messages", {
+          autoClose: 3000,
+        });
       }
     } catch (err) {
       const msg = err.response?.data?.message || "Error getting messages";
@@ -121,29 +123,32 @@ export default function Chatbox() {
   const formatDate = (ts) => new Date(ts).toISOString().split("T")[0];
 
   return (
-    <div className="h-screen flex justify-center bg-gradient-to-tr from-white to-indigo-50 p-4 overflow-hidden">
-      <div className="flex flex-col w-full max-w-md h-full min-h-0 px-2 sm:px-4 overflow-hidden">
-        <div className="flex items-center justify-between mb-4">
+    <div className="h-screen w-screen flex justify-center bg-gradient-to-tr from-white to-indigo-50 p-2 sm:p-4">
+      <div className="flex flex-col w-full max-w-md h-full min-h-0 overflow-hidden">
+        {/* Top Bar */}
+        <div className="flex items-center justify-between px-2 mb-2">
           <button
             onClick={() => navigate("/dashboard")}
             className="text-indigo-600 hover:underline text-sm"
           >
             ← Back
           </button>
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-800 truncate">
             Chat with {name.split(" ")[0]}
           </h2>
           <div className="w-12" />
         </div>
 
+        {/* Message List */}
         <div
-          className="flex-1 overflow-y-auto overflow-x-hidden space-y-2 px-2 pb-4 scrollbar-thin scrollbar-thumb-indigo-400 scrollbar-track-transparent"
           ref={chatWindowRef}
+          className="flex-1 min-h-0 overflow-y-auto px-2 pb-4 space-y-2 scrollbar-thin scrollbar-thumb-indigo-400"
         >
           {messages.map((msg, i) => {
             const isSender = msg.sender_id === loggedInUserId;
             const currentDate = formatDate(msg.timestamp);
-            const prevDate = i > 0 ? formatDate(messages[i - 1].timestamp) : null;
+            const prevDate =
+              i > 0 ? formatDate(messages[i - 1].timestamp) : null;
 
             return (
               <React.Fragment key={msg.id}>
@@ -157,16 +162,16 @@ export default function Chatbox() {
                   </div>
                 )}
                 <div
-                  className={`flex ${isSender ? "justify-end" : "justify-start"}`}
+                  className={`flex ${
+                    isSender ? "justify-end" : "justify-start"
+                  }`}
                 >
                   <motion.div
                     initial={{ opacity: 0, x: isSender ? 50 : -50 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.2 }}
                     className={`p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap ${
-                      isSender
-                        ? "bg-indigo-100 self-end"
-                        : "bg-white self-start"
+                      isSender ? "bg-indigo-100" : "bg-white"
                     }`}
                   >
                     <div className="text-left">{msg.message}</div>
@@ -180,13 +185,15 @@ export default function Chatbox() {
           })}
         </div>
 
-        <div className="text-sm text-gray-500 mb-2 h-5 px-1">
+        {/* Typing Indicator */}
+        <div className="text-sm text-gray-500 h-5 px-3 mb-1">
           {isTyping ? "Typing..." : "\u00A0"}
         </div>
 
+        {/* Input Area */}
         <form
           onSubmit={handleSubmit}
-          className="flex items-end gap-2 bg-white p-2 rounded-lg shadow-md"
+          className="flex items-end gap-2 bg-white p-2 rounded-lg shadow-md mx-2 mb-1"
         >
           <textarea
             value={input}
@@ -198,7 +205,7 @@ export default function Chatbox() {
               }
             }}
             placeholder="Type your message..."
-            className="flex-1 px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none min-h-[4rem] max-h-[30vh] overflow-y-auto"
+            className="flex-1 px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none min-h-[3.5rem] max-h-[30vh] overflow-y-auto"
             autoComplete="off"
           />
           <button
