@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import { useNavigate } from "react-router-dom";
 
+let existingSocket = null; // <-- added to track global instance
+
 export default function useGlobalNotifications(token) {
   const socketRef = useRef(null);
   const navigate = useNavigate();
@@ -9,9 +11,17 @@ export default function useGlobalNotifications(token) {
   useEffect(() => {
     if (!token) return;
 
+    if (existingSocket) {
+      console.log("Socket already exists, reusing:", existingSocket.id);
+      socketRef.current = existingSocket;
+      return;
+    }
+
     socketRef.current = io(process.env.REACT_APP_API_BASE, {
       auth: { token },
     });
+
+    existingSocket = socketRef.current;
 
     socketRef.current.on("connect", () => {
       console.log("Global socket connected:", socketRef.current.id);
@@ -20,8 +30,7 @@ export default function useGlobalNotifications(token) {
     socketRef.current.on("newMessage", (message) => {
       if (Notification.permission === "granted" && document.visibilityState !== "visible") {
         const notification = new Notification("New Message", {
-          // body: `${message.sender_name}: ${message.message}`,
-          body: 'New Message',
+          body: `${message.sender_name}: New Message`,
           icon: "/icon.png",
         });
 
@@ -39,6 +48,7 @@ export default function useGlobalNotifications(token) {
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
+        existingSocket = null; // reset on unmount
       }
     };
   }, [token, navigate]);

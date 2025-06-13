@@ -3,12 +3,22 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { getFriends } from "../../api";
 import { motion } from "framer-motion";
+import useGlobalNotifications from "../../hooks/useGlobalNotifications";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const token = localStorage.getItem("jwt");
   const [friends, setFriends] = useState([]);
   const [user, setUser] = useState(null);
+  const [unreadMap, setUnreadMap] = useState({});
+
+  // Receive new message alert to update unreadMap
+  useGlobalNotifications(token, (fromUserId) => {
+    setUnreadMap((prev) => ({
+      ...prev,
+      [fromUserId]: true,
+    }));
+  });
 
   useEffect(() => {
     const fetchFriends = async () => {
@@ -19,9 +29,8 @@ export default function Dashboard() {
             autoClose: 3000,
           });
         } else {
-          // console.log('User: ',response.data.user)
           setFriends(response.data.data);
-          setUser(response.data.user)
+          setUser(response.data.user);
         }
       } catch (error) {
         const errorMessage =
@@ -50,6 +59,13 @@ export default function Dashboard() {
   };
 
   const handleUserClick = (user) => {
+    // Mark as read when opening chat
+    setUnreadMap((prev) => {
+      const updated = { ...prev };
+      delete updated[user.id];
+      return updated;
+    });
+
     navigate(`/chatbox/${user.id}?name=${encodeURIComponent(user.name)}`);
   };
 
@@ -64,10 +80,12 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-tr from-indigo-50 to-white py-8 px-4">
       <div className="max-w-4xl mx-auto">
-        {/* Header: Welcome & Buttons */}
+        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-indigo-700">{user ? `Welcome Back ${user?.name.trim().split(' ')[0]}!` : `Welcome Back!`}</h1>
+            <h1 className="text-3xl font-bold text-indigo-700">
+              {user ? `Welcome Back ${user?.name.trim().split(" ")[0]}!` : "Welcome Back!"}
+            </h1>
             <p className="text-gray-500 text-sm sm:text-base">
               Stay connected and chat with your friends
             </p>
@@ -95,7 +113,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Friends Section */}
+        {/* Friends List */}
         <h2 className="text-xl font-semibold text-gray-700 mb-4">Your Friends:</h2>
 
         {friends.length === 0 ? (
@@ -108,7 +126,7 @@ export default function Dashboard() {
               <motion.div
                 key={user.id}
                 onClick={() => handleUserClick(user)}
-                className="bg-white p-4 rounded-xl shadow-md cursor-pointer hover:shadow-lg transition duration-300"
+                className="bg-white p-4 rounded-xl shadow-md cursor-pointer hover:shadow-lg transition duration-300 relative"
                 title={`Chat with ${user.name}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -123,6 +141,11 @@ export default function Dashboard() {
                     <p className="text-sm text-gray-500">{user.email}</p>
                   </div>
                 </div>
+
+                {/* 🔴 Unread Indicator */}
+                {unreadMap[user.id] && (
+                  <span className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full animate-bounce"></span>
+                )}
               </motion.div>
             ))}
           </div>
