@@ -25,7 +25,7 @@ function App() {
   useGlobalNotifications(token);
 
   return (
-    <div className="h-screen overflow-hidden bg-white text-gray-800">
+    <div className="h-screen bg-white text-gray-800">
       <Routes>
         <Route path='/' element={<Login />} />
         <Route path='/register' element={<Register />} />

@@ -9,5 +9,8 @@ body,
   margin: 0;
   padding: 0;
   overflow: hidden;
-  overscroll-behavior: none; /* prevent scroll bounce on mobile */
+}
+
+body {
+  overscroll-behavior: none;
 }
