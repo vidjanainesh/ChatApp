@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { getFriends } from "../../api";
+import { getFriends, getUserDetails } from "../../api";
 import { motion } from "framer-motion";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const token = localStorage.getItem("jwt");
   const [friends, setFriends] = useState([]);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     const fetchFriends = async () => {
@@ -18,7 +19,9 @@ export default function Dashboard() {
             autoClose: 3000,
           });
         } else {
+          // console.log('User: ',response.data.user)
           setFriends(response.data.data);
+          setUser(response.data.user)
         }
       } catch (error) {
         const errorMessage =
@@ -64,7 +67,7 @@ export default function Dashboard() {
         {/* Header: Welcome & Buttons */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-indigo-700">Welcome Back!</h1>
+            <h1 className="text-3xl font-bold text-indigo-700">{user ? `Welcome Back ${user?.name.trim().split(' ')[0]}!` : `Welcome Back!`}</h1>
             <p className="text-gray-500 text-sm sm:text-base">
               Stay connected and chat with your friends
             </p>

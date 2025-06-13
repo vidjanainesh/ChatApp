@@ -1,4 +1,3 @@
-// src/components/authentication/VerifyToken.js
 import React, { useState } from "react";
 import { verifyToken } from "../../api";
 import { toast } from "react-toastify";

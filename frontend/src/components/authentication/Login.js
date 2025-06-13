@@ -1,5 +1,4 @@
-// src/components/authentication/Login.js
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { loginUser } from "../../api";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
@@ -10,6 +9,14 @@ export default function Login() {
   const navigate = useNavigate();
   const [user, setUser] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('jwt');
+    if(token) {
+      navigate('/dashboard')
+    }
+  });
+
 
   const handleChange = (e) =>
     setUser({ ...user, [e.target.name]: e.target.value });

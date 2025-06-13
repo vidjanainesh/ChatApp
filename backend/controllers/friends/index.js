@@ -156,9 +156,16 @@ const getFriends = async (req, res) => {
       };
     });
 
+    const userObj = {
+        id: user.id,
+        name: user.name,
+        email: user.email
+    }
+
     return res.status(200).json({
       status: "success",
       message: "Fetched all friends",
+      user: userObj,
       data: friendList
     });
 

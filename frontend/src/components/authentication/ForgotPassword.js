@@ -1,4 +1,3 @@
-// src/components/authentication/ForgetPassword.js
 import React, { useState } from "react";
 import { forgetPassword } from "../../api";
 import { toast } from "react-toastify";
