@@ -25,29 +25,28 @@ function App() {
   useGlobalNotifications(token);
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <Routes>
-          <Route path='/' element={<Login/>} />
-          <Route path='/register' element={<Register/>} />
-          <Route path='/dashboard' element={<Dashboard/>} />
-          <Route path='/forgot-password' element={<ForgotPassword/>} />
-          <Route path='/verify-token' element={<VerifyToken/>} />
-          <Route path='/reset-password' element={<ResetPassword/>} />
-          <Route path='/chatbox/:id' element={<Chatbox/>} />
-          <Route path='/find-people' element={<FindPeople/>} />
-          <Route path='/friend-requests' element={<FriendRequests/>} />
-        </Routes>          
-      </header>
+    <div className="h-screen overflow-hidden bg-white text-gray-800">
+      <Routes>
+        <Route path='/' element={<Login />} />
+        <Route path='/register' element={<Register />} />
+        <Route path='/dashboard' element={<Dashboard />} />
+        <Route path='/forgot-password' element={<ForgotPassword />} />
+        <Route path='/verify-token' element={<VerifyToken />} />
+        <Route path='/reset-password' element={<ResetPassword />} />
+        <Route path='/chatbox/:id' element={<Chatbox />} />
+        <Route path='/find-people' element={<FindPeople />} />
+        <Route path='/friend-requests' element={<FriendRequests />} />
+      </Routes>
+
       <ToastContainer 
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          closeOnClick
-          pauseOnHover
-          draggable
-          theme="light"
-        />
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        closeOnClick
+        pauseOnHover
+        draggable
+        theme="light"
+      />
     </div>
 
     
