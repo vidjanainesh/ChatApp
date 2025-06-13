@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { getFriends, getUserDetails } from "../../api";
+import { getFriends } from "../../api";
 import { motion } from "framer-motion";
 
 export default function Dashboard() {
