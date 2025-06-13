@@ -121,108 +121,112 @@ export default function Chatbox() {
   const formatDate = (ts) => new Date(ts).toISOString().split("T")[0];
 
   return (
-    <div className="min-h-screen bg-gradient-to-tr from-white to-indigo-50 p-4">
-      <div className="w-full max-w-md mx-auto flex flex-col h-[90vh] px-2 sm:px-4">
-        <div className="flex items-center justify-between mb-4">
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="text-indigo-600 hover:underline text-sm"
-          >
-            ← Back
-          </button>
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
-            {/* {name.split().length === 0 ? `Chat with ${name}` : `Chat with ${name.split(' ')[0]}`} */}
-            Chat with {name.split(' ')[0]}
-          </h2>
-          <div className="w-12" />
-        </div>
-
-        <div
-          className="flex-1 overflow-y-auto overflow-x-hidden space-y-2 px-2 pb-4 scrollbar-thin scrollbar-thumb-indigo-400 scrollbar-track-transparent"
-          ref={chatWindowRef}
+  <div className="h-full bg-gradient-to-tr from-white to-indigo-50 p-2 sm:p-4">
+    <div className="w-full max-w-md mx-auto flex flex-col h-full px-2 sm:px-4 overflow-hidden rounded-xl shadow bg-white">
+      {/* Top Bar */}
+      <div className="flex items-center justify-between py-2">
+        <button
+          onClick={() => navigate("/dashboard")}
+          className="text-indigo-600 hover:underline text-sm"
         >
-          {messages.map((msg, i) => {
-            const isSender = msg.sender_id === loggedInUserId;
-            const currentDate = formatDate(msg.timestamp);
-            const prevDate =
-              i > 0 ? formatDate(messages[i - 1].timestamp) : null;
+          ← Back
+        </button>
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-800 truncate">
+          Chat with {name?.split(" ")[0]}
+        </h2>
+        <div className="w-12" />
+      </div>
 
-            return (
-              <React.Fragment key={msg.id}>
-                {prevDate !== currentDate && (
-                  <div className="flex items-center justify-center my-4">
-                    <hr className="flex-1 border-gray-300" />
-                    <span className="px-3 text-xs text-gray-500">
-                      {currentDate}
-                    </span>
-                    <hr className="flex-1 border-gray-300" />
-                  </div>
-                )}
-                <div
-                  className={`flex ${
-                    isSender ? "justify-end" : "justify-start"
+      {/* Message List */}
+      <div
+        ref={chatWindowRef}
+        className="flex-1 overflow-y-auto overflow-x-hidden space-y-2 px-1 pb-4 scrollbar-thin scrollbar-thumb-indigo-400 scrollbar-track-transparent"
+      >
+        {messages.map((msg, i) => {
+          const isSender = msg.sender_id === loggedInUserId;
+          const currentDate = formatDate(msg.timestamp);
+          const prevDate =
+            i > 0 ? formatDate(messages[i - 1].timestamp) : null;
+
+          return (
+            <React.Fragment key={msg.id}>
+              {prevDate !== currentDate && (
+                <div className="flex items-center justify-center my-4">
+                  <hr className="flex-1 border-gray-300" />
+                  <span className="px-3 text-xs text-gray-500">
+                    {currentDate}
+                  </span>
+                  <hr className="flex-1 border-gray-300" />
+                </div>
+              )}
+              <div
+                className={`flex ${
+                  isSender ? "justify-end" : "justify-start"
+                }`}
+              >
+                <motion.div
+                  initial={{ opacity: 0, x: isSender ? 50 : -50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className={`p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap ${
+                    isSender
+                      ? "bg-indigo-100 self-end"
+                      : "bg-white self-start"
                   }`}
                 >
-                  <motion.div
-                    initial={{ opacity: 0, x: isSender ? 50 : -50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className={`p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap ${
-                      isSender
-                        ? "bg-indigo-100 self-end" // removed text-right
-                        : "bg-white self-start"
-                    }`}
-                  >
-                    <div className="text-left">{msg.message}</div> {/* ✅ force left text alignment */}
-                    <div className="text-[10px] text-gray-400 mt-1 text-right">
-                      {formatTime(msg.timestamp)}
-                    </div>
-                  </motion.div>
-                </div>
-              </React.Fragment>
-            );
-          })}
-        </div>
-
-        <div className="text-sm text-gray-500 mb-2 h-5 px-1">
-          {isTyping ? "Typing..." : "\u00A0"}
-        </div>
-
-        <form
-          onSubmit={handleSubmit}
-          className="flex items-end gap-2 bg-white p-2 rounded-lg shadow-md"
-        >
-          <textarea
-            value={input}
-            onChange={handleInputChange}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit(e);
-              }
-            }}
-            placeholder="Type your message..."
-            className="flex-1 px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none min-h-[4rem] max-h-[10rem] overflow-y-auto"
-            autoComplete="off"
-          />
-          <button
-            type="submit"
-            className="bg-indigo-500 hover:bg-indigo-600 text-white p-2 rounded-full transition"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-              width="20"
-              height="20"
-            >
-              <path d="M2 21l21-9L2 3v7l15 2-15 2v7z" />
-            </svg>
-          </button>
-        </form>
+                  <div className="text-left">{msg.message}</div>
+                  <div className="text-[10px] text-gray-400 mt-1 text-right">
+                    {formatTime(msg.timestamp)}
+                  </div>
+                </motion.div>
+              </div>
+            </React.Fragment>
+          );
+        })}
       </div>
+
+      {/* Typing Indicator */}
+      <div className="text-sm text-gray-500 mb-1 h-5 px-1">
+        {isTyping ? "Typing..." : "\u00A0"}
+      </div>
+
+      {/* Input */}
+      <form
+        onSubmit={handleSubmit}
+        className="relative flex items-end gap-2 bg-white p-2 rounded-lg shadow-md"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <textarea
+          value={input}
+          onChange={handleInputChange}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSubmit(e);
+            }
+          }}
+          placeholder="Type your message..."
+          className="flex-1 px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none min-h-[3.5rem] max-h-[10rem] overflow-y-auto"
+          autoComplete="off"
+        />
+        <button
+          type="submit"
+          className="bg-indigo-500 hover:bg-indigo-600 text-white p-2 rounded-full transition"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+          >
+            <path d="M2 21l21-9L2 3v7l15 2-15 2v7z" />
+          </svg>
+        </button>
+      </form>
     </div>
-  );
+  </div>
+);
 }
