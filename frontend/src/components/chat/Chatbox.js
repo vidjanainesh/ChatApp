@@ -123,10 +123,10 @@ export default function Chatbox() {
   const formatDate = (ts) => new Date(ts).toISOString().split("T")[0];
 
   return (
-    <div className="h-screen w-screen flex justify-center bg-gradient-to-tr from-white to-indigo-50 p-2 sm:p-4">
-      <div className="flex flex-col w-full max-w-md h-full min-h-0 overflow-hidden">
+    <div className="h-screen w-screen flex justify-center bg-gradient-to-tr from-white to-indigo-50 p-2 sm:p-4 overflow-hidden">
+      <div className="flex flex-col w-full max-w-md h-full min-h-0 overflow-hidden rounded-xl shadow-md bg-white">
         {/* Top Bar */}
-        <div className="flex items-center justify-between px-2 mb-2">
+        <div className="flex items-center justify-between px-3 py-2 border-b">
           <button
             onClick={() => navigate("/dashboard")}
             className="text-indigo-600 hover:underline text-sm"
@@ -134,15 +134,15 @@ export default function Chatbox() {
             ← Back
           </button>
           <h2 className="text-lg sm:text-xl font-semibold text-gray-800 truncate">
-            Chat with {name.split(" ")[0]}
+            Chat with {name?.split(" ")[0]}
           </h2>
           <div className="w-12" />
         </div>
 
-        {/* Message List */}
+        {/* Scrollable Message List */}
         <div
           ref={chatWindowRef}
-          className="flex-1 min-h-0 overflow-y-auto px-2 pb-4 space-y-2 scrollbar-thin scrollbar-thumb-indigo-400"
+          className="flex-1 min-h-0 overflow-y-auto px-3 py-2 space-y-2 scrollbar-thin scrollbar-thumb-indigo-400"
         >
           {messages.map((msg, i) => {
             const isSender = msg.sender_id === loggedInUserId;
@@ -168,10 +168,10 @@ export default function Chatbox() {
                 >
                   <motion.div
                     initial={{ opacity: 0, x: isSender ? 50 : -50 }}
-                    animate={{ opacity: 1, x: 0 }}
+                    animate={{ opacitysssss: 1, x: 0 }}
                     transition={{ duration: 0.2 }}
                     className={`p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap ${
-                      isSender ? "bg-indigo-100" : "bg-white"
+                      isSender ? "bg-indigo-100" : "bg-gray-100"
                     }`}
                   >
                     <div className="text-left">{msg.message}</div>
@@ -186,14 +186,14 @@ export default function Chatbox() {
         </div>
 
         {/* Typing Indicator */}
-        <div className="text-sm text-gray-500 h-5 px-3 mb-1">
+        <div className="text-sm text-gray-500 px-3 py-1 h-5">
           {isTyping ? "Typing..." : "\u00A0"}
         </div>
 
-        {/* Input Area */}
+        {/* Fixed Input Area */}
         <form
           onSubmit={handleSubmit}
-          className="flex items-end gap-2 bg-white p-2 rounded-lg shadow-md mx-2 mb-1"
+          className="flex items-end gap-2 px-3 py-2 border-t"
         >
           <textarea
             value={input}
