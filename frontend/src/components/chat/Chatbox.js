@@ -122,7 +122,7 @@ export default function Chatbox() {
 
   return (
     <div className="min-h-screen bg-gradient-to-tr from-white to-indigo-50 p-4">
-      <div className="w-full max-w-md mx-auto flex flex-col h-[88vh] sm:h-[95vh] px-2 sm:px-4 rounded-lg shadow-md">
+      <div className="w-full max-w-md mx-auto flex flex-col h-[85vh] sm:h-[95vh] px-2 sm:px-4 rounded-lg shadow-md">
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => navigate("/dashboard")}
