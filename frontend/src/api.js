@@ -50,6 +50,15 @@ export const getMessages = (id, token) => {
     );
 }
 
+export const getUnreadMessages = (token) => {
+  return axios.get(`${API_BASE}/chat/unread`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
+
 export const getUsers = (token) => {
     return axios.get(`${API_BASE}/chat/get`,
         {

@@ -46,7 +46,7 @@ const sendMessage = async (req, res) => {
             sender_name: user.name || user.email || "Unknown",
         };
 
-        io.to(receiverRoom).emit("newMessage", messageWithSender);
+        io.to(receiverRoom).emit("newMessage", {message: messageWithSender, fromUserId: user.id});
         io.to(senderRoom).emit("newMessage", messageWithSender);
         
         return res.status(201).json({
@@ -191,6 +191,17 @@ const getMessages = async (req, res) => {
             order: [['timestamp', 'ASC']]
         });
 
+        await Message.update(
+            { is_read: true },
+            {
+                where: {
+                    sender_id: id,
+                    receiver_id: user.id,
+                    is_read: false,
+                },
+            }
+        );
+
         return res.status(201).json({
             status: "success",
             message: "All messages retrieved between the two people",
@@ -205,8 +216,44 @@ const getMessages = async (req, res) => {
     }
 }
 
+const getUnreadMessages = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const unreadCounts = await Message.findAll({
+      where: {
+        receiver_id: userId,
+        is_read: false
+      },
+      attributes: [
+        'sender_id',
+        [Sequelize.fn('COUNT', Sequelize.col('id')), 'unreadCount']
+      ],
+      group: ['sender_id']
+    });
+
+    const unreadMap = {};
+    unreadCounts.forEach(row => {
+      unreadMap[row.sender_id] = parseInt(row.get('unreadCount'));
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      data: unreadMap
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      status: 'error',
+      message: error.message
+    });
+  }
+};
+
+
 module.exports = {
     sendMessage,
     getMessages,
-    getUsers
+    getUsers,
+    getUnreadMessages
 }

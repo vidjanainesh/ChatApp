@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 let existingSocket = null; // <-- added to track global instance
 
-export default function useGlobalNotifications(token) {
+export default function useGlobalNotifications(token, onNewMessageAlert) {
   const socketRef = useRef(null);
   const navigate = useNavigate();
 
@@ -27,7 +27,10 @@ export default function useGlobalNotifications(token) {
       console.log("Global socket connected:", socketRef.current.id);
     });
 
-    socketRef.current.on("newMessage", (message) => {
+    socketRef.current.on("newMessage", ({message, fromUserId}) => {
+      if (typeof onNewMessageAlert === "function") {
+        onNewMessageAlert(fromUserId);
+      }
       if (Notification.permission === "granted" && document.visibilityState !== "visible") {
         const notification = new Notification("New Message", {
           body: `${message.sender_name}: New Message`,

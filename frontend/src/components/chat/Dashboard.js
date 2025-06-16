@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { getFriends } from "../../api";
+import { getFriends, getUnreadMessages } from "../../api";
 import { motion } from "framer-motion";
 import useGlobalNotifications from "../../hooks/useGlobalNotifications";
 
@@ -21,7 +21,7 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    const fetchFriends = async () => {
+    const fetchFriendsAndUnread = async () => {
       try {
         const response = await getFriends(token);
         if (response.data.status !== "success") {
@@ -31,6 +31,12 @@ export default function Dashboard() {
         } else {
           setFriends(response.data.data);
           setUser(response.data.user);
+
+          // Fetch unread messages after friends are set
+          const unreadRes = await getUnreadMessages(token);
+          if (unreadRes.data.status === "success") {
+            setUnreadMap(unreadRes.data.data || {});
+          }
         }
       } catch (error) {
         const errorMessage =
@@ -49,7 +55,7 @@ export default function Dashboard() {
       }
     };
 
-    fetchFriends();
+    fetchFriendsAndUnread();
   }, [token, navigate]);
 
   const handleLogout = () => {
