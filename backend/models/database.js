@@ -1,5 +1,8 @@
 const { Sequelize } = require('sequelize');
+const dns = require('dns');
 require('dotenv').config();
+
+dns.setDefaultResultOrder('ipv4first');
 
 const db = process.env.DB || 'development';
 const config = require('../config/config')[db];
