@@ -5,10 +5,10 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-
-const sequelize = require('./models/database');
-const indexRoutes = require('./routes/index');
 const morgan = require('morgan');
+
+const sequelize = require('./app/models/database');
+const indexRoutes = require('./routes/index');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

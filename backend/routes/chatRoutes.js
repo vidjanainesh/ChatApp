@@ -6,12 +6,15 @@ const {
     getMessages,
     getUsers,
     getUnreadMessages
-} = require('../controllers/chat');
+} = require('../app/controllers/chat');
 
-const authMiddleware = require('../middlewares/authMiddleware');
+const authMiddleware = require('../app/middlewares/authMiddleware');
 
-router.post('/send', authMiddleware, sendMessage);
-router.get('/get/:id', authMiddleware, getMessages);
+const chatValidationRules = require('../app/middlewares/validators/chatValidationRules');
+const handleValidation = require('../app/middlewares/validators/handleValidation');
+
+router.post('/send', authMiddleware, chatValidationRules.sendMessage, handleValidation, sendMessage);
+router.get('/get/:id', authMiddleware, chatValidationRules.getMessages, handleValidation, getMessages);
 router.get('/unread', authMiddleware, getUnreadMessages);
 router.get('/get', authMiddleware, getUsers);
 

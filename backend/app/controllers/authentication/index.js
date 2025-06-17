@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const User = require('../../models/users');
+const User = require('../../../app/models/users');
 
 const bcrypt = require('bcrypt');
 
@@ -13,7 +13,7 @@ const register = async (req, res) => {
         // console.log(hashedPassword);
         
         const user = await User.findOne({
-            where: {email: email},
+            where: {email: email.trim().toLowerCase()},
             raw: true
         });
 
@@ -22,8 +22,8 @@ const register = async (req, res) => {
         }
         
         await User.create({
-            name,
-            email,
+            name: name.trim(),
+            email: email.trim().toLowerCase(),
             password: hashedPassword,
         });
         

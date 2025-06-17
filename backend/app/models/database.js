@@ -5,7 +5,7 @@ require('dotenv').config();
 dns.setDefaultResultOrder('ipv4first');
 
 const db = process.env.DB || 'development';
-const config = require('../config/config')[db];
+const config = require('../../config/config')[db];
 
 // console.log(`DB: ${db}`);
 // console.log('Config:', config);

@@ -6,12 +6,15 @@ const {
     getAllFriendReq,
     manageFriendReq,
     getFriends
-} = require('../controllers/friends');
+} = require('../app/controllers/friends');
 
-const authMiddleware = require('../middlewares/authMiddleware');
+const authMiddleware = require('../app/middlewares/authMiddleware');
 
-router.post('/send', authMiddleware, sendFriendReq);
-router.post('/update', authMiddleware, manageFriendReq);
+const friendValidationRules = require('../app/middlewares/validators/friendValidationRules');
+const handleValidation = require('../app/middlewares/validators/handleValidation');
+
+router.post('/send', authMiddleware, friendValidationRules.sendFriendReq, handleValidation, sendFriendReq);
+router.post('/update', authMiddleware, friendValidationRules.manageFriendReq, handleValidation, manageFriendReq);
 router.get('/requests', authMiddleware, getAllFriendReq);
 router.get('/', authMiddleware, getFriends);
 

@@ -1,5 +1,5 @@
 const nodemailer = require('nodemailer');
-const User = require('../../models/users');
+const User = require('../../../app/models/users');
 const { token } = require('morgan');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -118,9 +118,9 @@ const resetPassword = async (req, res) => {
     try {
 
         const {password} = req.body;
-        const token = req.headers.authorization?.split(' ')[1]; // Bearer <token>
-        console.log(password);
-        console.log(token);
+        const token = req.headers.authorization?.split(' ')[1]; // Bearer token
+        // console.log(password);
+        // console.log(token);
         if(!token) {
             return res.status(401).json({ 
                 status: "error", 
