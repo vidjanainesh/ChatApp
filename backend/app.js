@@ -13,17 +13,35 @@ const indexRoutes = require('./routes/index');
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(cors({
-  origin: '*',
-}));
+const allowedOrigins = [
+  "http://localhost:3001", 
+  "https://chatapp-frontend-llqt.onrender.com", 
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+};
+app.use(cors(corsOptions));
 
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by Socket.IO CORS"));
+      }
+    },
     methods: ['GET', 'POST'],
-    credentials: false,
-    optionsSuccessStatus: 200,
+    credentials: true,
   },
 });
 
