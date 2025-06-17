@@ -1,66 +1,78 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
+import { initSocket } from "./socketManager";
 import { useNavigate } from "react-router-dom";
-import { io } from "socket.io-client";
 
-export default function useSocket({ id, token, loggedInUserId, setMessages, setIsTyping }) {
-  const socketRef = useRef(null);
+export default function useSocket({ token, chatUserId, loggedInUserId, setMessages, setIsTyping, onNewMessageAlert }) {
   const navigate = useNavigate();
-
+  const [socketInstance, setSocketInstance] = useState(null);
   useEffect(() => {
     if (!token) return;
 
-    socketRef.current = io(process.env.REACT_APP_API_BASE, {
-      auth: { token },
+    const socket = initSocket(token);
+
+    setSocketInstance(socket);
+
+    if (!socket) return;
+
+    socket.off("connect");
+    socket.on("connect", () => {
+      console.log("Socket connected:", socket.id);
     });
 
-    socketRef.current.on("connect", () => {
-      console.log("Socket connected:", socketRef.current.id);
-    });
+    socket.on("newMessage", (data) => {
+      const message = data?.message || data;
+      const fromUserId = data?.fromUserId || message.sender_id;
 
-    socketRef.current.on("newMessage", (newMessage) => {
-      const receiverIdStr = String(newMessage.receiver_id);
-      const senderIdStr = String(newMessage.sender_id);
+      // 1. Push to chat messages if it's the active conversation
+      if (chatUserId && setMessages) {
+        const receiverIdStr = String(message.receiver_id);
+        const senderIdStr = String(message.sender_id);
 
-      if (
-        (senderIdStr === String(loggedInUserId) && receiverIdStr === id) ||
-        (receiverIdStr === String(loggedInUserId) && senderIdStr === id)
-      ) {
-        setMessages((prev) => [...prev, newMessage]);
+        if (
+          (senderIdStr === String(loggedInUserId) && receiverIdStr === chatUserId) ||
+          (receiverIdStr === String(loggedInUserId) && senderIdStr === chatUserId)
+        ) {
+          setMessages((prev) => [...prev, message]);
+        }
       }
 
+      // 2. Global notification logic
+      if (
+        typeof onNewMessageAlert === "function" &&
+        fromUserId !== String(loggedInUserId)
+      ) {
+        onNewMessageAlert(fromUserId);
+      }
+
+      // 3. Push browser notification
       if (
         Notification.permission === "granted" &&
         document.visibilityState !== "visible"
       ) {
-        const notification = new Notification("New Message", {
-          // body: `${newMessage.sender_name}: ${newMessage.message}`,
-          body: 'New Message',
+        const notif = new Notification("New Message", {
+          body: `${message.sender_name}: New Message`,
           icon: "/icon.png",
         });
 
-        notification.onclick = () => {
+        notif.onclick = () => {
           window.focus();
-          navigate(`/chatbox/${newMessage.sender_id}?name=${encodeURIComponent(newMessage.sender_name)}`);
+          navigate(`/chatbox/${message.sender_id}?name=${encodeURIComponent(message.sender_name || "User")}`);
         };
       }
     });
 
-    socketRef.current.on("disconnect", (reason) => {
-      console.warn("Socket disconnected:", reason);
-    });
-
-    socketRef.current.on("typing", ({ senderId, receiverId, isTyping }) => {
-      if (senderId === parseInt(id) && receiverId === loggedInUserId) {
+    socket.on("typing", ({ senderId, receiverId, isTyping }) => {
+      if (setIsTyping && senderId === parseInt(chatUserId) && receiverId === loggedInUserId) {
         setIsTyping(isTyping);
       }
     });
 
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
+      // Detach only listeners, not socket itself
+      socket.off("newMessage");
+      socket.off("typing");
     };
-  }, [id, token, loggedInUserId]);
+  }, [token, chatUserId, loggedInUserId, onNewMessageAlert]);
 
-  return socketRef;
+  return socketInstance;
 }

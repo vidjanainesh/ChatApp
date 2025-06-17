@@ -1,5 +1,12 @@
 const { Op } = require("sequelize");
 const { Friends, User } = require("../../models")
+const {
+  successResponse,
+  errorResponse,
+  badRequestResponse,
+  notFoundResponse,
+  conflictResponse
+} = require("../../helper/response");
 
 const sendFriendReq = async (req, res) => {
     try {
@@ -7,7 +14,7 @@ const sendFriendReq = async (req, res) => {
         const user = req.user;
 
         if (user.id === id) {
-            return res.status(400).json({ status: "error", message: "You can't send a friend request to yourself." });
+            return badRequestResponse(res, "You can't send a friend request to yourself.");
         }
 
         const existing = await Friends.findOne({
@@ -21,10 +28,7 @@ const sendFriendReq = async (req, res) => {
         });
 
         if (existing) {
-            return res.status(409).json({
-                status: "error",
-                message: "Friend request already exists or you are already friends."
-            });
+            return conflictResponse(res, "Friend request already exists or you are already friends.");
         }
         
         const obj = {
@@ -35,16 +39,10 @@ const sendFriendReq = async (req, res) => {
 
         await Friends.create(obj);
 
-        return res.status(200).json({
-            status: "success",
-            message: "Friend request sent"
-        });
+        return successResponse(res, {}, "Friend request sent");
 
     } catch (error) {
-        return res.status(500).json({
-            status: "error",
-            message: `${error}`
-        })
+        return errorResponse(res, error.message, 500)
     }
 }
 
@@ -64,21 +62,12 @@ const manageFriendReq = async (req, res) => {
         )
 
         if(result[0] === 0) {
-            return res.status(404).json({
-                status: "error",
-                message: "Friend request not found"
-            })
+            return notFoundResponse(res, "Friend request not found");
         }
 
-        return res.status(200).json({
-            status: "success",
-            message: "Friend request status updated"
-        })
+        return successResponse(res, {}, "Friend request status updated");
     } catch (error) {
-        return res.status(500).json({
-            status: "error",
-            message: error.message
-        })
+        return errorResponse(res, error.message, 500)
     }
 }
 
@@ -103,17 +92,10 @@ const getAllFriendReq = async (req, res) => {
             ]
         });
 
-        return res.status(200).json({
-            status: "success",
-            message: "Fetched all req",
-            data: result
-        })
+        return successResponse(res, result, "Fetched all req")
     } catch (error) {
         console.log("Error: ", error);
-        return res.status(500).json({
-            status: "error",
-            message: error.message
-        })
+        return errorResponse(res, error.message, 500)
     }
 }
 
@@ -162,18 +144,13 @@ const getFriends = async (req, res) => {
         email: user.email
     }
 
-    return res.status(200).json({
-      status: "success",
-      message: "Fetched all friends",
+    return successResponse(res, {
       user: userObj,
       data: friendList
-    });
+    }, "Fetched all friends");
 
   } catch (error) {
-    return res.status(500).json({
-      status: "error",
-      message: error.message
-    });
+    return errorResponse(res, error.message, 500);
   }
 };
 

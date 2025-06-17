@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { getMessages, sendMessage } from "../../api";
 import { toast } from "react-toastify";
@@ -31,12 +31,14 @@ export default function Chatbox() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
+  const stableAlert = useCallback( () => {}, []);
   const socketRef = useSocket({
-    id,
     token,
+    chatUserId: id,
     loggedInUserId,
     setMessages,
     setIsTyping,
+    onNewMessageAlert: stableAlert, // prevents global notification while inside Chatbox
   });
 
   const fetchMessages = async () => {
@@ -70,9 +72,8 @@ export default function Chatbox() {
 
   const handleInputChange = (e) => {
     setInput(e.target.value);
-
-    if (socketRef.current) {
-      socketRef.current.emit("typing", {
+    if (socketRef) {
+      socketRef.emit("typing", {
         senderId: loggedInUserId,
         receiverId: parseInt(id),
         isTyping: true,
@@ -81,7 +82,7 @@ export default function Chatbox() {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
       typingTimeoutRef.current = setTimeout(() => {
-        socketRef.current.emit("typing", {
+        socketRef.emit("typing", {
           senderId: loggedInUserId,
           receiverId: parseInt(id),
           isTyping: false,
@@ -95,6 +96,13 @@ export default function Chatbox() {
     if (!input.trim()) return;
 
     try {
+      if (socketRef) {
+        socketRef.emit("typing", {
+          senderId: loggedInUserId,
+          receiverId: parseInt(id),
+          isTyping: false,
+        });
+      }
       const res = await sendMessage(input, id, token);
       if (res.data.status === "success") {
         setInput("");

@@ -9,20 +9,16 @@ import VerifyToken from './components/authentication/VerifyToken';
 import ResetPassword from './components/authentication/ResetPassword';
 import Chatbox from './components/chat/Chatbox';
 import { useEffect } from 'react';
-import useGlobalNotifications from './hooks/useGlobalNotifications';
 import FindPeople from './components/chat/FindPeople';
 import FriendRequests from './components/chat/FriendRequests';
 
 function App() {
-
-  const token = localStorage.getItem("jwt");
 
   useEffect(() => {
     if ("Notification" in window && Notification.permission !== "granted") {
       Notification.requestPermission();
     }
   }, []);
-  useGlobalNotifications(token);
 
   return (
     <div className="w-screen h-screen flex flex-col overflow-hidden bg-white text-gray-800">

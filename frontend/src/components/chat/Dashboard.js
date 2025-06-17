@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { getFriends, getUnreadMessages } from "../../api";
 import { motion } from "framer-motion";
-import useGlobalNotifications from "../../hooks/useGlobalNotifications";
+import useSocket from "../../hooks/useSocket";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -12,12 +12,19 @@ export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [unreadMap, setUnreadMap] = useState({});
 
-  // Receive new message alert to update unreadMap
-  useGlobalNotifications(token, (fromUserId) => {
-    setUnreadMap((prev) => ({
-      ...prev,
-      [fromUserId]: true,
-    }));
+  // Use socket globally just for notifications
+  useSocket({
+    token,
+    chatUserId: null,
+    loggedInUserId: null,
+    setMessages: null,
+    setIsTyping: null,
+    onNewMessageAlert: (fromUserId) => {
+      setUnreadMap((prev) => ({
+        ...prev,
+        [fromUserId]: true,
+      }));
+    },
   });
 
   useEffect(() => {
@@ -29,8 +36,8 @@ export default function Dashboard() {
             autoClose: 3000,
           });
         } else {
-          setFriends(response.data.data);
-          setUser(response.data.user);
+          setFriends(response.data.data.data);
+          setUser(response.data.data.user);
 
           // Fetch unread messages after friends are set
           const unreadRes = await getUnreadMessages(token);

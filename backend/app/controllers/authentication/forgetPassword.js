@@ -4,6 +4,12 @@ const { token } = require('morgan');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
+const {
+  successResponse,
+  errorResponse,
+  unAuthorizedResponse
+} = require("../../helper/response");
+
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -30,10 +36,7 @@ const forgetPassword = async (req, res) => {
         const user = await User.findOne({where: {email}});
         
         if(!user) {
-            return res.status(401).json({
-                status: "error",
-                message: "No such users found"
-            })
+            return unAuthorizedResponse(res, "No such users found");
         };
 
         user.token = token;
@@ -65,16 +68,10 @@ const forgetPassword = async (req, res) => {
         await transporter.sendMail(mailOptions);
         
         // const user = await User.findOne({email});
-        res.status(200).json({
-            status: "success",
-            message: "Check mail for OTP"
-        });   
+        return successResponse(res, {}, "Check mail for OTP");   
 
     } catch (error) {
-        res.status(500).json({
-            status: "error",
-            message: error.message
-        }); 
+       return errorResponse(res, error.message, 500);
     }
 }
 
@@ -86,7 +83,7 @@ const verifyToken = async (req, res) => {
             where: {email},
             raw: true
         });
-        console.log(user);
+        // console.log(user);
 
         if(user.token == token && user.token_expires > new Date()){
             const emailToken = jwt.sign(
@@ -94,23 +91,13 @@ const verifyToken = async (req, res) => {
                 process.env.JWT_SECRET, 
                 {expiresIn: '15m'},
             )
-            res.status(200).json({
-                "status": "success",
-                "message": "OTP verified",
-                emailToken
-            })
+            return successResponse(res, { emailToken }, "OTP verified");
         }
         else{
-            res.status(400).json({
-                "status": "error",
-                "message": "Invalid or Expired OTP"
-            })
+            return errorResponse(res, "Invalid or Expired OTP", 400);
         }
     } catch (error) {
-        res.status(500).json({
-            "status": "error",
-            "message": error.message
-        });
+        return errorResponse(res, error.message, 500);
     }
 }
 
@@ -122,10 +109,7 @@ const resetPassword = async (req, res) => {
         // console.log(password);
         // console.log(token);
         if(!token) {
-            return res.status(401).json({ 
-                status: "error", 
-                message: "Reset token missing" 
-            });
+            return unAuthorizedResponse(res, "Reset token missing");
         }
 
         const decode = jwt.decode(token, process.env.JWT_SECRET);
@@ -143,16 +127,10 @@ const resetPassword = async (req, res) => {
 
         // const user = await User.findOne({email});
 
-        res.status(200).json({
-            status: "success",
-            message: "Password is reset, you can login with new password"
-        });
+        return successResponse(res, {}, "Password is reset, you can login with new password");
         
     } catch (error) {
-        res.status(500).json({
-            "status": "error",
-            "message": error.message
-        });
+        return errorResponse(res, error.message, 500);
     }
 }
 

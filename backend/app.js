@@ -76,6 +76,7 @@ io.on('connection', (socket) => {
     // Expect data: { senderId, receiverId, isTyping }
     // Emit only to receiver's room
     const receiverRoom = `user_${data.receiverId}`;
+    console.log("TYPING!!!!!!!!")
     socket.to(receiverRoom).emit('typing', data);
   });
 

@@ -1,5 +1,11 @@
 const { Op, Sequelize } = require("sequelize");
 const { Message, User, Friends } = require("../../models");
+const {
+  successResponse,
+  errorResponse,
+  unAuthorizedResponse,
+  badRequestResponse
+} = require("../../helper/response");
 
 const sendMessage = async (req, res) => {
     try {
@@ -8,10 +14,7 @@ const sendMessage = async (req, res) => {
         // console.log(message, receiverId, user);
 
         if(!message || !receiverId){
-            return res.status(401).json({
-                status: "error",
-                message: "Message content and Receiver ID are required"
-            })
+            return unAuthorizedResponse(res, "Message content and Receiver ID are required");
         };
 
         const friendship = await Friends.findOne({
@@ -25,9 +28,7 @@ const sendMessage = async (req, res) => {
         });
 
         if(!friendship) {
-            return res.status(400).json({
-                message: "Not friends with this user"
-            })
+            return badRequestResponse(res, "Not friends with this user");
         }
         
         const sentMessage = await Message.create({
@@ -46,19 +47,17 @@ const sendMessage = async (req, res) => {
             sender_name: user.name || user.email || "Unknown",
         };
 
-        io.to(receiverRoom).emit("newMessage", {message: messageWithSender, fromUserId: user.id});
-        io.to(senderRoom).emit("newMessage", messageWithSender);
+        const payload = {
+            message: messageWithSender, 
+            fromUserId: user.id
+        };
+
+        io.to(receiverRoom).emit("newMessage", payload);
+        io.to(senderRoom).emit("newMessage", payload);
         
-        return res.status(201).json({
-            status: "success",
-            message: "Message sent",
-            sentMessage
-        })
+        return successResponse(res, sentMessage, "Message sent");
     } catch (error) {
-        return res.status(500).json({
-            status: "error",
-            message: error.message
-        });
+        return errorResponse(res, error.message, 500);
     }
 }
 
@@ -77,42 +76,34 @@ const getUsers = async (req, res) => {
                     [Op.notIn]: baseExclusions
                 },
                 // For local mySQL
-                // [Op.and]: Sequelize.literal(`NOT EXISTS (
-                //     SELECT 1 FROM Friends f
-                //     WHERE (
-                //         (f.sender_id = ${currentUserId} AND f.receiver_id = User.id) OR
-                //         (f.sender_id = User.id AND f.receiver_id = ${currentUserId})
-                //     ) AND f.status IN ('pending', 'accepted')
-                // )`)
+                [Op.and]: Sequelize.literal(`NOT EXISTS (
+                    SELECT 1 FROM Friends f
+                    WHERE (
+                        (f.sender_id = ${currentUserId} AND f.receiver_id = User.id) OR
+                        (f.sender_id = User.id AND f.receiver_id = ${currentUserId})
+                    ) AND f.status IN ('pending', 'accepted')
+                )`)
 
                 // For deployed postgreSQL
-                [Op.and]: Sequelize.literal(`
-                    NOT EXISTS (
-                        SELECT 1 FROM "Friends" f
-                        WHERE (
-                        (f.sender_id = ${currentUserId} AND f.receiver_id = "User".id)
-                        OR
-                        (f.sender_id = "User".id AND f.receiver_id = ${currentUserId})
-                        )
-                        AND f.status IN ('pending', 'accepted')
-                    )
-                `)
+                // [Op.and]: Sequelize.literal(`
+                //     NOT EXISTS (
+                //         SELECT 1 FROM "Friends" f
+                //         WHERE (
+                //         (f.sender_id = ${currentUserId} AND f.receiver_id = "User".id)
+                //         OR
+                //         (f.sender_id = "User".id AND f.receiver_id = ${currentUserId})
+                //         )
+                //         AND f.status IN ('pending', 'accepted')
+                //     )
+                // `)
             },
             attributes: ['id', 'name', 'email']
         });
-
-        return res.status(200).json({
-            status: "success",
-            message: "Fetched eligible users",
-            data: users
-        });
+        return successResponse(res, users, "Fetched eligible users");
 
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            status: "error",
-            message: error.message
-        });
+        // console.error(error);
+        return errorResponse(res, error.message, 500);
     }
 };
 
@@ -122,10 +113,7 @@ const getMessages = async (req, res) => {
         const user = req.user;
 
         if(!id) {
-            return res.status(401).json({
-                status: "error",
-                message: "Person ID is required"
-            })
+            return unAuthorizedResponse(res, "Person ID is required");
         }
         const allMessages = await Message.findAll({
             where: {
@@ -158,54 +146,39 @@ const getMessages = async (req, res) => {
             }
         );
 
-        return res.status(201).json({
-            status: "success",
-            message: "All messages retrieved between the two people",
-            data: allMessages
-        });
+        return successResponse(res, allMessages, "All messages retrieved between the two people");
 
     } catch (error) {
-        return res.status(500).json({
-            status: "error",
-            message: error.message
-        });
+        return errorResponse(res, error.message, 500);
     }
 }
 
 const getUnreadMessages = async (req, res) => {
-  try {
-    const userId = req.user.id;
+    try {
+        const userId = req.user.id;
 
-    const unreadCounts = await Message.findAll({
-      where: {
-        receiver_id: userId,
-        is_read: false
-      },
-      attributes: [
-        'sender_id',
-        [Sequelize.fn('COUNT', Sequelize.col('id')), 'unreadCount']
-      ],
-      group: ['sender_id']
-    });
+        const unreadCounts = await Message.findAll({
+            where: {
+                receiver_id: userId,
+                is_read: false
+            },
+            attributes: [
+                'sender_id',
+                [Sequelize.fn('COUNT', Sequelize.col('id')), 'unreadCount']
+            ],
+            group: ['sender_id']
+        });
 
-    const unreadMap = {};
-    unreadCounts.forEach(row => {
-      unreadMap[row.sender_id] = parseInt(row.get('unreadCount'));
-    });
+        const unreadMap = {};
+        unreadCounts.forEach(row => {
+            unreadMap[row.sender_id] = parseInt(row.get('unreadCount'));
+        });
 
-    return res.status(200).json({
-      status: 'success',
-      data: unreadMap
-    });
-
-  } catch (error) {
-    return res.status(500).json({
-      status: 'error',
-      message: error.message
-    });
-  }
+        return successResponse(res, unreadMap);
+    } catch (error) {
+        return errorResponse(res, error.message, 500);
+    }
 };
-
 
 module.exports = {
     sendMessage,

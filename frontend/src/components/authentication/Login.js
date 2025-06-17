@@ -28,7 +28,7 @@ export default function Login() {
     try {
       const response = await loginUser(user);
       if (response.data.status === "success") {
-        localStorage.setItem("jwt", response.data.userToken);
+        localStorage.setItem("jwt", response.data.data);
         navigate("/dashboard");
       } else {
         toast.error(response.data.message || "Login failed", {
