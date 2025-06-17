@@ -96,13 +96,6 @@ export default function Chatbox() {
     if (!input.trim()) return;
 
     try {
-      if (socketRef) {
-        socketRef.emit("typing", {
-          senderId: loggedInUserId,
-          receiverId: parseInt(id),
-          isTyping: false,
-        });
-      }
       const res = await sendMessage(input, id, token);
       if (res.data.status === "success") {
         setInput("");
