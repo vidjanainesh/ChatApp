@@ -36,7 +36,7 @@ A real-time chat application with friend management, built using React, Node.js,
 - JWT (Authentication)
 
 **Database:**
-- MySQL
+- PostgreSQL
 
 **Deployment:**
 - Render (both frontend and backend)
