@@ -3,17 +3,19 @@ const router = express.Router();
 
 const {
     createGroup,
-    sendGroupMessage
+    sendGroupMessage,
+    getGroupMessages,
+    getGroupMembers
 } = require('../app/controllers/groups');
 
 const authMiddleware = require('../app/middlewares/authMiddleware');
 
-// const friendValidationRules = require('../app/middlewares/validators/friendValidationRules');
-// const handleValidation = require('../app/middlewares/validators/handleValidation');
+const groupValidationRules = require('../app/middlewares/validators/groupValidationRules');
+const handleValidation = require('../app/middlewares/validators/handleValidation');
 
-router.post('/', authMiddleware, createGroup);
-router.post('/send-message', authMiddleware, sendGroupMessage);
-// router.get('/requests', authMiddleware, getAllFriendReq);
-// router.get('/', authMiddleware, getFriends);
+router.post('/', groupValidationRules.createGroup, handleValidation, authMiddleware, createGroup);
+router.post('/send-message', groupValidationRules.sendGroupMessage, handleValidation, authMiddleware, sendGroupMessage);
+router.get('/messages/:id', groupValidationRules.getGroupMessages, handleValidation, authMiddleware, getGroupMessages);
+router.get('/:id', groupValidationRules.getGroupMembers, handleValidation, getGroupMembers);
 
 module.exports = router;

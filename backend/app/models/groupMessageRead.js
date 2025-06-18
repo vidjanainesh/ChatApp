@@ -12,7 +12,7 @@ const GroupMessageRead = sequelize.define('group_message_read', {
     },
     read_at: {
         type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
+        defaultValue: null,
     }
 });
 

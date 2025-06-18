@@ -57,13 +57,14 @@ Friends.belongsTo(User, {
 // --------------------------------------------
 
 // Groups-GroupMembers
-Groups.hasMany(GroupMembers, { foreignKey: "group_id", as: "group_members_raw",});
+Groups.hasMany(GroupMembers, { foreignKey: "group_id", as: "groupMembers",});
 GroupMembers.belongsTo(Groups, { foreignKey: "group_id", as: "group" });
 
 // User–GroupMember
-User.hasMany(GroupMembers, { foreignKey: "user_id", as: "group_members_raw" });
+User.hasMany(GroupMembers, { foreignKey: "user_id", as: "groupMembers" });
 GroupMembers.belongsTo(User, { foreignKey: "user_id", as: "user" });
 
+// User-Groups (many-to-many via GroupMembers)
 User.belongsToMany(Groups, {
   through: GroupMembers,
   foreignKey: "user_id",
@@ -75,27 +76,31 @@ Groups.belongsToMany(User, {
   through: GroupMembers,
   foreignKey: "group_id",
   otherKey: "user_id",
-  as: "users"
+  as: "members"
 });
 
 // Group–GroupMessage
-Groups.hasMany(GroupMessages, { foreignKey: "group_id" });
-GroupMessages.belongsTo(Groups, { foreignKey: "group_id" });
+Groups.hasMany(GroupMessages, { foreignKey: "group_id", as: "messages"});
+GroupMessages.belongsTo(Groups, { foreignKey: "group_id", as: "group" });
 
 // User–GroupMessage
-User.hasMany(GroupMessages, { foreignKey: "sender_id" });
-GroupMessages.belongsTo(User, { foreignKey: "sender_id" });
+User.hasMany(GroupMessages, { foreignKey: "sender_id", as: "sentGroupMessages"});
+GroupMessages.belongsTo(User, { foreignKey: "sender_id", as: "sender"});
 
 // GroupMessage–GroupMessageRead
-GroupMessages.hasMany(GroupMessageRead, { foreignKey: "group_message_id" });
-GroupMessageRead.belongsTo(GroupMessages, { foreignKey: "group_message_id" });
+GroupMessages.hasMany(GroupMessageRead, { foreignKey: "group_message_id", as: "reads"});
+GroupMessageRead.belongsTo(GroupMessages, { foreignKey: "group_message_id", as: "message"});
 
 // User–GroupMessageRead
-User.hasMany(GroupMessageRead, { foreignKey: "user_id" });
-GroupMessageRead.belongsTo(User, { foreignKey: "user_id" });
+User.hasMany(GroupMessageRead, { foreignKey: "user_id", as: "readGroupMessages"});
+GroupMessageRead.belongsTo(User, { foreignKey: "user_id", as: "reader"});
 
 module.exports = {
   User,
   Message,
-  Friends
+  Friends,
+  Groups,
+  GroupMembers,
+  GroupMessages,
+  GroupMessageRead
 };
