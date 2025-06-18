@@ -1,7 +1,7 @@
 const sequelize = require('./database');
 const {DataTypes} = require('sequelize');
 
-const Message = sequelize.define('Message', {
+const Message = sequelize.define('messages', {
     id: {
         type: DataTypes.INTEGER,
         allowNull: false,
