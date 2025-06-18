@@ -48,6 +48,7 @@ const sendGroupMessage = async (req, res) => {
         const user = req.user;
 
         const group = await Groups.findOne({ where: {id: groupId} });
+        if(!group) notFoundResponse(res, "Group not found");
         const users = await group.getGroupMembers({attributes: ['user_id']}); //Magic method to get all the group member ids
 
         let userIds = users.map((curr) => curr.user_id);
@@ -84,6 +85,15 @@ const getGroupMessages = async (req, res) => {
         const groupId = req.params.id;
         const user = req.user;
         
+        const group = await Groups.findOne({ where: {id: groupId} });
+        const users = await group.getGroupMembers({attributes: ['user_id']}); //Magic method to get all the group member ids
+
+        let userIds = users.map((curr) => curr.user_id);
+
+        if(!userIds.includes(user.id)) {
+            return errorResponse(res, "User is not a part of this group");
+        }
+
         const groupMessages = await Groups.findOne({
             where: {id: groupId},
             attributes: ['id', 'name'],
