@@ -110,3 +110,67 @@ export const manageFriendReq = (id, status, token) => {
         }
     );
 }
+
+// ---------------------------------------------------------
+export const createGroup = (data, token) => {
+    return axios.post(`${API_BASE}/group`, 
+        data,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
+
+export const sendGroupMessage = (data, token) => {
+    return axios.post(`${API_BASE}/group/send-message`, 
+        data,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
+
+export const getGroupMessages = (id, token) => {
+    return axios.get(`${API_BASE}/group/messages/${id}`, 
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
+
+export const getGroupMembers = (id, token) => {
+    return axios.get(`${API_BASE}/group/${id}`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+} 
+
+export const getUnreadGroupMessages = (token) => {
+    return axios.get(`${API_BASE}/group/unread`, 
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+} 
+
+export const getGroups = (token) => {
+    return axios.get(`${API_BASE}/group`, 
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
+ 

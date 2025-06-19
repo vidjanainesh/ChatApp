@@ -17,8 +17,8 @@ exports.successPostResponse = (res, data = {}, message = "Created successfully")
 };
 
 // 400 Bad Request - Application-specific client-side error
-exports.errorResponse = (res, message = "Bad request", code = 400) => {
-  res.status(code).json({
+exports.errorResponse = (res, message = "Bad request") => {
+  res.status(400).json({
     status: "error",
     message
   }).end();

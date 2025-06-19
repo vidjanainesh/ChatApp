@@ -77,21 +77,21 @@ const getUsers = async (req, res) => {
                 },
                 // For local mySQL
                 // [Op.and]: Sequelize.literal(`NOT EXISTS (
-                //     SELECT 1 FROM Friends f
+                //     SELECT 1 FROM friends f
                 //     WHERE (
-                //         (f.sender_id = ${currentUserId} AND f.receiver_id = User.id) OR
-                //         (f.sender_id = User.id AND f.receiver_id = ${currentUserId})
+                //         (f.sender_id = ${currentUserId} AND f.receiver_id = users.id) OR
+                //         (f.sender_id = users.id AND f.receiver_id = ${currentUserId})
                 //     ) AND f.status IN ('pending', 'accepted')
                 // )`)
 
                 // For deployed postgreSQL
                 [Op.and]: Sequelize.literal(`
                     NOT EXISTS (
-                        SELECT 1 FROM "Friends" f
+                        SELECT 1 FROM "friends" f
                         WHERE (
-                        (f.sender_id = ${currentUserId} AND f.receiver_id = "User".id)
+                        (f.sender_id = ${currentUserId} AND f.receiver_id = users.id)
                         OR
-                        (f.sender_id = "User".id AND f.receiver_id = ${currentUserId})
+                        (f.sender_id = users.id AND f.receiver_id = ${currentUserId})
                         )
                         AND f.status IN ('pending', 'accepted')
                     )

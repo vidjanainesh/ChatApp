@@ -3,7 +3,14 @@ const sequelize = require('./database');
 const User = require('./users');
 const Message = require('./message');
 const Friends = require('./friends');
+const Groups = require('./groups');
+const GroupMembers = require('./groupMembers');
+const GroupMessages = require('./groupMessages');
+const GroupMessageRead = require('./groupMessageRead');
 
+// -----------------------------------------
+
+// User-Messages
 User.hasMany(Message, {
   foreignKey: 'sender_id',
   as: 'sentMessages',
@@ -24,6 +31,9 @@ Message.belongsTo(User, {
   as: 'receiver',
 });
 
+// -----------------------------------------
+
+// User-Friends
 User.hasMany(Friends, {
   foreignKey: 'sender_id',
   as: 'sentRequests',
@@ -44,8 +54,53 @@ Friends.belongsTo(User, {
   as: 'receiver',
 });
 
+// --------------------------------------------
+
+// Groups-GroupMembers
+Groups.hasMany(GroupMembers, { foreignKey: "group_id", as: "groupMembers",});
+GroupMembers.belongsTo(Groups, { foreignKey: "group_id", as: "group" });
+
+// User–GroupMember
+User.hasMany(GroupMembers, { foreignKey: "user_id", as: "groupMembers" });
+GroupMembers.belongsTo(User, { foreignKey: "user_id", as: "user" });
+
+// User-Groups (many-to-many via GroupMembers)
+User.belongsToMany(Groups, {
+  through: GroupMembers,
+  foreignKey: "user_id",
+  otherKey: "group_id",
+  as: 'groups'
+});
+
+Groups.belongsToMany(User, {
+  through: GroupMembers,
+  foreignKey: "group_id",
+  otherKey: "user_id",
+  as: "members"
+});
+
+// Group–GroupMessage
+Groups.hasMany(GroupMessages, { foreignKey: "group_id", as: "messages"});
+GroupMessages.belongsTo(Groups, { foreignKey: "group_id", as: "group" });
+
+// User–GroupMessage
+User.hasMany(GroupMessages, { foreignKey: "sender_id", as: "sentGroupMessages"});
+GroupMessages.belongsTo(User, { foreignKey: "sender_id", as: "sender"});
+
+// GroupMessage–GroupMessageRead
+GroupMessages.hasMany(GroupMessageRead, { foreignKey: "group_message_id", as: "reads"});
+GroupMessageRead.belongsTo(GroupMessages, { foreignKey: "group_message_id", as: "message"});
+
+// User–GroupMessageRead
+User.hasMany(GroupMessageRead, { foreignKey: "user_id", as: "readGroupMessages"});
+GroupMessageRead.belongsTo(User, { foreignKey: "user_id", as: "reader"});
+
 module.exports = {
   User,
   Message,
-  Friends
+  Friends,
+  Groups,
+  GroupMembers,
+  GroupMessages,
+  GroupMessageRead
 };
