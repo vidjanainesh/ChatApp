@@ -29,6 +29,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); 
 app.use(morgan('dev'));
 app.use('/api', indexRoutes);
 
