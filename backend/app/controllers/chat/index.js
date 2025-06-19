@@ -6,6 +6,7 @@ const {
   unAuthorizedResponse,
   badRequestResponse
 } = require("../../helper/response");
+const sequelize = require("../../models/database");
 
 const sendMessage = async (req, res) => {
     try {
@@ -69,36 +70,28 @@ const getUsers = async (req, res) => {
         if (currentUserId !== 2) {
             baseExclusions.push(1); 
         }
-
-        const users = await User.findAll({
-            where: {
-                id: {
-                    [Op.notIn]: baseExclusions
-                },
-                // For local mySQL
-                // [Op.and]: Sequelize.literal(`NOT EXISTS (
-                //     SELECT 1 FROM friends f
-                //     WHERE (
-                //         (f.sender_id = ${currentUserId} AND f.receiver_id = users.id) OR
-                //         (f.sender_id = users.id AND f.receiver_id = ${currentUserId})
-                //     ) AND f.status IN ('pending', 'accepted')
-                // )`)
-
-                // For deployed postgreSQL
-                [Op.and]: Sequelize.literal(`
-                    NOT EXISTS (
-                        SELECT 1 FROM "friends" f
-                        WHERE (
-                        (f.sender_id = ${currentUserId} AND f.receiver_id = users.id)
-                        OR
-                        (f.sender_id = users.id AND f.receiver_id = ${currentUserId})
-                        )
-                        AND f.status IN ('pending', 'accepted')
-                    )
-                `)
+        
+        const users = await sequelize.query(`
+            SELECT u.id, u.name, u.email
+            FROM users u
+            WHERE u.id NOT IN (:excludedIds)
+            AND NOT EXISTS (
+                SELECT 1 FROM friends f
+                WHERE (
+                    (f.sender_id = :currentUserId AND f.receiver_id = u.id)
+                    OR
+                    (f.sender_id = u.id AND f.receiver_id = :currentUserId)
+                )
+                AND f.status IN ('pending', 'accepted')
+            )
+        `, {
+            replacements: {
+                excludedIds: baseExclusions,
+                currentUserId
             },
-            attributes: ['id', 'name', 'email']
+            type: Sequelize.QueryTypes.SELECT
         });
+
         return successResponse(res, users, "Fetched eligible users");
 
     } catch (error) {

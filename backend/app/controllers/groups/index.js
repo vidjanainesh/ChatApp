@@ -54,13 +54,13 @@ const createGroup = async (req, res) => {
 
 const sendGroupMessage = async (req, res) => {
     try {
-        const { groupId, message } = req.body;
+        const { groupId, msg } = req.body;
         const user = req.user;
 
         const group = await Groups.findOne({ where: { id: groupId } });
         if (!group) notFoundResponse(res, "Group not found");
-        const users = await group.getGroupMembers({ attributes: ["user_id"] }); //Magic method to get all the group member ids
 
+        const users = await group.getGroupMembers({ attributes: ["user_id"] }); //Magic method to get all the group member ids
         let userIds = users.map((curr) => curr.user_id);
 
         if (!userIds.includes(user.id)) {
@@ -70,7 +70,7 @@ const sendGroupMessage = async (req, res) => {
         const groupMessage = await GroupMessages.create({
             group_id: groupId,
             sender_id: user.id,
-            message,
+            message: msg,
         });
 
         userIds = userIds.filter((curr) => {
@@ -83,14 +83,17 @@ const sendGroupMessage = async (req, res) => {
         }));
         await GroupMessageRead.bulkCreate(readEntries);
 
-        const io = req.app.get("io");
-        io.to(`group_${groupId}`).emit("newGroupMessage", {
+        const message = {
             id: groupMessage.id,
-            groupId,
             senderId: user.id,
-            message,
+            message: msg,
             createdAt: groupMessage.createdAt,
-        });
+            sender: {
+                name: user.name
+            }
+        };        
+        const io = req.app.get("io");
+        io.to(`group_${groupId}`).emit("newGroupMessage", {message, groupId});
 
         return successPostResponse(res, {}, "Message sent");
     } catch (error) {
@@ -98,14 +101,15 @@ const sendGroupMessage = async (req, res) => {
     }
 };
 
-const getGroupMessages = async (req, res) => {
+const getGroupData = async (req, res) => {
     try {
         const groupId = req.params.id;
         const user = req.user;
 
         const group = await Groups.findOne({ where: { id: groupId } });
-        const users = await group.getGroupMembers({ attributes: ["user_id"] }); //Magic method to get all the group member ids
+        if (!group) notFoundResponse(res, "Group not found");
 
+        const users = await group.getGroupMembers({ attributes: ["user_id"] }); //Magic method to get all the group member ids
         let userIds = users.map((curr) => curr.user_id);
 
         if (!userIds.includes(user.id)) {
@@ -149,33 +153,10 @@ const getGroupMessages = async (req, res) => {
             }
         );
 
-        return successResponse(res, groupMessages, "Fetched all messages");
-    } catch (error) {
-        return errorThrowResponse(res, `${error.message}`, error);
-    }
-};
-
-const getGroupMembers = async (req, res) => {
-    try {
-        const groupId = req.params.id;
-
+        // Get the group members
         const members = await Groups.findOne({
             where: { id: groupId },
             attributes: ["id", "name"],
-            // include: [
-            //     {
-            //         model: GroupMembers,
-            //         as: 'groupMembers',
-            //         attributes: ['id'],
-            //         include: [
-            //             {
-            //                 model: User,
-            //                 as: 'user',
-            //                 attributes: ['id', 'name', 'email']
-            //             }
-            //         ]
-            //     }
-            // ]
             include: [
                 {
                     model: User,
@@ -186,11 +167,50 @@ const getGroupMembers = async (req, res) => {
             ],
         });
 
-        return successResponse(res, members, "Fetched all members of the group");
+        const result = {messages: groupMessages, members}
+
+        return successResponse(res, result, "Fetched all messages");
     } catch (error) {
         return errorThrowResponse(res, `${error.message}`, error);
     }
 };
+
+// const getGroupMembers = async (req, res) => {
+//     try {
+//         const groupId = req.params.id;
+
+//         const members = await Groups.findOne({
+//             where: { id: groupId },
+//             attributes: ["id", "name"],
+//             // include: [
+//             //     {
+//             //         model: GroupMembers,
+//             //         as: 'groupMembers',
+//             //         attributes: ['id'],
+//             //         include: [
+//             //             {
+//             //                 model: User,
+//             //                 as: 'user',
+//             //                 attributes: ['id', 'name', 'email']
+//             //             }
+//             //         ]
+//             //     }
+//             // ]
+//             include: [
+//                 {
+//                     model: User,
+//                     as: "members",
+//                     attributes: ["id", "name", "email"],
+//                     through: { attributes: [] },
+//                 },
+//             ],
+//         });
+
+//         return successResponse(res, members, "Fetched all members of the group");
+//     } catch (error) {
+//         return errorThrowResponse(res, `${error.message}`, error);
+//     }
+// };
 
 const getGroups = async (req, res) => {
     try {
@@ -271,11 +291,47 @@ const getUnreadGroupMessages = async (req, res) => {
   }
 };
 
+const deleteGroup = async (req, res) => {
+    try {
+        const groupId = req.params.id;
+        const user = req.user;
+
+        const group = await Groups.findOne({ where: { id: groupId } });
+        if (!group) notFoundResponse(res, "Group not found");
+
+        const users = await group.getGroupMembers({ attributes: ["user_id"] }); //Magic method to get all the group member id
+        let userIds = users.map((curr) => curr.user_id);
+
+        if (!userIds.includes(user.id)) {
+            return errorResponse(res, "User is not a part of this group");
+        }
+
+        let messageIds = await GroupMessages.findAll({
+            where: {group_id: groupId},
+            attributes: ['id']
+        });
+
+        messageIds = messageIds.map(curr => curr.id);
+
+        await GroupMessageRead.destroy({
+            where: {group_message_id: messageIds}
+        });
+
+        await GroupMessages.destroy({ where: {group_id: groupId}});
+        await GroupMembers.destroy({ where: {group_id: groupId}});
+        await Groups.destroy({ where: {id: groupId}});
+
+        return successResponse(res, {}, "Group deleted successfully ")
+    } catch (error) {
+        return errorThrowResponse(res, `${error.message}`, error);
+    }
+}
+
 module.exports = {
     createGroup,
     sendGroupMessage,
-    getGroupMessages,
-    getGroupMembers,
+    getGroupData,
     getUnreadGroupMessages,
-    getGroups
+    getGroups,
+    deleteGroup
 };

@@ -8,6 +8,11 @@ body,
   height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden;            
+  overflow-y: auto;         /* ← Enable scroll when content exceeds */
+  overflow-x: hidden;          
   overscroll-behavior: none;  
+}
+
+html {
+  scroll-behavior: smooth;
 }
