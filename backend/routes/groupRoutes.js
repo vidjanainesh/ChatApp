@@ -4,10 +4,10 @@ const router = express.Router();
 const {
     createGroup,
     sendGroupMessage,
-    getGroupMessages,
-    getGroupMembers,
+    getGroupData,
     getUnreadGroupMessages,
-    getGroups
+    getGroups,
+    deleteGroup
 } = require('../app/controllers/groups');
 
 const authMiddleware = require('../app/middlewares/authMiddleware');
@@ -17,9 +17,12 @@ const handleValidation = require('../app/middlewares/validators/handleValidation
 
 router.post('/', groupValidationRules.createGroup, handleValidation, authMiddleware, createGroup);
 router.post('/send-message', groupValidationRules.sendGroupMessage, handleValidation, authMiddleware, sendGroupMessage);
-router.get('/messages/:id', groupValidationRules.getGroupMessages, handleValidation, authMiddleware, getGroupMessages);
+
+router.get('/messages/:id', groupValidationRules.getGroupData, handleValidation, authMiddleware, getGroupData);
 router.get('/unread', authMiddleware, getUnreadGroupMessages);
-router.get('/:id', groupValidationRules.getGroupMembers, handleValidation, authMiddleware, getGroupMembers);
+// router.get('/:id', groupValidationRules.getGroupMembers, handleValidation, authMiddleware, getGroupMembers);
 router.get('/', authMiddleware, getGroups);
+
+router.delete('/:id', authMiddleware, deleteGroup);
 
 module.exports = router;

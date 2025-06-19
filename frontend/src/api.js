@@ -173,4 +173,14 @@ export const getGroups = (token) => {
         }
     );
 }
+
+export const deleteGroup = (id, token) => {
+    return axios.delete(`${API_BASE}/group/${id}`, 
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    )
+}
  

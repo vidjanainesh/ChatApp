@@ -11,6 +11,7 @@ import Chatbox from './components/chat/Chatbox';
 import { useEffect } from 'react';
 import FindPeople from './components/chat/FindPeople';
 import FriendRequests from './components/chat/FriendRequests';
+import GroupChatbox from './components/chat/GroupChatbox';
 
 function App() {
 
@@ -21,7 +22,7 @@ function App() {
   }, []);
 
   return (
-    <div className="w-screen h-screen flex flex-col overflow-hidden bg-white text-gray-800">
+    <div className="min-h-screen w-full bg-white text-gray-800">
       <Routes>
         <Route path='/' element={<Login />} />
         <Route path='/register' element={<Register />} />
@@ -30,6 +31,7 @@ function App() {
         <Route path='/verify-token' element={<VerifyToken />} />
         <Route path='/reset-password' element={<ResetPassword />} />
         <Route path='/chatbox/:id' element={<Chatbox />} />
+        <Route path='/groupchatbox/:id' element={<GroupChatbox />} />
         <Route path='/find-people' element={<FindPeople />} />
         <Route path='/friend-requests' element={<FriendRequests />} />
       </Routes>
