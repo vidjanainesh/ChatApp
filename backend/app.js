@@ -38,8 +38,8 @@ const io = setupSocket(server);
 // Attach `io` to app so you can use it in your routes
 app.set('io', io);
 
-sequelize.sync()
-// sequelize.authenticate()
+// sequelize.sync()
+sequelize.authenticate()
   .then(() => {
     console.log('Connected to the Database');
     server.listen(3000, () => console.log('Server Listening on PORT 3000'));
