@@ -36,7 +36,7 @@ const groupValidationRules = {
     param("id")
       .notEmpty().withMessage("Group ID is required in URL")
       .isInt({ min: 1 }).withMessage("Group ID must be a valid positive integer"),
-  ]
+  ],
 };
 
 module.exports = groupValidationRules;

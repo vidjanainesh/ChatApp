@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { getFriends, getUnreadMessages } from "../../api";
+import { getFriends, getUnreadMessages, getGroups, getUnreadGroupMessages } from "../../api";
 import { motion } from "framer-motion";
 import useSocket from "../../hooks/useSocket";
 
@@ -11,24 +11,34 @@ export default function Dashboard() {
   const [friends, setFriends] = useState([]);
   const [user, setUser] = useState(null);
   const [unreadMap, setUnreadMap] = useState({});
+  const [groups, setGroups] = useState([]);
+  const [unreadGroupMap, setUnreadGroupMap] = useState({});
 
   // Use socket globally just for notifications
   useSocket({
     token,
     chatUserId: null,
+    groupId: null,
     loggedInUserId: null,
     setMessages: null,
     setIsTyping: null,
-    onNewMessageAlert: (fromUserId) => {
-      setUnreadMap((prev) => ({
-        ...prev,
-        [fromUserId]: true,
-      }));
+    onNewMessageAlert: (fromUserId, type, roomId) => {
+      if (type === "group") {
+        setUnreadGroupMap((prev) => ({
+          ...prev,
+          [roomId]: true,
+        }));
+      } else {
+        setUnreadMap((prev) => ({
+          ...prev,
+          [fromUserId]: true,
+        }));
+      }
     },
   });
 
   useEffect(() => {
-    const fetchFriendsAndUnread = async () => {
+    const fetchData = async () => {
       try {
         const response = await getFriends(token);
         if (response.data.status !== "success") {
@@ -45,10 +55,21 @@ export default function Dashboard() {
             setUnreadMap(unreadRes.data.data || {});
           }
         }
+
+        const groupsRes = await getGroups(token);
+        if (groupsRes.data.status === "success") {
+          setGroups(groupsRes.data.data || []);
+        }
+
+        const unreadGroupRes = await getUnreadGroupMessages(token);
+        if (unreadGroupRes.data.status === "success") {
+          setUnreadGroupMap(unreadGroupRes.data.data || {});
+        }
+
       } catch (error) {
         const errorMessage =
           error.response?.data?.message ||
-          "Something went wrong while fetching friends";
+          "Something went wrong while fetching data";
 
         if (errorMessage === "Invalid or expired token") {
           toast.error("Invalid session. Please log in again.", {
@@ -62,7 +83,7 @@ export default function Dashboard() {
       }
     };
 
-    fetchFriendsAndUnread();
+    fetchData();
   }, [token, navigate]);
 
   const handleLogout = () => {
@@ -80,6 +101,16 @@ export default function Dashboard() {
     });
 
     navigate(`/chatbox/${user.id}?name=${encodeURIComponent(user.name)}`);
+  };
+
+  const handleGroupClick = (group) => {
+    setUnreadGroupMap((prev) => {
+      const updated = { ...prev };
+      delete updated[group.id];
+      return updated;
+    });
+
+    navigate(`/groupchatbox/${group.id}?name=${encodeURIComponent(group.name)}`);
   };
 
   const goToFindPeople = () => {
@@ -134,7 +165,7 @@ export default function Dashboard() {
             No friends yet. Send some requests!
           </p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10">
             {friends.map((user, index) => (
               <motion.div
                 key={user.id}
@@ -162,6 +193,41 @@ export default function Dashboard() {
               </motion.div>
             ))}
           </div>
+        )}
+
+        {/* Groups List */}
+        {groups.length > 0 && (
+          <>
+            <h2 className="text-xl font-semibold text-gray-700 mb-4">Your Groups:</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              {groups.map((group, index) => (
+                <motion.div
+                  key={group.id}
+                  onClick={() => handleGroupClick(group)}
+                  className="bg-white p-4 rounded-xl shadow-md cursor-pointer hover:shadow-lg transition duration-300 relative"
+                  title={`Enter group ${group.name}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 flex items-center justify-center rounded-full bg-green-100 text-green-600 font-bold text-lg">
+                      {group.name?.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-800">{group.name}</p>
+                      <p className="text-sm text-gray-500">Group Chat</p>
+                    </div>
+                  </div>
+
+                  {/* 🔴 Unread Indicator */}
+                  {unreadGroupMap[group.id] && (
+                    <span className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full animate-bounce"></span>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

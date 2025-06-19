@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { initSocket } from "./socketManager";
 import { useNavigate } from "react-router-dom";
 
-export default function useSocket({ token, chatUserId, loggedInUserId, setMessages, setIsTyping, onNewMessageAlert }) {
+export default function useSocket({ token, chatUserId, groupId, loggedInUserId, setMessages, setIsTyping, onNewMessageAlert }) {
   const navigate = useNavigate();
   const [socketInstance, setSocketInstance] = useState(null);
   useEffect(() => {
@@ -67,10 +67,52 @@ export default function useSocket({ token, chatUserId, loggedInUserId, setMessag
       }
     });
 
+     // New: Handle newGroupMessage
+    socket.on("newGroupMessage", (data) => {
+      const { message, groupId: msgGroupId } = data;
+
+      if (groupId && parseInt(groupId) === msgGroupId && setMessages) {
+        setMessages((prev) => [...prev, message]);
+      }
+
+      if (typeof onNewMessageAlert === "function") {
+        onNewMessageAlert(`group_${msgGroupId}`);
+      }
+
+      if (
+        Notification.permission === "granted" &&
+        document.visibilityState !== "visible"
+      ) {
+        const notif = new Notification("New Group Message", {
+          body: `${message.sender_name}: ${message.message}`,
+          icon: "/icon.png",
+        });
+
+        notif.onclick = () => {
+          window.focus();
+          navigate(`/groupchat/${msgGroupId}`);
+        };
+      }
+    });
+
+    // New: Handle groupTyping
+    socket.on("groupTyping", ({ groupId: typingGroupId, senderId }) => {
+      if (
+        setIsTyping &&
+        typingGroupId === parseInt(groupId) &&
+        senderId !== loggedInUserId
+      ) {
+        setIsTyping(true);
+        setTimeout(() => setIsTyping(false), 2000);
+      }
+    });
+
     return () => {
       // Detach only listeners, not socket itself
       socket.off("newMessage");
       socket.off("typing");
+      socket.off("newGroupMessage");
+      socket.off("groupTyping");
     };
   }, [token, chatUserId, loggedInUserId, onNewMessageAlert]);
 

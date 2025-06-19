@@ -5,7 +5,9 @@ const {
     createGroup,
     sendGroupMessage,
     getGroupMessages,
-    getGroupMembers
+    getGroupMembers,
+    getUnreadGroupMessages,
+    getGroups
 } = require('../app/controllers/groups');
 
 const authMiddleware = require('../app/middlewares/authMiddleware');
@@ -17,5 +19,7 @@ router.post('/', groupValidationRules.createGroup, handleValidation, authMiddlew
 router.post('/send-message', groupValidationRules.sendGroupMessage, handleValidation, authMiddleware, sendGroupMessage);
 router.get('/messages/:id', groupValidationRules.getGroupMessages, handleValidation, authMiddleware, getGroupMessages);
 router.get('/:id', groupValidationRules.getGroupMembers, handleValidation, authMiddleware, getGroupMembers);
+router.get('/unread', authMiddleware, getUnreadGroupMessages);
+router.get('/', authMiddleware, getGroups);
 
 module.exports = router;
