@@ -12,6 +12,7 @@ const {
     GroupMessages,
     User,
     GroupMessageRead,
+    GroupMembers,
 } = require("../../models");
 
 const createGroup = async (req, res) => {
@@ -191,6 +192,51 @@ const getGroupMembers = async (req, res) => {
     }
 };
 
+const getGroups = async (req, res) => {
+    try {
+        const user = req.user;
+
+        // const groups = await Groups.findAll({
+        //     include: [
+        //         {
+        //             model: User,
+        //             as: "members",
+        //             attributes: ["id", "name", "email"],
+        //             through: { attributes: [] },
+        //         },
+        //     ],
+        //     where: {
+        //         [Op.or]: [
+        //             { created_by: user.id },
+        //             { '$members.id$': user.id }, // Check if user is a member
+        //         ],
+        //     },
+        // });
+        let groups = await GroupMembers.findAll({
+            where: {user_id: user.id},
+            attributes: [['group_id','id']],
+            include: [
+                {
+                    model: Groups,
+                    as: 'group',
+                    attributes: ['name']
+                }
+            ]
+        });
+
+        groups = groups.map((curr) => {
+            return ({
+                id: curr.id,
+                name: curr.group.name
+            })
+        })
+
+        return successResponse(res, groups, "Fetched all groups");
+    } catch (error) {
+        return errorThrowResponse(res, `${error.message}`, error);
+    }
+};
+
 const getUnreadGroupMessages = async (req, res) => {
   try {
     const user = req.user;
@@ -205,6 +251,7 @@ const getUnreadGroupMessages = async (req, res) => {
       include: [
         {
           model: GroupMessages,
+          as: 'message',
           attributes: ["group_id"],
         },
       ],
@@ -212,7 +259,7 @@ const getUnreadGroupMessages = async (req, res) => {
 
     const unreadGroupMap = {};
     unread.forEach((entry) => {
-      const groupId = entry.GroupMessage?.group_id;
+      const groupId = entry.message?.group_id;
       if (groupId) {
         unreadGroupMap[groupId] = true;
       }
@@ -223,34 +270,6 @@ const getUnreadGroupMessages = async (req, res) => {
     return errorThrowResponse(res, `${error.message}`, error);
   }
 };
-
-const getGroups = async (req, res) => {
-    try {
-        const user = req.user;
-
-        const groups = await Groups.findAll({
-            include: [
-                {
-                    model: User,
-                    as: "members",
-                    attributes: ["id", "name", "email"],
-                    through: { attributes: [] },
-                },
-            ],
-            where: {
-                [Op.or]: [
-                    { created_by: user.id },
-                    { '$members.id$': user.id }, // Check if user is a member
-                ],
-            },
-        });
-
-        return successResponse(res, groups, "Fetched all groups");
-    } catch (error) {
-        return errorThrowResponse(res, `${error.message}`, error);
-    }
-}
-
 
 module.exports = {
     createGroup,

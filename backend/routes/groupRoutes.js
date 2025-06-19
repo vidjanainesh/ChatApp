@@ -18,8 +18,8 @@ const handleValidation = require('../app/middlewares/validators/handleValidation
 router.post('/', groupValidationRules.createGroup, handleValidation, authMiddleware, createGroup);
 router.post('/send-message', groupValidationRules.sendGroupMessage, handleValidation, authMiddleware, sendGroupMessage);
 router.get('/messages/:id', groupValidationRules.getGroupMessages, handleValidation, authMiddleware, getGroupMessages);
-router.get('/:id', groupValidationRules.getGroupMembers, handleValidation, authMiddleware, getGroupMembers);
 router.get('/unread', authMiddleware, getUnreadGroupMessages);
+router.get('/:id', groupValidationRules.getGroupMembers, handleValidation, authMiddleware, getGroupMembers);
 router.get('/', authMiddleware, getGroups);
 
 module.exports = router;
