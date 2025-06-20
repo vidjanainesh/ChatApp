@@ -100,6 +100,16 @@ export const sendFriendReq = (id, token) => {
     );
 }
 
+export const unFriend = (id, token) => {
+    return axios.get(`${API_BASE}/friend/unfriend/${id}`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    )
+}
+
 export const manageFriendReq = (id, status, token) => {
     return axios.post(`${API_BASE}/friend/update`,
         { id, status }, 
@@ -123,6 +133,27 @@ export const createGroup = (data, token) => {
     );
 }
 
+export const joinGroup = (data, token) => {
+    return axios.post(`${API_BASE}/group/join`, 
+        data, 
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    )
+};
+
+export const leaveGroup = (id, token) => {
+    return axios.get(`${API_BASE}/group/leave/${id}`, 
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    )
+};
+
 export const sendGroupMessage = (data, token) => {
     return axios.post(`${API_BASE}/group/send-message`, 
         data,
@@ -134,8 +165,8 @@ export const sendGroupMessage = (data, token) => {
     );
 }
 
-export const getGroupMessages = (id, token) => {
-    return axios.get(`${API_BASE}/group/messages/${id}`, 
+export const getGroupData = (id, token) => {
+    return axios.get(`${API_BASE}/group/data/${id}`, 
         {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -144,15 +175,16 @@ export const getGroupMessages = (id, token) => {
     );
 }
 
-export const getGroupMembers = (id, token) => {
-    return axios.get(`${API_BASE}/group/${id}`,
-        {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        }
-    );
-} 
+// Not needed now
+// export const getGroupMembers = (id, token) => {
+//     return axios.get(`${API_BASE}/group/${id}`,
+//         {
+//             headers: {
+//                 Authorization: `Bearer ${token}`
+//             }
+//         }
+//     );
+// } 
 
 export const getUnreadGroupMessages = (token) => {
     return axios.get(`${API_BASE}/group/unread`, 

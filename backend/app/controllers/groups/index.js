@@ -60,7 +60,7 @@ const sendGroupMessage = async (req, res) => {
         const group = await Groups.findOne({ where: { id: groupId } });
         if (!group) notFoundResponse(res, "Group not found");
 
-        const users = await group.getGroupMembers({ attributes: ["user_id"] }); //Magic method to get all the group member ids
+        const users = await group.getGroupMembers({where: {status: 'active'}, attributes: ["user_id"] }); //Magic method to get all the group member ids
         let userIds = users.map((curr) => curr.user_id);
 
         if (!userIds.includes(user.id)) {
@@ -109,7 +109,7 @@ const getGroupData = async (req, res) => {
         const group = await Groups.findOne({ where: { id: groupId } });
         if (!group) notFoundResponse(res, "Group not found");
 
-        const users = await group.getGroupMembers({ attributes: ["user_id"] }); //Magic method to get all the group member ids
+        const users = await group.getGroupMembers({where: {status: 'active'}, attributes: ["user_id"] }); //Magic method to get all the group member ids
         let userIds = users.map((curr) => curr.user_id);
 
         if (!userIds.includes(user.id)) {
@@ -162,7 +162,7 @@ const getGroupData = async (req, res) => {
                     model: User,
                     as: "members",
                     attributes: ["id", "name", "email"],
-                    through: { attributes: [] },
+                    through: { where: {status: 'active'}, attributes: [] },
                 },
             ],
         });
@@ -215,7 +215,6 @@ const getGroupData = async (req, res) => {
 const getGroups = async (req, res) => {
     try {
         const user = req.user;
-
         // const groups = await Groups.findAll({
         //     include: [
         //         {
@@ -233,7 +232,7 @@ const getGroups = async (req, res) => {
         //     },
         // });
         let groups = await GroupMembers.findAll({
-            where: {user_id: user.id},
+            where: {user_id: user.id, status: 'active'},
             attributes: [['group_id','id']],
             include: [
                 {
@@ -327,11 +326,75 @@ const deleteGroup = async (req, res) => {
     }
 }
 
+const leaveGroup = async (req, res) => {
+    try {
+        const groupId = req.params.id;
+        const user = req.user;
+
+        let groupMessageIds = await GroupMessages.findAll({where: {group_id: groupId}, attributes: ['id']});
+        groupMessageIds = groupMessageIds.map(curr => curr.id);
+
+        await GroupMembers.update(
+            {status: 'left'},
+            {where: {group_id: groupId, user_id: user.id}}
+        );
+        await GroupMessageRead.destroy({where: {user_id: user.id, group_message_id: groupMessageIds}});
+        
+        return successPostResponse(res, {}, "User left this group successfully")
+    } catch (error) {
+        return errorThrowResponse(res, `${error.message}`, error);
+    }
+}
+
+const joinGroup = async (req, res) => {
+    try {
+        const {groupId, friendIds} = req.body;
+        const user = req.user;
+
+        const partOfGroup = await GroupMembers.findOne({where: {group_id: groupId, user_id: user.id, status: 'active'}});
+        if(!partOfGroup) return errorResponse(res, "User not part of the group");
+        
+        const existingMembers = await GroupMembers.findAll({where: {group_id: groupId, user_id: friendIds}});
+
+        const membersToUpdate = []; //leftMembers
+        const activeMembers = [];
+        
+        // To seperate into active/left members
+        existingMembers.forEach( (curr) => {
+            if(curr.status === 'left') membersToUpdate.push(curr.user_id);
+            else activeMembers.push(curr.user_id);
+        });
+
+        // Only the users not part of the group whether active/left
+        const membersToCreate = friendIds
+        .filter(curr => !membersToUpdate.includes(curr) && !activeMembers.includes(curr)) 
+        .map(curr => {
+            return {
+                group_id: groupId,
+                user_id: curr
+            };
+        });
+        // Database queries
+        await GroupMembers.update(
+            {status: 'active'},
+            {where: {group_id: groupId, user_id: membersToUpdate}}
+        );
+
+        await GroupMembers.bulkCreate(membersToCreate);
+
+        return successPostResponse(res, {}, "Users successfully joined the group")
+    } catch (error) {
+        return errorThrowResponse(res, `${error.message}`, error);
+    }
+}
+
 module.exports = {
     createGroup,
     sendGroupMessage,
     getGroupData,
     getUnreadGroupMessages,
     getGroups,
-    deleteGroup
+    deleteGroup,
+    leaveGroup,
+    joinGroup
 };
