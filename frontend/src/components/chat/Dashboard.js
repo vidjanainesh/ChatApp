@@ -146,7 +146,7 @@ export default function Dashboard() {
             return toast.error("Group name is required");
         }
 
-        if(groupName.length > 20){
+        if (groupName.length > 20) {
             return toast.error("Group name too long")
         }
 
@@ -200,7 +200,7 @@ export default function Dashboard() {
                 dropdownRef.current &&
                 !dropdownRef.current.contains(event.target)
             ) {
-                setActiveMenuGroupId(null);
+                setActiveMenuGroupId(false);
             }
         }
 
@@ -211,16 +211,15 @@ export default function Dashboard() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-gradient-to-tr from-indigo-50 to-white py-8 px-4 relative">
-            <div className="max-w-4xl mx-auto">
+        <div className="min-h-screen bg-gradient-to-tr from-indigo-50 to-white px-4">
+            <div className="max-w-4xl mx-auto relative min-h-screen py-8">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                     <div>
                         <h1 className="text-3xl font-bold text-indigo-700">
                             {user
-                                ? `Welcome Back ${
-                                      user?.name.trim().split(" ")[0]
-                                  }!`
+                                ? `Welcome Back ${user?.name.trim().split(" ")[0]
+                                }!`
                                 : "Welcome Back!"}
                         </h1>
                         <p className="text-gray-500 text-sm sm:text-base">
@@ -330,7 +329,7 @@ export default function Dashboard() {
                                     </div>
 
                                     {/* ⋮ Menu Toggle */}
-                                    <div className="absolute top-2 right-2" ref={dropdownRef}>
+                                    <div className="absolute top-2 right-2">
                                         <button
                                             className="text-gray-500 hover:text-gray-800 text-lg"
                                             onClick={() =>
@@ -347,13 +346,15 @@ export default function Dashboard() {
                                         {activeMenuGroupId === group.id && (
                                             <div
                                                 className="absolute right-0 mt-2 w-28 bg-white border rounded-md shadow-md z-50"
+                                                ref={dropdownRef}
                                             >
                                                 <button
-                                                    onClick={() =>
+                                                    onClick={() => {
                                                         setConfirmingDeleteId(
                                                             group.id
-                                                        )
-                                                    }
+                                                        );
+                                                        setActiveMenuGroupId(false);
+                                                    }}
                                                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                                                 >
                                                     Delete
@@ -372,15 +373,16 @@ export default function Dashboard() {
                     </>
                 )}
             </div>
-
-            {/* Floating + Button */}
-            <button
-                onClick={() => setShowCreateModal(true)}
-                className="fixed bottom-6 right-6 bg-indigo-600 hover:bg-indigo-700 text-white text-2xl w-14 h-14 rounded-full shadow-lg transition duration-300 z-50"
-                title="Create Group"
-            >
-                +
-            </button>
+            {/* Floating + Button aligned to container but fixed on screen */}
+            <div className="fixed bottom-6 left-1/2 w-full max-w-4xl px-4 transform -translate-x-1/2 flex justify-end z-50">
+                <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-2xl w-14 h-14 rounded-full shadow-lg transition duration-300"
+                    title="Create Group"
+                >
+                    +
+                </button>
+            </div>
 
             {/* Create Group Modal */}
             {showCreateModal && (
@@ -417,8 +419,8 @@ export default function Dashboard() {
                                                 e.target.checked
                                                     ? [...prev, f.id]
                                                     : prev.filter(
-                                                          (id) => id !== f.id
-                                                      )
+                                                        (id) => id !== f.id
+                                                    )
                                             )
                                         }
                                     />
@@ -445,14 +447,14 @@ export default function Dashboard() {
                 </div>
             )}
             {confirmingDeleteId && (
-                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50" >
                     <div className="bg-white rounded-md p-5 shadow-lg max-w-sm w-full text-center">
                         <p className="text-gray-800 font-medium mb-4">
                             Are you sure you want to delete this group?
                         </p>
                         <div className="flex justify-center gap-4">
                             <button
-                                onClick={() => setConfirmingDeleteId(null)}
+                                onClick={() => { setConfirmingDeleteId(false); setActiveMenuGroupId(false) }}
                                 className="px-4 py-2 text-sm bg-gray-300 hover:bg-gray-400 rounded-md"
                             >
                                 Cancel
@@ -460,7 +462,8 @@ export default function Dashboard() {
                             <button
                                 onClick={() => {
                                     handleDeleteGroup(confirmingDeleteId);
-                                    setConfirmingDeleteId(null);
+                                    setConfirmingDeleteId(false);
+
                                 }}
                                 className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md"
                             >

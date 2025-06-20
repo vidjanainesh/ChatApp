@@ -1,7 +1,7 @@
 // GroupChatbox.js
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
-import { getGroupMessages, sendGroupMessage } from "../../api";
+import { getGroupData, sendGroupMessage } from "../../api";
 import { toast } from "react-toastify";
 import { jwtDecode } from "jwt-decode";
 import useSocket from "../../hooks/useSocket";
@@ -23,7 +23,8 @@ export default function GroupChatbox() {
     const [showMembers, setShowMembers] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
-    const dropdownRef = useRef(null);
+    const emojiRef = useRef(null);
+    const membersDropdownRef = useRef(null);
     const chatWindowRef = useRef(null);
     const typingTimeoutRef = useRef(null);
 
@@ -51,7 +52,7 @@ export default function GroupChatbox() {
 
     const fetchGroupMessages = async () => {
         try {
-            const res = await getGroupMessages(id, token);
+            const res = await getGroupData(id, token);
             if (res.data.status === "success") {
                 setMessages(res.data.data.messages.messages);
                 setMembers(res.data.data.members.members);
@@ -134,11 +135,17 @@ export default function GroupChatbox() {
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (
-                dropdownRef.current &&
-                !dropdownRef.current.contains(event.target)
+                emojiRef.current &&
+                !emojiRef.current.contains(event.target)
+            ) {
+                setShowEmojiPicker(false);
+            }
+
+            if (
+                membersDropdownRef.current &&
+                !membersDropdownRef.current.contains(event.target)
             ) {
                 setShowMembers(false);
-                setShowEmojiPicker(false);
             }
         };
 
@@ -147,6 +154,7 @@ export default function GroupChatbox() {
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, []);
+
 
     const formatTime = (ts) =>
         new Date(ts).toLocaleTimeString([], {
@@ -189,7 +197,7 @@ export default function GroupChatbox() {
                     </h2>
 
                     {/* 👥 Button aligned right */}
-                    <div className="relative" ref={dropdownRef}>
+                    <div className="relative" ref={membersDropdownRef}>
                         <button
                             onClick={() => setShowMembers((prev) => !prev)}
                             className="text-indigo-600 hover:text-indigo-800 text-lg focus:outline-none"
@@ -319,7 +327,7 @@ export default function GroupChatbox() {
                     {isTyping ? "Someone is typing..." : "\u00A0"}
                 </div>
 
-                <div className="relative" ref={dropdownRef}>
+                <div className="relative" ref={emojiRef}>
                     {/* Emoji Picker */}
                     {showEmojiPicker && (
                         <div
@@ -342,7 +350,7 @@ export default function GroupChatbox() {
                             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                             className="text-gray-500 hover:text-indigo-500"
                             title="Insert Emoji"
-                            style={{transform: 'scale(1.3)'}}
+                            style={{ transform: 'scale(1.3)' }}
                         >
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
