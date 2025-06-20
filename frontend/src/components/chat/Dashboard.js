@@ -330,7 +330,7 @@ export default function Dashboard() {
                                     </div>
 
                                     {/* ⋮ Menu Toggle */}
-                                    <div className="absolute top-2 right-2">
+                                    <div className="absolute top-2 right-2" ref={dropdownRef}>
                                         <button
                                             className="text-gray-500 hover:text-gray-800 text-lg"
                                             onClick={() =>
@@ -346,7 +346,6 @@ export default function Dashboard() {
 
                                         {activeMenuGroupId === group.id && (
                                             <div
-                                                ref={dropdownRef}
                                                 className="absolute right-0 mt-2 w-28 bg-white border rounded-md shadow-md z-50"
                                             >
                                                 <button
