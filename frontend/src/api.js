@@ -145,7 +145,7 @@ export const joinGroup = (data, token) => {
 };
 
 export const leaveGroup = (id, token) => {
-    return axios.get(`${API_BASE}/group/join/${id}`, 
+    return axios.get(`${API_BASE}/group/leave/${id}`, 
         {
             headers: {
                 Authorization: `Bearer ${token}`

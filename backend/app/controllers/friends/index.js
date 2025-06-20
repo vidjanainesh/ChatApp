@@ -68,8 +68,9 @@ const unFriend = async (req, res) => {
 
         if (!existing) return errorResponse(res, "User is not your friend");
         else {
-            existing.status = "rejected";
-            await existing.save();
+            // existing.status = "rejected";
+            // await existing.save();
+            await existing.destroy();
 
             return successResponse(
                 res,
