@@ -5,7 +5,6 @@ const {
     createGroup,
     sendGroupMessage,
     getGroupData,
-    getUnreadGroupMessages,
     getGroups,
     deleteGroup,
     leaveGroup,
@@ -23,7 +22,6 @@ router.get('/leave/:id', authMiddleware, leaveGroup)
 router.post('/send-message', groupValidationRules.sendGroupMessage, handleValidation, authMiddleware, sendGroupMessage);
 
 router.get('/data/:id', groupValidationRules.getGroupData, handleValidation, authMiddleware, getGroupData);
-router.get('/unread', authMiddleware, getUnreadGroupMessages);
 // router.get('/:id', groupValidationRules.getGroupMembers, handleValidation, authMiddleware, getGroupMembers); // Not needed now
 router.get('/', authMiddleware, getGroups);
 

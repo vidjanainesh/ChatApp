@@ -4,7 +4,6 @@ const {
   successResponse,
   errorResponse,
   unAuthorizedResponse,
-  badRequestResponse
 } = require("../../helper/response");
 const sequelize = require("../../models/database");
 
@@ -29,7 +28,7 @@ const sendMessage = async (req, res) => {
         });
 
         if(!friendship) {
-            return badRequestResponse(res, "Not friends with this user");
+            return errorResponse(res, "Not friends with this user");
         }
         
         const sentMessage = await Message.create({
@@ -146,36 +145,8 @@ const getMessages = async (req, res) => {
     }
 }
 
-const getUnreadMessages = async (req, res) => {
-    try {
-        const userId = req.user.id;
-
-        const unreadCounts = await Message.findAll({
-            where: {
-                receiver_id: userId,
-                is_read: false
-            },
-            attributes: [
-                'sender_id',
-                [Sequelize.fn('COUNT', Sequelize.col('id')), 'unreadCount']
-            ],
-            group: ['sender_id']
-        });
-
-        const unreadMap = {};
-        unreadCounts.forEach(row => {
-            unreadMap[row.sender_id] = parseInt(row.get('unreadCount'));
-        });
-
-        return successResponse(res, unreadMap);
-    } catch (error) {
-        return errorResponse(res, error.message, 500);
-    }
-};
-
 module.exports = {
     sendMessage,
     getMessages,
     getUsers,
-    getUnreadMessages
 }

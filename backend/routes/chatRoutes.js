@@ -5,7 +5,6 @@ const {
     sendMessage,
     getMessages,
     getUsers,
-    getUnreadMessages
 } = require('../app/controllers/chat');
 
 const authMiddleware = require('../app/middlewares/authMiddleware');
@@ -15,7 +14,6 @@ const handleValidation = require('../app/middlewares/validators/handleValidation
 
 router.post('/send', authMiddleware, chatValidationRules.sendMessage, handleValidation, sendMessage);
 router.get('/get/:id', authMiddleware, chatValidationRules.getMessages, handleValidation, getMessages);
-router.get('/unread', authMiddleware, getUnreadMessages);
 router.get('/get', authMiddleware, getUsers);
 
 module.exports = router;

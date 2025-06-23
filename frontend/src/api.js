@@ -28,6 +28,19 @@ export const resetPassword = (data, token) => {
         }
     );
 }
+// ---------------------------------------------------------------------
+
+export const getDashboardData = (token) => {
+    return axios.get(`${API_BASE}/dashboard`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    )
+}
+
+// ---------------------------------------------------------------------
 
 export const sendMessage = (message, receiverId, token) => {
     return axios.post(`${API_BASE}/chat/send`,
@@ -50,15 +63,6 @@ export const getMessages = (id, token) => {
     );
 }
 
-export const getUnreadMessages = (token) => {
-  return axios.get(`${API_BASE}/chat/unread`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-};
-
-
 export const getUsers = (token) => {
     return axios.get(`${API_BASE}/chat/get`,
         {
@@ -69,15 +73,6 @@ export const getUsers = (token) => {
     );
 }
 // ---------------------------------------------------------
-export const getFriends = (token) => {
-    return axios.get(`${API_BASE}/friend`,
-        {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        }
-    );
-}
 
 export const getFriendReq = (token) => {
     return axios.get(`${API_BASE}/friend/requests`,
@@ -185,16 +180,6 @@ export const getGroupData = (id, token) => {
 //         }
 //     );
 // } 
-
-export const getUnreadGroupMessages = (token) => {
-    return axios.get(`${API_BASE}/group/unread`, 
-        {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        }
-    );
-} 
 
 export const getGroups = (token) => {
     return axios.get(`${API_BASE}/group`, 

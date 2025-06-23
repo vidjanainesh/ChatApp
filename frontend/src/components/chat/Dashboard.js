@@ -2,25 +2,30 @@ import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
-    getFriends,
-    getUnreadMessages,
+    getDashboardData,
     getGroups,
-    getUnreadGroupMessages,
     createGroup,
     deleteGroup,
     unFriend,
 } from "../../api";
 import { motion } from "framer-motion";
 import useSocket from "../../hooks/useSocket";
+import { useDispatch, useSelector } from "react-redux";
+import { setFriends, setUser, setGroups } from "../../store/userSlice";
 
 export default function Dashboard() {
     const navigate = useNavigate();
     const token = localStorage.getItem("jwt");
 
-    const [friends, setFriends] = useState([]);
-    const [user, setUser] = useState(null);
+    const dispatch = useDispatch();
+    const user = useSelector((state) => state.user.user);
+    const friends = useSelector((state) => state.user.friends);
+    const groups = useSelector((state) => state.user.groups);
+
+    // const [friends, setFriends] = useState([]);
+    // const [user, setUser] = useState(null);
     const [unreadMap, setUnreadMap] = useState({});
-    const [groups, setGroups] = useState([]);
+    // const [groups, setGroups] = useState([]);
     const [unreadGroupMap, setUnreadGroupMap] = useState({});
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [groupName, setGroupName] = useState("");
@@ -59,39 +64,20 @@ export default function Dashboard() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [friendsRes, unreadRes, groupsRes, unreadGroupRes] =
-                    await Promise.all([
-                        getFriends(token),
-                        getUnreadMessages(token),
-                        getGroups(token),
-                        getUnreadGroupMessages(token),
-                    ]);
+                const response = await getDashboardData(token);
 
-                if (friendsRes.data.status !== "success") {
-                    toast.error(
-                        friendsRes.data.message || "Could not retrieve friends",
-                        { autoClose: 3000 }
-                    );
-                } else {
-                    setFriends(friendsRes.data.data.data);
-                    setUser(friendsRes.data.data.user);
+                if(response.data.status === 'success') {
+                    dispatch(setFriends(response.data.data.friends.data));
+                    dispatch(setUser({user: response.data.data.friends.user, token}));
+                    setUnreadMap(response.data.data.unreadPrivateMsgs || {});
+                    dispatch(setGroups(response.data.data.groups || []));
+                    setUnreadGroupMap(response.data.data.unreadGroupMsgs || {});
                 }
 
-                if (unreadRes.data.status === "success") {
-                    setUnreadMap(unreadRes.data.data || {});
-                }
-
-                if (groupsRes.data.status === "success") {
-                    setGroups(groupsRes.data.data || []);
-                }
-
-                if (unreadGroupRes.data.status === "success") {
-                    setUnreadGroupMap(unreadGroupRes.data.data || {});
-                }
             } catch (error) {
                 const errorMessage =
                     error.response?.data?.message ||
-                    "Something went wrong while fetching data";
+                    "Something went wrong while fetching data for dashboard";
 
                 if (errorMessage === "Invalid or expired token") {
                     toast.error("Invalid session. Please log in again.", {
@@ -105,8 +91,10 @@ export default function Dashboard() {
             }
         };
         
-        fetchData();
-    }, [token, navigate]);
+        if (!friends.length || !groups.length || !user) {
+            fetchData();
+        }
+    }, [token, navigate, dispatch, friends.length, groups.length, user]);
 
     const handleLogout = () => {
         localStorage.removeItem("jwt");
@@ -132,10 +120,7 @@ export default function Dashboard() {
             return updated;
         });
 
-        navigate(
-            `/groupchatbox/${group.id}?name=${encodeURIComponent(group.name)}`,
-            { state: { friends } }
-        );
+        navigate(`/groupchatbox/${group.id}?name=${encodeURIComponent(group.name)}`);
     };
 
     const goToFindPeople = () => {
@@ -152,7 +137,7 @@ export default function Dashboard() {
 
             if (res.data.status === "success") {
                 toast.success("Friend removed!");
-                setFriends((prev) => prev.filter((f) => f.id !== friendId));
+                dispatch(setFriends(friends.filter((f) => f.id !== friendId)));
             } else {
                 toast.error(res.data.message || "Failed to unfriend");
             }
@@ -190,7 +175,7 @@ export default function Dashboard() {
                 // Refresh groups
                 const refreshed = await getGroups(token);
                 if (refreshed.data.status === "success") {
-                    setGroups(refreshed.data.data || []);
+                    dispatch(setGroups(refreshed.data.data || []));
                 }
             } else {
                 toast.error(res.data.message || "Could not create group");
@@ -206,7 +191,7 @@ export default function Dashboard() {
             const res = await deleteGroup(groupId, token);
             if (res.data.status === "success") {
                 toast.success("Group deleted!");
-                setGroups((prev) => prev.filter((g) => g.id !== groupId));
+                dispatch(setGroups(groups.filter((g) => g.id !== groupId)));
             } else {
                 toast.error(res.data.message || "Failed to delete group");
             }

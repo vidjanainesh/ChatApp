@@ -5,7 +5,6 @@ const {
     errorResponse,
     errorThrowResponse,
     notFoundResponse,
-    conflictResponse,
 } = require("../../helper/response");
 
 const sendFriendReq = async (req, res) => {
@@ -31,7 +30,7 @@ const sendFriendReq = async (req, res) => {
         });
 
         if (existing) {
-            return conflictResponse(
+            return errorResponse(
                 res,
                 "Friend request already exists or you are already friends."
             );
@@ -47,7 +46,7 @@ const sendFriendReq = async (req, res) => {
 
         return successResponse(res, {}, "Friend request sent");
     } catch (error) {
-        return errorThrowResponse(res, error.message, 500);
+        return errorThrowResponse(res, error.message, error);
     }
 };
 
@@ -74,7 +73,7 @@ const unFriend = async (req, res) => {
 
             return successResponse(
                 res,
-                existing,
+                {},
                 "User removed from your friends"
             );
         }
@@ -102,6 +101,13 @@ const manageFriendReq = async (req, res) => {
 
         if (result[0] === 0) {
             return notFoundResponse(res, "Friend request not found");
+        }
+
+        if(status === 'accepted'){
+            const friend = await User.findOne({where: {id: user.id}, attributes: ['id', 'name', 'email']});
+
+            const io = req.app.get('io');
+            io.to(`user_${id}`).emit('friendAccepted', {friend});
         }
 
         return successResponse(res, {}, "Friend request status updated");
@@ -136,65 +142,9 @@ const getAllFriendReq = async (req, res) => {
     }
 };
 
-const getFriends = async (req, res) => {
-    try {
-        const user = req.user;
-
-        const friends = await Friends.findAll({
-            where: {
-                status: "accepted",
-                [Op.or]: [{ sender_id: user.id }, { receiver_id: user.id }],
-            },
-            include: [
-                {
-                    model: User,
-                    as: "sender",
-                    attributes: ["id", "name", "email"],
-                },
-                {
-                    model: User,
-                    as: "receiver",
-                    attributes: ["id", "name", "email"],
-                },
-            ],
-            attributes: ["id", "sender_id", "receiver_id", "status"],
-        });
-
-        // console.log(friends[0].receiver);
-
-        const friendList = friends.map((friend) => {
-            const isSender = friend.sender_id === user.id;
-            const otherUser = isSender ? friend.receiver : friend.sender;
-            return {
-                id: otherUser.id,
-                name: otherUser.name,
-                email: otherUser.email,
-            };
-        });
-
-        const userObj = {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-        };
-
-        return successResponse(
-            res,
-            {
-                user: userObj,
-                data: friendList,
-            },
-            "Fetched all friends"
-        );
-    } catch (error) {
-        return errorThrowResponse(res, error.message, 500);
-    }
-};
-
 module.exports = {
     getAllFriendReq,
     sendFriendReq,
     manageFriendReq,
-    getFriends,
     unFriend,
 };

@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { initSocket } from "./socketManager";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { addMessage, addGroupMessage } from "../store/chatSlice";
+import { addFriend, setGroups } from "../store/userSlice";
 
 export default function useSocket({ token, chatUserId, groupId, loggedInUserId, setMessages, setIsTyping, onNewMessageAlert }) {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [socketInstance, setSocketInstance] = useState(null);
 
   useEffect(() => {
@@ -20,6 +24,44 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
       console.log("Socket connected:", socket.id);
     });
 
+    socket.on("friendAccepted", (data) => {
+      const {friend} = data;
+      if(friend) {
+        dispatch(addFriend(friend));
+        if (Notification.permission === "granted") {
+          const notif = new Notification("Friend Request Accepted", {
+            body: `${friend.name} accepted your request!`,
+            icon: "/icon.png",
+          });
+
+          notif.onclick = () => {
+            window.focus();
+            navigate("/dashboard");
+          };
+        }
+      }
+    });
+
+    socket.on("groupCreated", (data) => {
+      console.log("NEW GROUP!!!!!!!!!!!!!!!");
+      const {group} = data;
+      if(group) {
+        dispatch(setGroups(group));
+        socket.emit('joinGroupRoom',`group_${group.id}`)
+        if (Notification.permission === "granted") {
+          const notif = new Notification("Group Joined", {
+            body: `You are part of a new group: ${group.name}!`,
+            icon: "/icon.png",
+          });
+
+          notif.onclick = () => {
+            window.focus();
+            navigate("/dashboard");
+          };
+        }
+      }
+    })
+
     socket.on("newMessage", (data) => {
       const message = data?.message || data;
       const senderIdStr = String(message.sender_id);
@@ -27,12 +69,13 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
       const loggedInUserIdStr = String(loggedInUserId);
 
       // 1. Push to chat messages if it's the active conversation
-      if (chatUserId && setMessages) {
+      if (chatUserId) {
         if (
           (senderIdStr === loggedInUserIdStr && receiverIdStr === chatUserId) ||
           (receiverIdStr === loggedInUserIdStr && senderIdStr === chatUserId)
         ) {
-          setMessages((prev) => [...prev, message]);
+          // setMessages((prev) => [...prev, message]);
+          dispatch(addMessage(message)); 
         }
       }
 
@@ -73,7 +116,8 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
       const { message, groupId: msgGroupId } = data;
 
       if (groupId && parseInt(groupId) === msgGroupId && setMessages) {
-        setMessages((prev) => [...prev, message]);
+        // setMessages((prev) => [...prev, message]);
+        dispatch(addGroupMessage(message)); 
       }
 
       if (typeof onNewMessageAlert === "function") {
@@ -110,12 +154,14 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
 
     return () => {
       // Detach only listeners, not socket itself
+      socket.off("friendAccepted");
+      socket.off("groupCreated")
       socket.off("newMessage");
       socket.off("typing");
       socket.off("newGroupMessage");
       socket.off("groupTyping");
     };
-  }, [token, chatUserId, loggedInUserId, onNewMessageAlert]);
+  }, [token, chatUserId, groupId, loggedInUserId, onNewMessageAlert, dispatch, navigate, setIsTyping, setMessages]);
 
   return socketInstance;
 }
