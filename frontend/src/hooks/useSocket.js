@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
 import { initSocket } from "./socketManager";
 import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { addMessage, addGroupMessage } from "../store/chatSlice";
-import { addFriend, setGroups } from "../store/userSlice";
+import { addFriend, setGroups, appendUnreadPrivate, appendUnreadGroup, setFriendReqCount } from "../store/userSlice";
 
 export default function useSocket({ token, chatUserId, groupId, loggedInUserId, setMessages, setIsTyping, onNewMessageAlert }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [socketInstance, setSocketInstance] = useState(null);
+  const friendReqCount = useSelector((state) => state.user.friendReqCount);
 
   useEffect(() => {
     if (!token) return;
@@ -24,7 +25,12 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
       console.log("Socket connected:", socket.id);
     });
 
+    socket.on('friendReqSent', () => {
+      dispatch(setFriendReqCount(friendReqCount+1));
+    })
+
     socket.on("friendAccepted", (data) => {
+      console.log('[Socket]: Friend accepted')
       const {friend} = data;
       if(friend) {
         dispatch(addFriend(friend));
@@ -80,11 +86,9 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
       }
 
       // 2. Global notification logic
-      if (
-        typeof onNewMessageAlert === "function" &&
-        senderIdStr !== loggedInUserIdStr
-      ) {
-        onNewMessageAlert(senderIdStr);
+      if (senderIdStr !== loggedInUserIdStr) {
+        // onNewMessageAlert(senderIdStr);
+        dispatch(appendUnreadPrivate(senderIdStr));
       }
 
       // 3. Push browser notification
@@ -120,9 +124,7 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
         dispatch(addGroupMessage(message)); 
       }
 
-      if (typeof onNewMessageAlert === "function") {
-        onNewMessageAlert(`group_${msgGroupId}`);
-      }
+      dispatch(appendUnreadGroup(msgGroupId));
 
       if (
         Notification.permission === "granted" &&

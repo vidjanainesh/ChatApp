@@ -46,6 +46,16 @@ const getDashboardData = async (req, res) => {
             data: friendList,
         };
 
+        // Get friend req count ----------------------------------------------------------------
+        const friendReqs = await Friends.findAll({
+            where: {
+                receiver_id: user.id,
+                status: 'pending'
+            }
+        });
+
+        const friendReqCount = friendReqs.length;
+
         // Get unread private messages ---------------------------------------------------------
         const unreadCounts = await Message.findAll({
             where: {
@@ -113,6 +123,7 @@ const getDashboardData = async (req, res) => {
         // Dashboard Data Object 
         const dashboardData = {
             friends: friendsObj,
+            friendReqCount,
             unreadPrivateMsgs: unreadMap,
             groups,
             unreadGroupMsgs: unreadGroupMap,

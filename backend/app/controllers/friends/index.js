@@ -44,6 +44,9 @@ const sendFriendReq = async (req, res) => {
 
         await Friends.create(obj);
 
+        const io = req.app.get('io');
+        io.to(`user_${id}`).emit('friendReqSent');
+
         return successResponse(res, {}, "Friend request sent");
     } catch (error) {
         return errorThrowResponse(res, error.message, error);
@@ -88,19 +91,27 @@ const manageFriendReq = async (req, res) => {
         const user = req.user;
 
         // status = status == '1' ? 'accepted' : 'rejected';
-
-        const result = await Friends.update(
-            { status },
-            {
+        if(status === 'accepted') {
+            const result = await Friends.update(
+                { status },
+                {
+                    where: {
+                        sender_id: id,
+                        receiver_id: user.id,
+                    },
+                }
+            );
+            if (result[0] === 0) {
+            return notFoundResponse(res, "Friend request not found");
+            }
+        }
+        else if(status === 'rejected'){
+            await Friends.destroy({
                 where: {
                     sender_id: id,
                     receiver_id: user.id,
-                },
-            }
-        );
-
-        if (result[0] === 0) {
-            return notFoundResponse(res, "Friend request not found");
+                }
+            })
         }
 
         if(status === 'accepted'){
