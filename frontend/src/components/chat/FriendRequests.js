@@ -3,13 +3,15 @@ import { getFriendReq, manageFriendReq } from "../../api";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { motion } from "framer-motion";
-import { useDispatch } from "react-redux";
-import { setFriends } from "../../store/userSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { setFriends, setFriendReqCount } from "../../store/userSlice";
 
 export default function FriendRequests() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const token = localStorage.getItem("jwt");
+
+  const friendReqCount = useSelector((state => state.user.friendReqCount));
   const [requests, setRequests] = useState([]);
 
   useEffect(() => {
@@ -36,6 +38,7 @@ export default function FriendRequests() {
 
   const handleAction = async (id, status) => {
     try {
+      dispatch(setFriendReqCount(friendReqCount-1));
       const response = await manageFriendReq(id, status, token);
       if (response.data.status === "success") {
         // toast.success(`Request ${status}`, { autoClose: 2000 });

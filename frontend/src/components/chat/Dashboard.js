@@ -11,7 +11,17 @@ import {
 import { motion } from "framer-motion";
 import useSocket from "../../hooks/useSocket";
 import { useDispatch, useSelector } from "react-redux";
-import { setFriends, setUser, setGroups } from "../../store/userSlice";
+import {
+    setFriends,
+    setUser,
+    setGroups,
+    setUnreadPrivateMap,
+    setUnreadGroupMap,
+    clearUnreadPrivateMapEntry,
+    clearUnreadGroupMapEntry,
+    setFriendReqCount,
+    clearUser,
+} from "../../store/userSlice";
 
 export default function Dashboard() {
     const navigate = useNavigate();
@@ -21,12 +31,15 @@ export default function Dashboard() {
     const user = useSelector((state) => state.user.user);
     const friends = useSelector((state) => state.user.friends);
     const groups = useSelector((state) => state.user.groups);
+    const unreadPrivateMap = useSelector((state) => state.user.unreadPrivateMap);
+    const unreadGroupMap = useSelector((state) => state.user.unreadGroupMap);
+    const friendReqCount = useSelector((state) => state.user.friendReqCount);
 
     // const [friends, setFriends] = useState([]);
     // const [user, setUser] = useState(null);
-    const [unreadMap, setUnreadMap] = useState({});
+    // const [unreadMap, setUnreadMap] = useState({});
     // const [groups, setGroups] = useState([]);
-    const [unreadGroupMap, setUnreadGroupMap] = useState({});
+    // const [unreadGroupMap, setUnreadGroupMap] = useState({});
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [groupName, setGroupName] = useState("");
     const [selectedFriendIds, setSelectedFriendIds] = useState([]);
@@ -48,15 +61,9 @@ export default function Dashboard() {
         setIsTyping: null,
         onNewMessageAlert: (fromUserId, type, roomId) => {
             if (type === "group") {
-                setUnreadGroupMap((prev) => ({
-                    ...prev,
-                    [roomId]: true,
-                }));
+                dispatch(setUnreadGroupMap(roomId));
             } else {
-                setUnreadMap((prev) => ({
-                    ...prev,
-                    [fromUserId]: true,
-                }));
+                dispatch(setUnreadPrivateMap(fromUserId));
             }
         },
     });
@@ -64,16 +71,24 @@ export default function Dashboard() {
     useEffect(() => {
         const fetchData = async () => {
             try {
+                if(!token) {
+                    return;
+                }
                 const response = await getDashboardData(token);
 
-                if(response.data.status === 'success') {
+                if (response.data.status === "success") {
                     dispatch(setFriends(response.data.data.friends.data));
-                    dispatch(setUser({user: response.data.data.friends.user, token}));
-                    setUnreadMap(response.data.data.unreadPrivateMsgs || {});
+                    dispatch(setFriendReqCount(response.data.data.friendReqCount));
+                    dispatch(
+                        setUser({
+                            user: response.data.data.friends.user,
+                            token,
+                        })
+                    );
                     dispatch(setGroups(response.data.data.groups || []));
-                    setUnreadGroupMap(response.data.data.unreadGroupMsgs || {});
+                    dispatch(setUnreadPrivateMap(response.data.data.unreadPrivateMsgs || {}));
+                    dispatch(setUnreadGroupMap(response.data.data.unreadGroupMsgs || {}));
                 }
-
             } catch (error) {
                 const errorMessage =
                     error.response?.data?.message ||
@@ -90,7 +105,7 @@ export default function Dashboard() {
                 }
             }
         };
-        
+
         if (!friends.length || !groups.length || !user) {
             fetchData();
         }
@@ -99,28 +114,20 @@ export default function Dashboard() {
     const handleLogout = () => {
         localStorage.removeItem("jwt");
         toast.success("Logged out", { autoClose: 3000 });
+        dispatch(clearUser());
         navigate("/");
     };
 
     const handleUserClick = (user) => {
-        // Mark as read when opening chat
-        setUnreadMap((prev) => {
-            const updated = { ...prev };
-            delete updated[user.id];
-            return updated;
-        });
-
+        dispatch(clearUnreadPrivateMapEntry(user.id));
         navigate(`/chatbox/${user.id}?name=${encodeURIComponent(user.name)}`);
     };
 
     const handleGroupClick = (group) => {
-        setUnreadGroupMap((prev) => {
-            const updated = { ...prev };
-            delete updated[group.id];
-            return updated;
-        });
-
-        navigate(`/groupchatbox/${group.id}?name=${encodeURIComponent(group.name)}`);
+        dispatch(clearUnreadGroupMapEntry(group.id));
+        navigate(
+            `/groupchatbox/${group.id}?name=${encodeURIComponent(group.name)}`
+        );
     };
 
     const goToFindPeople = () => {
@@ -257,12 +264,21 @@ export default function Dashboard() {
                         >
                             🔍 Find People
                         </button>
-                        <button
-                            onClick={goToFriendRequests}
-                            className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition duration-300 text-sm sm:text-base"
-                        >
-                            📨 Friend Requests
-                        </button>
+                        <motion.div className="relative inline-block">
+                            <button
+                                onClick={goToFriendRequests}
+                                className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition duration-300 text-sm sm:text-base"
+                            >
+                                📨 Friend Requests
+                            </button>
+
+                            {friendReqCount > 0 && (
+                                <span className="absolute top-0 right-0 -mt-1 -mr-1 bg-slate-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                                    {friendReqCount}
+                                </span>
+                            )}
+                        </motion.div>
+
                         <button
                             onClick={handleLogout}
                             className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition duration-300 text-sm sm:text-base"
@@ -350,7 +366,7 @@ export default function Dashboard() {
                                 </div>
 
                                 {/* 🔴 Unread Indicator */}
-                                {unreadMap[user.id] && (
+                                {unreadPrivateMap[user.id] && (
                                     <span className="absolute top-2 left-2 w-3 h-3 bg-red-500 rounded-full animate-bounce"></span>
                                 )}
                             </motion.div>
