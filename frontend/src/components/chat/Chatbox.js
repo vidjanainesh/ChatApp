@@ -6,6 +6,8 @@ import { jwtDecode } from "jwt-decode";
 import useSocket from "../../hooks/useSocket";
 import { motion } from "framer-motion";
 import EmojiPicker from "emoji-picker-react";
+import { useDispatch, useSelector } from "react-redux";
+import { setMessages, addMessage } from "../../store/chatSlice";
 
 export default function Chatbox() {
   const navigate = useNavigate();
@@ -19,6 +21,9 @@ export default function Chatbox() {
   const typingTimeoutRef = useRef(null);
   const dropdownRef = useRef(null);
 
+  const dispatch = useDispatch();
+  const messages = useSelector((state) => state.chat.messages);
+
   let loggedInUserId = null;
   try {
     const decoded = jwtDecode(token);
@@ -29,7 +34,6 @@ export default function Chatbox() {
     navigate("/");
   }
 
-  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -39,7 +43,7 @@ export default function Chatbox() {
     token,
     chatUserId: id,
     loggedInUserId,
-    setMessages,
+    setMessages: (msgs) => dispatch(setMessages(msgs)),
     setIsTyping,
     onNewMessageAlert: stableAlert, // prevents global notification while inside Chatbox
   });
@@ -48,7 +52,7 @@ export default function Chatbox() {
     try {
       const res = await getMessages(id, token);
       if (res.data.status === "success") {
-        setMessages(res.data.data);
+        dispatch(setMessages(res.data.data));
       } else {
         toast.error(res.data.message || "Failed to get messages", { autoClose: 3000 });
       }
@@ -102,6 +106,7 @@ export default function Chatbox() {
       const res = await sendMessage(input, id, token);
       if (res.data.status === "success") {
         setInput("");
+        // dispatch(addMessage(res.data.data)) - Not needed since it is being dispatched from socket
       } else {
         toast.error("Could not send message", { autoClose: 3000 });
       }

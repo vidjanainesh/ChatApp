@@ -44,6 +44,11 @@ const createGroup = async (req, res) => {
         });
 
         memberIds.push(user.id);
+
+        // Emit new group created event to all the members (including self)
+        const io = req.app.get('io');
+        memberIds.map((id) => io.to(`user_${id}`).emit("groupCreated", {group: {id: group.id, name: group.name}}));
+
         await group.addMembers(memberIds); //Magic method
 
         return successPostResponse(res, {}, "Group generated");
@@ -256,40 +261,6 @@ const getGroups = async (req, res) => {
     }
 };
 
-const getUnreadGroupMessages = async (req, res) => {
-  try {
-    const user = req.user;
-
-    // Get all messages that are unread (read_at is null) for this user
-    const unread = await GroupMessageRead.findAll({
-      where: {
-        user_id: user.id,
-        read_at: null,
-      },
-      attributes: ["group_message_id"],
-      include: [
-        {
-          model: GroupMessages,
-          as: 'message',
-          attributes: ["group_id"],
-        },
-      ],
-    });
-
-    const unreadGroupMap = {};
-    unread.forEach((entry) => {
-      const groupId = entry.message?.group_id;
-      if (groupId) {
-        unreadGroupMap[groupId] = true;
-      }
-    });
-
-    return successResponse(res, unreadGroupMap, "Fetched unread group messages");
-  } catch (error) {
-    return errorThrowResponse(res, `${error.message}`, error);
-  }
-};
-
 const deleteGroup = async (req, res) => {
     try {
         const groupId = req.params.id;
@@ -392,7 +363,6 @@ module.exports = {
     createGroup,
     sendGroupMessage,
     getGroupData,
-    getUnreadGroupMessages,
     getGroups,
     deleteGroup,
     leaveGroup,

@@ -52,6 +52,8 @@ function setupSocket(server) {
       console.error("Error joining group rooms:", err);
     }
 
+    socket.on('joinGroupRoom', (roomId) => { socket.join(roomId) })
+
     // Private typing
     socket.on("typing", (data) => {
       const receiverRoom = `user_${data.receiverId}`;

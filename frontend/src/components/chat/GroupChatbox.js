@@ -9,6 +9,8 @@ import {
 import { toast } from "react-toastify";
 import { jwtDecode } from "jwt-decode";
 import useSocket from "../../hooks/useSocket";
+import { useDispatch, useSelector } from "react-redux";
+import { setGroupMessages, addGroupMessage, setGroupMembers } from "../../store/chatSlice";
 import { motion } from "framer-motion";
 import EmojiPicker from "emoji-picker-react";
 import { HiOutlineLogout, HiUserAdd, HiOutlineUsers } from "react-icons/hi";
@@ -18,12 +20,16 @@ export default function GroupChatbox() {
     const { id } = useParams(); // groupId
     const location = useLocation();
     const queryParams = new URLSearchParams(location.search);
-    const friends = location.state?.friends || [];
     const name = queryParams.get("name");
     const token = localStorage.getItem("jwt");
+    
+    const dispatch = useDispatch();
+    const messages = useSelector((state) => state.chat.groupMessages);
+    const members = useSelector((state) => state.chat.groupMembers);
+    const friends = useSelector((state) => state.user.friends);
 
-    const [messages, setMessages] = useState([]);
-    const [members, setMembers] = useState([]);
+    // const [messages, setMessages] = useState([]);
+    // const [members, setMembers] = useState([]);
     const [input, setInput] = useState("");
     const [isTyping, setIsTyping] = useState(false);
     const [showMembers, setShowMembers] = useState(false);
@@ -38,6 +44,7 @@ export default function GroupChatbox() {
     const typingTimeoutRef = useRef(null);
     const leaveModalRef = useRef(null);
     const inviteModalRef = useRef(null);
+
 
     let loggedInUserId = null;
     try {
@@ -56,7 +63,7 @@ export default function GroupChatbox() {
         token,
         groupId: id,
         loggedInUserId,
-        setMessages,
+        setMessages: (msg) => dispatch(addGroupMessage(msg)),
         setIsTyping,
         onNewMessageAlert: stableAlert,
     });
@@ -65,8 +72,8 @@ export default function GroupChatbox() {
         try {
             const res = await getGroupData(id, token);
             if (res.data.status === "success") {
-                setMessages(res.data.data.messages.messages);
-                setMembers(res.data.data.members.members);
+                dispatch(setGroupMessages(res.data.data.messages.messages));
+                dispatch(setGroupMembers(res.data.data.members.members));
             } else {
                 toast.error(
                     res.data.message || "Failed to get group messages",

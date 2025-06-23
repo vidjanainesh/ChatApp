@@ -6,7 +6,6 @@ const {
     unFriend,
     getAllFriendReq,
     manageFriendReq,
-    getFriends,
 } = require('../app/controllers/friends');
 
 const authMiddleware = require('../app/middlewares/authMiddleware');
@@ -18,6 +17,5 @@ router.post('/send', authMiddleware, friendValidationRules.sendFriendReq, handle
 router.get('/unfriend/:id', authMiddleware, unFriend);
 router.post('/update', authMiddleware, friendValidationRules.manageFriendReq, handleValidation, manageFriendReq);
 router.get('/requests', authMiddleware, getAllFriendReq);
-router.get('/', authMiddleware, getFriends);
 
 module.exports = router;

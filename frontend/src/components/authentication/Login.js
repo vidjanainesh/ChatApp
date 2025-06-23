@@ -4,10 +4,15 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Eye, EyeOff } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { setUser } from '../../store/userSlice';
+import {jwtDecode} from 'jwt-decode';
 
 export default function Login() {
   const navigate = useNavigate();
-  const [user, setUser] = useState({ email: "", password: "" });
+  const dispatch = useDispatch();
+
+  const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
@@ -19,16 +24,20 @@ export default function Login() {
 
 
   const handleChange = (e) =>
-    setUser({ ...user, [e.target.name]: e.target.value });
+    setLoginForm({ ...loginForm, [e.target.name]: e.target.value });
 
   const togglePassword = () => setShowPassword((prev) => !prev);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await loginUser(user);
+      const response = await loginUser(loginForm);
       if (response.data.status === "success") {
+
+        const token = response.data.data;
+        const decodedUser = jwtDecode(token);
         localStorage.setItem("jwt", response.data.data);
+        dispatch(setUser({ user: decodedUser, token }));
         navigate("/dashboard");
       } else {
         toast.error(response.data.message || "Login failed", {
@@ -62,7 +71,7 @@ export default function Login() {
               type="email"
               name="email"
               id="email"
-              value={user.email}
+              value={loginForm.email}
               onChange={handleChange}
               required
               className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none"
@@ -78,7 +87,7 @@ export default function Login() {
                 type={showPassword ? "text" : "password"}
                 name="password"
                 id="password"
-                value={user.password}
+                value={loginForm.password}
                 onChange={handleChange}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none pr-10"
