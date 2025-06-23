@@ -11,4 +11,6 @@ router.use('/chat', chatRoutes);
 router.use('/friend', friendRoutes);
 router.use('/group', groupRoutes);
 
+router.get('/ping', (req, res) => res.status(200).send('PING!'));
+
 module.exports = router;

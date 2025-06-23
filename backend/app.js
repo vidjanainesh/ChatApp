@@ -2,8 +2,9 @@ const express = require('express');
 const http = require('http');
 const app = express();
 const cors = require('cors');
-require('dotenv').config();
 const morgan = require('morgan');
+require('dotenv').config();
+require('./cron-jobs/ping');
 
 const sequelize = require('./app/models/database');
 const indexRoutes = require('./routes/index');
