@@ -5,8 +5,8 @@ import {
     getDashboardData,
     getGroups,
     createGroup,
-    deleteGroup,
     unFriend,
+    leaveGroup,
 } from "../../api";
 import { motion } from "framer-motion";
 import useSocket from "../../hooks/useSocket";
@@ -192,20 +192,21 @@ export default function Dashboard() {
         }
     };
 
-    // Handle group deletion
-    const handleDeleteGroup = async (groupId) => {
-        try {
-            const res = await deleteGroup(groupId, token);
-            if (res.data.status === "success") {
-                toast.success("Group deleted!");
-                dispatch(setGroups(groups.filter((g) => g.id !== groupId)));
-            } else {
-                toast.error(res.data.message || "Failed to delete group");
+    // Handle leave group
+    const handleLeaveGroup = async (groupId) => {
+            try {
+                const res = await leaveGroup(groupId, token);
+                if (res.data.status === "success") {
+                    toast.success("You left the group");
+                    dispatch(setGroups(groups.filter((g) => g.id !== groupId)));
+                } else {
+                    toast.error(res.data.message || "Failed to leave group");
+                }
+            } catch (err) {
+                const msg = err.response?.data?.message || "Error leaving group";
+                toast.error(msg);
             }
-        } catch (err) {
-            toast.error("Error deleting group");
-        }
-    };
+        };
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -445,7 +446,7 @@ export default function Dashboard() {
                                                     }}
                                                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                                                 >
-                                                    Delete
+                                                    Leave
                                                 </button>
                                             </div>
                                         )}
@@ -538,7 +539,7 @@ export default function Dashboard() {
                 <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
                     <div className="bg-white rounded-md p-5 shadow-lg max-w-sm w-full text-center">
                         <p className="text-gray-800 font-medium mb-4">
-                            Are you sure you want to delete this group?
+                            Are you sure you want to leave this group?
                         </p>
                         <div className="flex justify-center gap-4">
                             <button
@@ -552,7 +553,7 @@ export default function Dashboard() {
                             </button>
                             <button
                                 onClick={() => {
-                                    handleDeleteGroup(confirmingDeleteId);
+                                    handleLeaveGroup(confirmingDeleteId);
                                     setConfirmingDeleteId(false);
                                 }}
                                 className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md"

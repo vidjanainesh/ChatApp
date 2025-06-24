@@ -120,7 +120,7 @@ const getDashboardData = async (req, res) => {
         }
         });
 
-        // Dashboard Data Object 
+        // Final response object
         const dashboardData = {
             friends: friendsObj,
             friendReqCount,

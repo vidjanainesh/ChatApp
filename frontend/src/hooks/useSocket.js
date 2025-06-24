@@ -30,7 +30,6 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
     })
 
     socket.on("friendAccepted", (data) => {
-      console.log('[Socket]: Friend accepted')
       const {friend} = data;
       if(friend) {
         dispatch(addFriend(friend));
@@ -119,9 +118,9 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
     socket.on("newGroupMessage", (data) => {
       const { message, groupId: msgGroupId } = data;
 
-      if (groupId && parseInt(groupId) === msgGroupId && setMessages) {
+      if (groupId && parseInt(groupId) === parseInt(msgGroupId) && setMessages) {
         // setMessages((prev) => [...prev, message]);
-        dispatch(addGroupMessage(message)); 
+        dispatch(addGroupMessage(message));
       }
 
       dispatch(appendUnreadGroup(msgGroupId));
@@ -163,7 +162,7 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
       socket.off("newGroupMessage");
       socket.off("groupTyping");
     };
-  }, [token, chatUserId, groupId, loggedInUserId, onNewMessageAlert, dispatch, navigate, setIsTyping, setMessages]);
+  }, [token, chatUserId, groupId, loggedInUserId, onNewMessageAlert, dispatch, navigate, setIsTyping, setMessages, friendReqCount]);s
 
   return socketInstance;
 }

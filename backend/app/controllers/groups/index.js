@@ -43,11 +43,30 @@ const createGroup = async (req, res) => {
             created_by: user.id,
         });
 
+        // "Group was created"
+        const systemMessage = await GroupMessages.create({
+            group_id: group.id,
+            sender_id: null,
+            message: `Group: ${name} created by ${user.name?.split(' ')[0]}!`,
+            type: 'system'
+        });
+        
+        const message = {
+            id: systemMessage.id,
+            senderId: null,
+            message: systemMessage.message,
+            createdAt: systemMessage.createdAt,
+            type: systemMessage.type,
+            sender: {
+                name: null,
+            }
+        };
+        
         memberIds.push(user.id);
-
-        // Emit new group created event to all the members (including self)
         const io = req.app.get('io');
+        // Emit new group created event to all the members (including self)
         memberIds.map((id) => io.to(`user_${id}`).emit("groupCreated", {group: {id: group.id, name: group.name}}));
+        io.to(`group_${group.id}`).emit("newGroupMessage", {message, groupId: group.id});
 
         await group.addMembers(memberIds); //Magic method
 
@@ -93,6 +112,7 @@ const sendGroupMessage = async (req, res) => {
             senderId: user.id,
             message: msg,
             createdAt: groupMessage.createdAt,
+            type: 'text',
             sender: {
                 name: user.name
             }
@@ -133,6 +153,7 @@ const getGroupData = async (req, res) => {
                         ["sender_id", "senderId"],
                         "message",
                         "createdAt",
+                        "type"
                     ],
                     include: [
                         {
@@ -305,12 +326,42 @@ const leaveGroup = async (req, res) => {
         let groupMessageIds = await GroupMessages.findAll({where: {group_id: groupId}, attributes: ['id']});
         groupMessageIds = groupMessageIds.map(curr => curr.id);
 
+        const partOfGroup = await GroupMembers.findOne({
+            where: {
+                group_id: groupId,
+                user_id: user.id,
+                status: 'active'
+            }
+        });
+        if(!partOfGroup) return errorResponse(res, "User is not part of the group!");
+
         await GroupMembers.update(
             {status: 'left'},
             {where: {group_id: groupId, user_id: user.id}}
         );
         await GroupMessageRead.destroy({where: {user_id: user.id, group_message_id: groupMessageIds}});
         
+        const systemMessage = await GroupMessages.create({
+            group_id: groupId,
+            sender_id: null,
+            message: `${user.name?.split(' ')[0]} left the group`,
+            type: 'system'
+        });
+
+        const message = {
+            id: systemMessage.id,
+            senderId: null,
+            message: systemMessage.message,
+            createdAt: systemMessage.createdAt,
+            type: systemMessage.type,
+            sender: {
+                name: null,
+            }
+        };
+
+        const io = req.app.get('io');
+        io.to(`group_${groupId}`).emit("newGroupMessage", {message, groupId});
+
         return successPostResponse(res, {}, "User left this group successfully")
     } catch (error) {
         return errorThrowResponse(res, `${error.message}`, error);
@@ -350,8 +401,35 @@ const joinGroup = async (req, res) => {
             {status: 'active'},
             {where: {group_id: groupId, user_id: membersToUpdate}}
         );
-
+        
         await GroupMembers.bulkCreate(membersToCreate);
+
+        // For system messages in groups
+        const newMembers = await User.findAll({where: {id: friendIds}, attributes: ['name']});
+        
+        const systemMessages = await GroupMessages.bulkCreate(
+            newMembers.map((newUser) => ({
+                group_id: groupId,
+                sender_id: null,
+                message: `${user.name?.split(' ')[0]} added "${newUser.name?.split(" ")[0]}"`,
+                type: 'system',
+            }))
+        );
+
+        const io = req.app.get('io');
+        systemMessages.forEach((msg) => {
+            const message = {
+                id: msg.id,
+                senderId: null,
+                message: msg.message,
+                createdAt: msg.createdAt,
+                type: msg.type,
+                sender: {
+                    name: null,
+                }
+            };
+            io.to(`group_${groupId}`).emit("newGroupMessage", {message, groupId});
+        });
 
         return successPostResponse(res, {}, "Users successfully joined the group")
     } catch (error) {

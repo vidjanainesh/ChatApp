@@ -10,10 +10,15 @@ import { toast } from "react-toastify";
 import { jwtDecode } from "jwt-decode";
 import useSocket from "../../hooks/useSocket";
 import { useDispatch, useSelector } from "react-redux";
-import { setGroupMessages, addGroupMessage, setGroupMembers } from "../../store/chatSlice";
+import {
+    setGroupMessages,
+    addGroupMessage,
+    setGroupMembers,
+} from "../../store/chatSlice";
 import { motion } from "framer-motion";
 import EmojiPicker from "emoji-picker-react";
 import { HiOutlineLogout, HiUserAdd, HiOutlineUsers } from "react-icons/hi";
+import { setGroups } from "../../store/userSlice";
 
 export default function GroupChatbox() {
     const navigate = useNavigate();
@@ -22,11 +27,12 @@ export default function GroupChatbox() {
     const queryParams = new URLSearchParams(location.search);
     const name = queryParams.get("name");
     const token = localStorage.getItem("jwt");
-    
+
     const dispatch = useDispatch();
     const messages = useSelector((state) => state.chat.groupMessages);
     const members = useSelector((state) => state.chat.groupMembers);
     const friends = useSelector((state) => state.user.friends);
+    const groups = useSelector((state) => state.user.groups);
 
     // const [messages, setMessages] = useState([]);
     // const [members, setMembers] = useState([]);
@@ -44,7 +50,6 @@ export default function GroupChatbox() {
     const typingTimeoutRef = useRef(null);
     const leaveModalRef = useRef(null);
     const inviteModalRef = useRef(null);
-
 
     let loggedInUserId = null;
     try {
@@ -127,6 +132,8 @@ export default function GroupChatbox() {
         e.preventDefault();
         if (!input.trim()) return;
 
+        setShowEmojiPicker(false);
+
         try {
             const res = await sendGroupMessage(
                 { groupId: parseInt(id), msg: input },
@@ -187,7 +194,11 @@ export default function GroupChatbox() {
             const res = await leaveGroup(id, token);
             if (res.data.status === "success") {
                 toast.success("You left the group");
-                navigate("/dashboard");
+                setTimeout(() => {
+                    dispatch(setGroups(groups.filter((g) => g.id !== parseInt(id))));
+                    dispatch(setGroupMembers(members.filter((m) => m.id !== loggedInUserId)))
+                    navigate("/dashboard");
+                }, 0);
             } else {
                 toast.error(res.data.message || "Failed to leave group");
             }
@@ -358,6 +369,7 @@ export default function GroupChatbox() {
 
                         return (
                             <React.Fragment key={msg.id}>
+                                {/* Date Divider */}
                                 {prevDate !== currentDate && (
                                     <div className="flex items-center justify-center my-4">
                                         <hr className="flex-1 border-gray-300" />
@@ -367,44 +379,59 @@ export default function GroupChatbox() {
                                         <hr className="flex-1 border-gray-300" />
                                     </div>
                                 )}
-                                <div
-                                    className={`flex ${
-                                        isSender
-                                            ? "justify-end"
-                                            : "justify-start"
-                                    }`}
-                                >
+
+                                {/* System message */}
+                                {msg.type === "system" ? (
                                     <motion.div
-                                        initial={{
-                                            opacity: 0,
-                                            x: isSender ? 50 : -50,
-                                        }}
-                                        animate={{ opacity: 1, x: 0 }}
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
                                         transition={{ duration: 0.2 }}
-                                        className={`p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap 
-                                            ${
-                                                isSender
-                                                    ? "bg-indigo-100 self-end"
-                                                    : "bg-white self-start"
-                                            }`}
+                                        className="flex justify-center"
                                     >
-                                        {!isSender && (
-                                            <div
-                                                className={`text-xs font-semibold ${getUserColor(
-                                                    msg.senderId
-                                                )} mb-1`}
-                                            >
-                                                {msg.sender.name?.split(" ")[0]}
-                                            </div>
-                                        )}
-                                        <div className="text-left">
+                                        <div className="text-gray-700 text-xs px-4 py-1">
                                             {msg.message}
                                         </div>
-                                        <div className="text-[10px] text-gray-400 mt-1 text-right">
-                                            {formatTime(msg.createdAt)}
-                                        </div>
                                     </motion.div>
-                                </div>
+                                ) : (
+                                    // Normal message
+                                    <div
+                                        className={`flex ${
+                                            isSender
+                                                ? "justify-end"
+                                                : "justify-start"
+                                        }`}
+                                    >
+                                        <motion.div
+                                            initial={{
+                                                opacity: 0,
+                                                x: isSender ? 50 : -50,
+                                            }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ duration: 0.2 }}
+                                            className={`p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap ${isSender ? "bg-indigo-100 self-end" : "bg-white self-start"}`}
+                                        >
+                                            {!isSender && (
+                                                <div
+                                                    className={`text-xs font-semibold ${getUserColor(
+                                                        msg.senderId
+                                                    )} mb-1`}
+                                                >
+                                                    {
+                                                        msg.sender.name?.split(
+                                                            " "
+                                                        )[0]
+                                                    }
+                                                </div>
+                                            )}
+                                            <div className="text-left">
+                                                {msg.message}
+                                            </div>
+                                            <div className="text-[10px] text-gray-400 mt-1 text-right">
+                                                {formatTime(msg.createdAt)}
+                                            </div>
+                                        </motion.div>
+                                    </div>
+                                )}
                             </React.Fragment>
                         );
                     })}

@@ -101,7 +101,8 @@ export default function Chatbox() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
-
+    
+    setShowEmojiPicker(false);
     try {
       const res = await sendMessage(input, id, token);
       if (res.data.status === "success") {

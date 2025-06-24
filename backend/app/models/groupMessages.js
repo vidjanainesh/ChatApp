@@ -8,11 +8,16 @@ const GroupMessages = sequelize.define('group_messages', {
     },
     sender_id: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
     },
     message: {
         type: DataTypes.TEXT,
         allowNull: false,
+    },
+    type: {
+        type: DataTypes.ENUM('text', 'system'),
+        allowNull: false,
+        defaultValue: 'text',
     }
 });
 
