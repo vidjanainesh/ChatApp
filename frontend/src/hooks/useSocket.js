@@ -3,13 +3,14 @@ import { initSocket } from "./socketManager";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { addMessage, addGroupMessage } from "../store/chatSlice";
-import { addFriend, setGroups, appendUnreadPrivate, appendUnreadGroup, setFriendReqCount } from "../store/userSlice";
+import { addFriend, setGroups, addGroup, appendUnreadPrivate, appendUnreadGroup, setFriendReqCount } from "../store/userSlice";
 
 export default function useSocket({ token, chatUserId, groupId, loggedInUserId, setMessages, setIsTyping, onNewMessageAlert }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [socketInstance, setSocketInstance] = useState(null);
   const friendReqCount = useSelector((state) => state.user.friendReqCount);
+  const groups = useSelector(state => state.user.groups);
 
   useEffect(() => {
     if (!token) return;
@@ -46,26 +47,6 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
         }
       }
     });
-
-    socket.on("groupCreated", (data) => {
-      console.log("NEW GROUP!!!!!!!!!!!!!!!");
-      const {group} = data;
-      if(group) {
-        dispatch(setGroups(group));
-        socket.emit('joinGroupRoom',`group_${group.id}`)
-        if (Notification.permission === "granted") {
-          const notif = new Notification("Group Joined", {
-            body: `You are part of a new group: ${group.name}!`,
-            icon: "/icon.png",
-          });
-
-          notif.onclick = () => {
-            window.focus();
-            navigate("/dashboard");
-          };
-        }
-      }
-    })
 
     socket.on("newMessage", (data) => {
       const message = data?.message || data;
@@ -114,6 +95,51 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
       }
     });
 
+    // New Group Created
+    socket.on("groupCreated", (data) => {
+      const {group} = data;
+      if(group) {
+        dispatch(setGroups(group));
+        socket.emit('joinGroupRoom',`group_${group.id}`)
+        if (Notification.permission === "granted") {
+          const notif = new Notification("Group Joined", {
+            body: `New group created: ${group.name}!`,
+            icon: "/icon.png",
+          });
+
+          notif.onclick = () => {
+            window.focus();
+            navigate("/dashboard");
+          };
+        }
+      }
+    });
+
+    // Group invitation
+    socket.on("groupJoined", (data) => {
+      const {group} = data;
+      if (group) {
+        const alreadyPresent = groups.some((g) => g.id === group.id);
+        if (!alreadyPresent) {
+          dispatch(addGroup(group));
+          socket.emit("joinGroupRoom", `group_${group.id}`);
+
+          if (Notification.permission === "granted") {
+            const notif = new Notification("Group Joined", {
+              body: `You are invited to join: ${group.name}!`,
+              icon: "/icon.png",
+            });
+
+            notif.onclick = () => {
+              window.focus();
+              navigate("/dashboard");
+            };
+          }
+        }
+      }
+
+    })
+
     // New: Handle newGroupMessage
     socket.on("newGroupMessage", (data) => {
       const { message, groupId: msgGroupId } = data;
@@ -156,13 +182,14 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
     return () => {
       // Detach only listeners, not socket itself
       socket.off("friendAccepted");
-      socket.off("groupCreated")
+      socket.off("groupCreated");
+      socket.off("groupJoined");
       socket.off("newMessage");
       socket.off("typing");
       socket.off("newGroupMessage");
       socket.off("groupTyping");
     };
-  }, [token, chatUserId, groupId, loggedInUserId, onNewMessageAlert, dispatch, navigate, setIsTyping, setMessages, friendReqCount]);
+  }, [token, chatUserId, groupId, loggedInUserId, onNewMessageAlert, dispatch, navigate, setIsTyping, setMessages, friendReqCount, groups]);
 
   return socketInstance;
 }

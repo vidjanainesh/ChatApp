@@ -378,7 +378,7 @@ const joinGroup = async (req, res) => {
         
         const existingMembers = await GroupMembers.findAll({where: {group_id: groupId, user_id: friendIds}});
 
-        const membersToUpdate = []; //leftMembers
+        const membersToUpdate = []; // Members that have left
         const activeMembers = [];
         
         // To seperate into active/left members
@@ -389,7 +389,7 @@ const joinGroup = async (req, res) => {
 
         // Only the users not part of the group whether active/left
         const membersToCreate = friendIds
-        .filter(curr => !membersToUpdate.includes(curr) && !activeMembers.includes(curr)) 
+        .filter(curr => !membersToUpdate.includes(curr) && !activeMembers.includes(curr))
         .map(curr => {
             return {
                 group_id: groupId,
@@ -405,16 +405,19 @@ const joinGroup = async (req, res) => {
         await GroupMembers.bulkCreate(membersToCreate);
 
         // For system messages in groups
-        const newMembers = await User.findAll({where: {id: friendIds}, attributes: ['name']});
+        const newMemberIds = friendIds.filter((id) => !activeMembers.includes(id));
+        const newMembers = await User.findAll({where: {id: newMemberIds}, attributes: ['name']});
         
         const systemMessages = await GroupMessages.bulkCreate(
             newMembers.map((newUser) => ({
                 group_id: groupId,
                 sender_id: null,
-                message: `${user.name?.split(' ')[0]} added "${newUser.name?.split(" ")[0]}"`,
+                message: `${user.name?.split(' ')[0]} added ${newUser.name?.split(" ")[0]}`,
                 type: 'system',
             }))
         );
+
+        const group = await Groups.findOne({where: {id: groupId}, attributes: ['name']});
 
         const io = req.app.get('io');
         systemMessages.forEach((msg) => {
@@ -431,7 +434,11 @@ const joinGroup = async (req, res) => {
             io.to(`group_${groupId}`).emit("newGroupMessage", {message, groupId});
         });
 
-        return successPostResponse(res, {}, "Users successfully joined the group")
+        newMemberIds.forEach((id) => {
+            io.to(`user_${id}`).emit("groupJoined", {group: {id: groupId, name: group.name}});
+        })
+
+        return successPostResponse(res, {membersToUpdate, activeMembers, membersToCreate, newMemberIds}, "Users successfully joined the group")
     } catch (error) {
         return errorThrowResponse(res, `${error.message}`, error);
     }

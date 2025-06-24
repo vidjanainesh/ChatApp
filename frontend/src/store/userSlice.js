@@ -36,6 +36,12 @@ const userSlice = createSlice({
         setGroups: (state, action) => {
             state.groups = action.payload;
         },
+        addGroup: (state, action) => {
+            const exists = state.groups.some((g) => g.id === action.payload.id);
+            if (!exists) {
+                state.groups.push(action.payload);
+            }
+        },
         setUnreadPrivateMap: (state, action) => {
             state.unreadPrivateMap = action.payload;
         },
@@ -77,7 +83,8 @@ export const {
     setUser, 
     clearUser, 
     setFriends, 
-    setGroups, 
+    setGroups,
+    addGroup,
     addFriend, 
     setUnreadPrivateMap, 
     setUnreadGroupMap, 
