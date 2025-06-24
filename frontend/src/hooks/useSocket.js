@@ -162,7 +162,7 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
       socket.off("newGroupMessage");
       socket.off("groupTyping");
     };
-  }, [token, chatUserId, groupId, loggedInUserId, onNewMessageAlert, dispatch, navigate, setIsTyping, setMessages, friendReqCount]);s
+  }, [token, chatUserId, groupId, loggedInUserId, onNewMessageAlert, dispatch, navigate, setIsTyping, setMessages, friendReqCount]);
 
   return socketInstance;
 }
