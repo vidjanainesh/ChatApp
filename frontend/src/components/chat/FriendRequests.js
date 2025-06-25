@@ -69,7 +69,7 @@ export default function FriendRequests() {
           </button>
         </div>
 
-        {loading ? (
+        {loading && friendReqCount > 0 ? (
           <div className="flex flex-col items-center justify-center text-gray-500 mt-6 h-[20vh]">
             <svg
               className="animate-spin h-6 w-6 text-indigo-500 mb-2"
