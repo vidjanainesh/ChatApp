@@ -43,8 +43,27 @@ export const getDashboardData = (token) => {
 // ---------------------------------------------------------------------
 
 export const sendMessage = (message, receiverId, token) => {
-    return axios.post(`${API_BASE}/chat/send`,
+    return axios.post(`${API_BASE}/chat`,
         { message, receiverId }, 
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
+export const deleteMessage = (id, token) => {
+    return axios.delete(`${API_BASE}/chat/${id}`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
+export const editMessage = (id, msg, token) => {
+    return axios.patch(`${API_BASE}/chat/${id}`,
+        { msg }, 
         {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -54,7 +73,7 @@ export const sendMessage = (message, receiverId, token) => {
 }
 
 export const getMessages = (id, token) => {
-    return axios.get(`${API_BASE}/chat/get/${id}`, 
+    return axios.get(`${API_BASE}/chat/${id}`, 
         {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -64,7 +83,7 @@ export const getMessages = (id, token) => {
 }
 
 export const getUsers = (token) => {
-    return axios.get(`${API_BASE}/chat/get`,
+    return axios.get(`${API_BASE}/chat`,
         {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -152,6 +171,26 @@ export const leaveGroup = (id, token) => {
 export const sendGroupMessage = (data, token) => {
     return axios.post(`${API_BASE}/group/send-message`, 
         data,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
+
+export const deleteGroupMessage = (id, token) => {
+    return axios.delete(`${API_BASE}/group/message/${id}`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
+export const editGroupMessage = (id, msg, token) => {
+    return axios.patch(`${API_BASE}/group/message/${id}`,
+        { msg }, 
         {
             headers: {
                 Authorization: `Bearer ${token}`

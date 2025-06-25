@@ -18,6 +18,14 @@ const GroupMessages = sequelize.define('group_messages', {
         type: DataTypes.ENUM('text', 'system'),
         allowNull: false,
         defaultValue: 'text',
+    },
+    is_deleted: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+    },
+    is_edited: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
     }
 });
 

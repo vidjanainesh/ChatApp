@@ -57,6 +57,8 @@ const createGroup = async (req, res) => {
             message: systemMessage.message,
             createdAt: systemMessage.createdAt,
             type: systemMessage.type,
+            isDeleted: null,
+            isEdited: null,
             sender: {
                 name: null,
             }
@@ -113,6 +115,8 @@ const sendGroupMessage = async (req, res) => {
             message: msg,
             createdAt: groupMessage.createdAt,
             type: 'text',
+            isDeleted: false,
+            isEdited: false,
             sender: {
                 name: user.name
             }
@@ -125,6 +129,81 @@ const sendGroupMessage = async (req, res) => {
         return errorThrowResponse(res, `${error.message}`, error);
     }
 };
+
+const deleteGroupMessage = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const user = req.user;
+
+        const groupMessage = await GroupMessages.findOne({where: {id}});
+
+        if(groupMessage.sender_id !== user.id){
+            return errorResponse(res, 'Invalid user');
+        }
+
+        groupMessage.is_deleted = true;
+        await groupMessage.save();
+
+        const message = {
+            id: groupMessage.id,
+            senderId: user.id,
+            message: groupMessage.message,
+            createdAt: groupMessage.createdAt,
+            type: groupMessage.type,
+            isDeleted: groupMessage.is_deleted,
+            isEdited: groupMessage.is_edited,
+            sender: {
+                name: user.name
+            }
+        };
+
+        const io = req.app.get("io");
+        io.to(`group_${groupMessage.group_id}`).emit("deleteGroupMessage", {message, groupId: groupMessage.group_id});
+
+        return successResponse(res, message, "Group Message deleted successfully")
+    } catch (error) {
+        return errorThrowResponse(res, error.message, error);
+    }
+}
+
+const editGroupMessage = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const {msg} = req.body;
+        const user = req.user;
+
+        const groupMessage = await GroupMessages.findOne({where: {id}});
+
+        if(groupMessage.sender_id !== user.id) {
+            return errorResponse(res, 'Invalid user');
+        }
+
+        groupMessage.message = msg;
+        groupMessage.is_edited = true;
+        groupMessage.updatedAt = new Date();
+        await groupMessage.save();
+
+        const message = {
+            id: groupMessage.id,
+            senderId: user.id,
+            message: groupMessage.message,
+            createdAt: groupMessage.createdAt,
+            type: groupMessage.type,
+            isDeleted: groupMessage.is_deleted,
+            isEdited: groupMessage.is_edited,
+            sender: {
+                name: user.name
+            }
+        };
+
+        const io = req.app.get("io");
+        io.to(`group_${groupMessage.group_id}`).emit("editGroupMessage", {message, groupId: groupMessage.group_id});
+
+        return successResponse(res, message, "Message edited successfully");
+    } catch (error) {
+        return errorThrowResponse(res, error.message, error);
+    }
+}
 
 const getGroupData = async (req, res) => {
     try {
@@ -148,12 +227,15 @@ const getGroupData = async (req, res) => {
                 {
                     model: GroupMessages,
                     as: "messages",
+                    where: {is_deleted: false},
                     attributes: [
                         "id",
                         ["sender_id", "senderId"],
                         "message",
                         "createdAt",
-                        "type"
+                        "type",
+                        ["is_deleted", "isDeleted"],
+                        ["is_edited", "isEdited"],
                     ],
                     include: [
                         {
@@ -447,6 +529,8 @@ const joinGroup = async (req, res) => {
 module.exports = {
     createGroup,
     sendGroupMessage,
+    deleteGroupMessage,
+    editGroupMessage,
     getGroupData,
     getGroups,
     deleteGroup,

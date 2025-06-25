@@ -1,13 +1,14 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
-import { getMessages, sendMessage } from "../../api";
+import { getMessages, sendMessage, deleteMessage, editMessage } from "../../api";
 import { toast } from "react-toastify";
 import { jwtDecode } from "jwt-decode";
 import useSocket from "../../hooks/useSocket";
 import { motion } from "framer-motion";
 import EmojiPicker from "emoji-picker-react";
 import { useDispatch, useSelector } from "react-redux";
-import { setMessages, addMessage } from "../../store/chatSlice";
+import { setMessages, addMessage, editPrivateMessage, deletePrivateMessage } from "../../store/chatSlice";
+import { HiDotsHorizontal } from "react-icons/hi";
 
 export default function Chatbox() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function Chatbox() {
   const chatWindowRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const dropdownRef = useRef(null);
+  const modalRef = useRef();
 
   const dispatch = useDispatch();
   const messages = useSelector((state) => state.chat.messages);
@@ -37,6 +39,8 @@ export default function Chatbox() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState(null);
+  const [editingInput, setEditingInput] = useState("");
 
   const stableAlert = useCallback(() => { }, []);
   const socketRef = useSocket({
@@ -101,7 +105,7 @@ export default function Chatbox() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
-    
+
     setShowEmojiPicker(false);
     try {
       const res = await sendMessage(input, id, token);
@@ -122,6 +126,33 @@ export default function Chatbox() {
     }
   };
 
+  const handleDeleteClick = async () => {
+    try {
+      const res = await deleteMessage(selectedMessage.id, token);
+      if (res.data.status === "success") {
+        dispatch(deletePrivateMessage(res.data.data));
+      }
+    } catch {
+      toast.error("Failed to delete message");
+    } finally {
+      setSelectedMessage(null);
+    }
+  };
+
+  const handleEditSave = async () => {
+    try {
+      const res = await editMessage(selectedMessage.id, editingInput, token);
+      if (res.data.status === "success") {
+        dispatch(editPrivateMessage(res.data.data));
+        setSelectedMessage(null);
+        setEditingInput("");
+      }
+    } catch {
+      toast.error("Failed to edit message");
+    }
+  };
+
+
   const formatTime = (ts) =>
     new Date(ts).toLocaleTimeString([], {
       hour: "2-digit",
@@ -132,11 +163,12 @@ export default function Chatbox() {
 
   useEffect(() => {
     function handleClickOutside(event) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowEmojiPicker(false);
+      }
+
+      if (modalRef.current && !modalRef.current.contains(event.target)) {
+        setSelectedMessage(null); 
       }
     }
 
@@ -170,43 +202,111 @@ export default function Chatbox() {
           {messages.map((msg, i) => {
             const isSender = msg.sender_id === loggedInUserId;
             const currentDate = formatDate(msg.timestamp);
-            const prevDate =
-              i > 0 ? formatDate(messages[i - 1].timestamp) : null;
+            const prevDate = i > 0 ? formatDate(messages[i - 1].timestamp) : null;
 
             return (
               <React.Fragment key={msg.id}>
                 {prevDate !== currentDate && (
                   <div className="flex items-center justify-center my-4">
                     <hr className="flex-1 border-gray-300" />
-                    <span className="px-3 text-xs text-gray-500">
-                      {currentDate}
-                    </span>
+                    <span className="px-3 text-xs text-gray-500">{currentDate}</span>
                     <hr className="flex-1 border-gray-300" />
                   </div>
                 )}
-                <div
-                  className={`flex ${isSender ? "justify-end" : "justify-start"
-                    }`}
-                >
+                <div className={`flex ${isSender ? "justify-end" : "justify-start"} relative`}>
                   <motion.div
                     initial={{ opacity: 0, x: isSender ? 50 : -50 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.2 }}
-                    className={`p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap ${isSender
-                      ? "bg-indigo-100 self-end" // removed text-right
-                      : "bg-white self-start"
+                    className={`group p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap ${isSender ? "bg-indigo-100 self-end" : "bg-white self-start"
                       }`}
                   >
-                    <div className="text-left">{msg.message}</div> {/* ✅ force left text alignment */}
-                    <div className="text-[10px] text-gray-400 mt-1 text-right">
-                      {formatTime(msg.timestamp)}
+                    <div className="text-left">
+                      {msg.is_deleted ? (
+                        <span className="italic text-gray-400">This message was deleted</span>
+                      ) : (
+                        msg.message
+                      )}
                     </div>
+                    <div className="text-[10px] text-gray-400 mt-1 text-right">
+                      {formatTime(msg.createdAt)}{" "}
+                      {!msg.is_deleted && msg.is_edited && <span className="italic">(edited)</span>}
+                    </div>
+                    {/* Icon positioned slightly outside top-right corner */}
+                    {isSender && !msg.is_deleted && (
+                      <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => setSelectedMessage(msg)}
+                          className="text-gray-700 hover:text-indigo-600 focus:outline-none bg-gray-100 border border-gray-300 rounded-full p-1 shadow-sm"
+                          title="Options"
+                        >
+                          <HiDotsHorizontal className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </motion.div>
+
                 </div>
               </React.Fragment>
             );
           })}
         </div>
+
+        {selectedMessage && selectedMessage.mode !== "edit" && (
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+            <div className="bg-white p-4 rounded-xl shadow-xl w-72" ref={modalRef}>
+              <h3 className="text-sm font-medium text-gray-700 mb-3">Choose Action</h3>
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => {
+                    setEditingInput(selectedMessage.message);
+                    setSelectedMessage({ ...selectedMessage, mode: "edit" });
+                  }}
+                  className="text-indigo-600 text-sm"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={handleDeleteClick}
+                  className="text-red-500 text-sm"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => setSelectedMessage(null)}
+                  className="text-gray-500 text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedMessage?.mode === "edit" && (
+          <div className="mb-2 flex gap-2 items-center bg-yellow-50 border border-yellow-300 p-2 rounded-md">
+            <input
+              className="flex-1 px-2 py-1 border border-gray-300 rounded-md text-sm"
+              value={editingInput}
+              onChange={(e) => setEditingInput(e.target.value)}
+            />
+            <button
+              onClick={handleEditSave}
+              className="text-white bg-indigo-500 px-2 py-1 rounded-md text-sm"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => {
+                setSelectedMessage(null);
+                setEditingInput("");
+              }}
+              className="text-gray-500 text-sm"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
 
         <div className="text-sm text-gray-500 mb-2 h-5 px-1">
           {isTyping ? "Typing..." : "\u00A0"}
@@ -235,7 +335,7 @@ export default function Chatbox() {
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
               className="text-gray-500 hover:text-indigo-500"
               title="Insert Emoji"
-              style={{transform: 'scale(1.3)'}}
+              style={{ transform: 'scale(1.3)' }}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

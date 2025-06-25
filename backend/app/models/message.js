@@ -28,7 +28,16 @@ const Message = sequelize.define('messages', {
     timestamp: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,
+    },
+    is_deleted: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+    },
+    is_edited: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
     }
+
 });
 
 module.exports = Message;
