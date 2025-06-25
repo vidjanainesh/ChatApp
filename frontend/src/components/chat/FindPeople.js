@@ -15,7 +15,6 @@ export default function FindPeople() {
       try {
         const response = await getUsers(token);
         if (response.data.status === "success") {
-          console.log(response.data);
           setUsers(response.data.data);
         } else {
           toast.error(response.data.message || "Failed to fetch users");

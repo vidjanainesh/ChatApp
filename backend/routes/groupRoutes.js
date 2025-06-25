@@ -4,6 +4,8 @@ const router = express.Router();
 const {
     createGroup,
     sendGroupMessage,
+    deleteGroupMessage,
+    editGroupMessage,
     getGroupData,
     getGroups,
     deleteGroup,
@@ -26,5 +28,8 @@ router.get('/data/:id', groupValidationRules.getGroupData, handleValidation, aut
 router.get('/', authMiddleware, getGroups);
 
 router.delete('/:id', authMiddleware, deleteGroup);
+router.delete('/message/:id', authMiddleware, deleteGroupMessage);
+
+router.patch('/message/:id', authMiddleware, editGroupMessage);
 
 module.exports = router;

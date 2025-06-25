@@ -71,7 +71,7 @@ export default function FriendRequests() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {requests.map((req, index) => (
               <motion.div
-                key={req.id}
+                key={req.senderId}
                 className="bg-white p-4 rounded-xl shadow-md"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}

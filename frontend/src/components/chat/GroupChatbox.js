@@ -5,6 +5,8 @@ import {
     sendGroupMessage,
     joinGroup,
     leaveGroup,
+    deleteGroupMessage,
+    editGroupMessage,
 } from "../../api";
 import { toast } from "react-toastify";
 import { jwtDecode } from "jwt-decode";
@@ -14,10 +16,12 @@ import {
     setGroupMessages,
     addGroupMessage,
     setGroupMembers,
+    deleteGroupMsgAction,
+    editGroupMsgAction,
 } from "../../store/chatSlice";
 import { motion } from "framer-motion";
 import EmojiPicker from "emoji-picker-react";
-import { HiOutlineLogout, HiUserAdd, HiOutlineUsers } from "react-icons/hi";
+import { HiOutlineLogout, HiUserAdd, HiOutlineUsers, HiDotsHorizontal } from "react-icons/hi";
 import { setGroups } from "../../store/userSlice";
 
 export default function GroupChatbox() {
@@ -43,6 +47,8 @@ export default function GroupChatbox() {
     const [showLeaveModal, setShowLeaveModal] = useState(false);
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [selectedFriends, setSelectedFriends] = useState([]);
+    const [selectedMessage, setSelectedMessage] = useState(null);
+    const [editingInput, setEditingInput] = useState("");
 
     const emojiRef = useRef(null);
     const membersDropdownRef = useRef(null);
@@ -63,7 +69,7 @@ export default function GroupChatbox() {
         navigate("/");
     }
 
-    const stableAlert = useCallback(() => {}, []);
+    const stableAlert = useCallback(() => { }, []);
     const socketRef = useSocket({
         token,
         groupId: id,
@@ -155,6 +161,31 @@ export default function GroupChatbox() {
         }
     };
 
+    const handleDeleteClick = async (id) => {
+        try {
+            const res = await deleteGroupMessage(id, token);
+            if (res.data.status === "success") {
+                dispatch(deleteGroupMsgAction(res.data.data));
+            }
+        } catch {
+            toast.error("Failed to delete message");
+        } finally {
+            setSelectedMessage(null);
+        }
+    };
+
+    const handleEditSave = async (id, editingInput) => {
+        try {
+            const res = await editGroupMessage(id, editingInput, token);
+            if (res.data.status === "success") {
+                dispatch(editGroupMsgAction(res.data.data));
+                setSelectedMessage(null);
+            }
+        } catch {
+            toast.error("Failed to edit message");
+        }
+    };
+
     const handleClickOutside = (event) => {
         if (emojiRef.current && !emojiRef.current.contains(event.target)) {
             setShowEmojiPicker(false);
@@ -215,7 +246,7 @@ export default function GroupChatbox() {
                 token
             );
             if (res.data.status === "success") {
-                toast.success("Friends added to group");
+                // toast.success("Friends added to group");
                 fetchGroupMessages(); // refresh members
             } else {
                 toast.error(res.data.message || "Could not add friends");
@@ -309,18 +340,16 @@ export default function GroupChatbox() {
                                                     onClick={() =>
                                                         !isCurrentUser &&
                                                         navigate(
-                                                            `/chatbox/${
-                                                                member.id
+                                                            `/chatbox/${member.id
                                                             }?name=${encodeURIComponent(
                                                                 member.name
                                                             )}`
                                                         )
                                                     }
-                                                    className={`px-4 py-3 transition ${
-                                                        isCurrentUser
-                                                            ? "cursor-default bg-gray-50"
-                                                            : "cursor-pointer hover:bg-indigo-50"
-                                                    }`}
+                                                    className={`px-4 py-3 transition ${isCurrentUser
+                                                        ? "cursor-default bg-gray-50"
+                                                        : "cursor-pointer hover:bg-indigo-50"
+                                                        }`}
                                                 >
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-semibold text-sm uppercase">
@@ -395,11 +424,10 @@ export default function GroupChatbox() {
                                 ) : (
                                     // Normal message
                                     <div
-                                        className={`flex ${
-                                            isSender
-                                                ? "justify-end"
-                                                : "justify-start"
-                                        }`}
+                                        className={`flex ${isSender
+                                            ? "justify-end"
+                                            : "justify-start"
+                                            }`}
                                     >
                                         <motion.div
                                             initial={{
@@ -408,27 +436,33 @@ export default function GroupChatbox() {
                                             }}
                                             animate={{ opacity: 1, x: 0 }}
                                             transition={{ duration: 0.2 }}
-                                            className={`p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap ${isSender ? "bg-indigo-100 self-end" : "bg-white self-start"}`}
+                                            className={`relative group p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap ${isSender ? "bg-indigo-100 self-end" : "bg-white self-start"}`}
                                         >
                                             {!isSender && (
-                                                <div
-                                                    className={`text-xs font-semibold ${getUserColor(
-                                                        msg.senderId
-                                                    )} mb-1`}
-                                                >
-                                                    {
-                                                        msg.sender.name?.split(
-                                                            " "
-                                                        )[0]
-                                                    }
+                                                <div className={`text-xs font-semibold ${getUserColor(msg.senderId)} mb-1`}>
+                                                    {msg.sender?.name?.split(" ")[0]}
                                                 </div>
                                             )}
-                                            <div className="text-left">
-                                                {msg.message}
+                                            <div className="text-left">{msg.isDeleted ? (
+                                                <span className="italic text-gray-400">This message was deleted</span>
+                                                ) : msg.message }
                                             </div>
                                             <div className="text-[10px] text-gray-400 mt-1 text-right">
-                                                {formatTime(msg.createdAt)}
+                                                {formatTime(msg.createdAt)}{" "}
+                                                {!msg.isDeleted && msg.isEdited && <span className="italic">(edited)</span>}
                                             </div>
+
+                                            {/* Add this edit/delete menu button only for the sender */}
+                                            {isSender && !msg.isDeleted && (
+                                                <div className="absolute top-1 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button
+                                                        onClick={() => setSelectedMessage(msg)}
+                                                        className="text-gray-500 hover:text-indigo-600 focus:outline-none"
+                                                    >
+                                                        <HiDotsHorizontal className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                            )}
                                         </motion.div>
                                     </div>
                                 )}
@@ -436,6 +470,61 @@ export default function GroupChatbox() {
                         );
                     })}
                 </div>
+                {selectedMessage && selectedMessage.mode !== "edit" && (
+                    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+                        <div className="bg-white p-4 rounded-xl shadow-xl w-72">
+                            <h3 className="text-sm font-medium text-gray-700 mb-3">Choose Action</h3>
+                            <div className="flex justify-end gap-4">
+                                <button
+                                    onClick={() => {
+                                        setEditingInput(selectedMessage.message);
+                                        setSelectedMessage({ ...selectedMessage, mode: "edit" });
+                                    }}
+                                    className="text-indigo-600 text-sm"
+                                >
+                                    Edit
+                                </button>
+                                <button
+                                    onClick={() => handleDeleteClick(selectedMessage.id)}
+                                    className="text-red-500 text-sm"
+                                >
+                                    Delete
+                                </button>
+                                <button
+                                    onClick={() => setSelectedMessage(null)}
+                                    className="text-gray-500 text-sm"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {selectedMessage?.mode === "edit" && (
+                    <div className="mb-2 flex gap-2 items-c enter bg-yellow-50 border border-yellow-300 p-2 rounded-md">
+                        <input
+                            className="flex-1 px-2 py-1 border border-gray-300 rounded-md text-sm"
+                            value={editingInput}
+                            onChange={(e) => setEditingInput(e.target.value)}
+                        />
+                        <button
+                            onClick={() => handleEditSave(selectedMessage.id, editingInput)}
+                            className="text-white bg-indigo-500 px-2 py-1 rounded-md text-sm"
+                        >
+                            Save
+                        </button>
+                        <button
+                            onClick={() => {
+                                setSelectedMessage(null);
+                                setEditingInput("");
+                            }}
+                            className="text-gray-500 text-sm"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                )}
+
 
                 <div className="text-sm text-gray-500 mb-2 h-5 px-1">
                     {isTyping ? "Someone is typing..." : "\u00A0"}
@@ -587,16 +676,16 @@ export default function GroupChatbox() {
                                                             (prev) =>
                                                                 checked
                                                                     ? [
-                                                                          ...prev,
-                                                                          friend.id,
-                                                                      ]
+                                                                        ...prev,
+                                                                        friend.id,
+                                                                    ]
                                                                     : prev.filter(
-                                                                          (
-                                                                              id
-                                                                          ) =>
-                                                                              id !==
-                                                                              friend.id
-                                                                      )
+                                                                        (
+                                                                            id
+                                                                        ) =>
+                                                                            id !==
+                                                                            friend.id
+                                                                    )
                                                         );
                                                     }}
                                                 />
@@ -639,11 +728,10 @@ export default function GroupChatbox() {
                                         }
                                     }}
                                     disabled={selectedFriends.length === 0}
-                                    className={`px-3 py-1 rounded text-white ${
-                                        selectedFriends.length > 0
-                                            ? "bg-indigo-500 hover:bg-indigo-600"
-                                            : "bg-indigo-300 cursor-not-allowed"
-                                    }`}
+                                    className={`px-3 py-1 rounded text-white ${selectedFriends.length > 0
+                                        ? "bg-indigo-500 hover:bg-indigo-600"
+                                        : "bg-indigo-300 cursor-not-allowed"
+                                        }`}
                                 >
                                     Add
                                 </button>

@@ -4,6 +4,7 @@ const {
   successResponse,
   errorResponse,
   unAuthorizedResponse,
+  errorThrowResponse,
 } = require("../../helper/response");
 const sequelize = require("../../models/database");
 
@@ -49,7 +50,6 @@ const sendMessage = async (req, res) => {
 
         const payload = {
             message: messageWithSender, 
-            fromUserId: user.id
         };
 
         io.to(receiverRoom).emit("newMessage", payload);
@@ -57,7 +57,64 @@ const sendMessage = async (req, res) => {
         
         return successResponse(res, sentMessage, "Message sent");
     } catch (error) {
-        return errorResponse(res, error.message, 500);
+        return errorThrowResponse(res, error.message, 500);
+    }
+}
+
+const deleteMessage = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const user = req.user;
+
+        const message = await Message.findOne({where: {id}});
+
+        if(message.sender_id !== user.id){
+            return errorResponse(res, 'Invalid user');
+        }
+
+        message.is_deleted = true;
+        await message.save();
+
+        const io = req.app.get("io");
+        const receiverRoom = `user_${message.receiver_id}`;
+        const senderRoom = `user_${message.sender_id}`;
+
+        io.to(receiverRoom).emit("deleteMessage", message);
+        io.to(senderRoom).emit("deleteMessage", message);
+
+        return successResponse(res, message, "Message deleted successfully")
+    } catch (error) {
+        return errorThrowResponse(res, error.message, error);
+    }
+}
+
+const editMessage = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const {msg} = req.body;
+        const user = req.user;
+
+        const message = await Message.findOne({where: {id}});
+
+        if(message.sender_id !== user.id) {
+            return errorResponse(res, 'Invalid user');
+        }
+
+        message.message = msg;
+        message.is_edited = true;
+        message.updatedAt = new Date();
+        await message.save();
+
+        const io = req.app.get("io");
+        const receiverRoom = `user_${message.receiver_id}`;
+        const senderRoom = `user_${message.sender_id}`;
+
+        io.to(receiverRoom).emit("editMessage", message);
+        io.to(senderRoom).emit("editMessage", message);
+
+        return successResponse(res, message, "Message edited successfully");
+    } catch (error) {
+        return errorThrowResponse(res, error.message, error);
     }
 }
 
@@ -95,7 +152,7 @@ const getUsers = async (req, res) => {
 
     } catch (error) {
         // console.error(error);
-        return errorResponse(res, error.message, 500);
+        return errorThrowResponse(res, error.message, 500);
     }
 };
 
@@ -109,6 +166,7 @@ const getMessages = async (req, res) => {
         }
         const allMessages = await Message.findAll({
             where: {
+                is_deleted: false,
                 [Op.or] : [
                     {
                         [Op.and] : [
@@ -141,12 +199,14 @@ const getMessages = async (req, res) => {
         return successResponse(res, allMessages, "All messages retrieved between the two people");
 
     } catch (error) {
-        return errorResponse(res, error.message, 500);
+        return errorThrowResponse(res, error.message, 500);
     }
 }
 
 module.exports = {
     sendMessage,
+    deleteMessage,
+    editMessage,
     getMessages,
     getUsers,
 }
