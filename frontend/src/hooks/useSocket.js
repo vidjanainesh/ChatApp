@@ -178,12 +178,12 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
     });
 
     socket.on('deleteGroupMessage', (data) => {
-      const {message, groupId} = data;
+      const {message} = data;
       dispatch(deleteGroupMsgAction(message));
     });
     
     socket.on('editGroupMessage', (data) => {
-      const {message, groupId} = data;
+      const {message} = data;
       dispatch(editGroupMsgAction(message));
     });
 
