@@ -3,6 +3,7 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
     user: null, // { id, name, email, etc }
     token: null,
+    hasFetchedDashboardData: false,
     friends: [],
     groups: [],
     unreadPrivateMap: {},
@@ -26,6 +27,9 @@ const userSlice = createSlice({
             state.unreadPrivateMap = {};
             state.unreadGroupMap = {};
             state.friendReqCount = 0;
+        },
+        setHasFetchedDashboardData: (state, action) => {
+            state.hasFetchedDashboardData = action.payload;
         },
         setFriends: (state, action) => {
             state.friends = action.payload;
@@ -79,20 +83,21 @@ const userSlice = createSlice({
     },
 });
 
-export const { 
-    setUser, 
-    clearUser, 
-    setFriends, 
+export const {
+    setUser,
+    clearUser,
+    setHasFetchedDashboardData,
+    setFriends,
     setGroups,
     addGroup,
-    addFriend, 
-    setUnreadPrivateMap, 
-    setUnreadGroupMap, 
+    addFriend,
+    setUnreadPrivateMap,
+    setUnreadGroupMap,
     appendUnreadPrivate,
     appendUnreadGroup,
     clearUnreadPrivateMapEntry,
     clearUnreadGroupMapEntry,
-    setFriendReqCount, 
+    setFriendReqCount,
     incrementFriendReqCount,
     resetFriendRequestCount,
 } = userSlice.actions;

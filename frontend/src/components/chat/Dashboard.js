@@ -8,12 +8,13 @@ import {
     unFriend,
     leaveGroup,
 } from "../../api";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import useSocket from "../../hooks/useSocket";
 import { useDispatch, useSelector } from "react-redux";
 import {
     setFriends,
     setUser,
+    setHasFetchedDashboardData,
     setGroups,
     setUnreadPrivateMap,
     setUnreadGroupMap,
@@ -30,6 +31,7 @@ export default function Dashboard() {
     const dispatch = useDispatch();
     const user = useSelector((state) => state.user.user);
     const friends = useSelector((state) => state.user.friends);
+    const hasFetched = useSelector((state) => state.user.hasFetchedDashboardData);
     const groups = useSelector((state) => state.user.groups);
     const unreadPrivateMap = useSelector((state) => state.user.unreadPrivateMap);
     const unreadGroupMap = useSelector((state) => state.user.unreadGroupMap);
@@ -41,7 +43,7 @@ export default function Dashboard() {
     // const [groups, setGroups] = useState([]);
     // const [unreadGroupMap, setUnreadGroupMap] = useState({});
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [groupName, setGroupName] = useState("");
     const [selectedFriendIds, setSelectedFriendIds] = useState([]);
     const [activeMenuGroupId, setActiveMenuGroupId] = useState(null);
@@ -72,7 +74,6 @@ export default function Dashboard() {
 
     useEffect(() => {
         const fetchData = async () => {
-            setLoading(true);
             try {
                 if (!token) {
                     return;
@@ -91,6 +92,7 @@ export default function Dashboard() {
                     dispatch(setGroups(response.data.data.groups || []));
                     dispatch(setUnreadPrivateMap(response.data.data.unreadPrivateMsgs || {}));
                     dispatch(setUnreadGroupMap(response.data.data.unreadGroupMsgs || {}));
+                    dispatch(setHasFetchedDashboardData(true));
                 }
             } catch (error) {
                 const errorMessage =
@@ -110,9 +112,13 @@ export default function Dashboard() {
                 setLoading(false);
             }
         };
-
-        fetchData();
-    }, [token, navigate, dispatch]);
+        if (!hasFetched) {
+            setLoading(true);
+            fetchData();
+        } else {
+            setLoading(false); // ensure loading is false if we skip fetch
+        }
+    }, [token, navigate, dispatch, hasFetched]);
 
     const handleLogout = () => {
         localStorage.removeItem("jwt");
@@ -475,31 +481,44 @@ export default function Dashboard() {
                     </button>
                 </div>
             }
-            {showLogoutModal && (
-                <div className="fixed inset-0 z-50 bg-black bg-opacity-40 flex items-center justify-center">
-                    <div className="bg-white p-6 rounded-xl shadow-lg w-80">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Confirm Logout</h3>
-                        <p className="text-sm text-gray-600 mb-6">Are you sure you want to log out?</p>
-                        <div className="flex justify-end gap-3">
-                            <button
-                                onClick={() => setShowLogoutModal(false)}
-                                className="px-4 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setShowLogoutModal(false);
-                                    handleLogout();
-                                }}
-                                className="px-4 py-2 text-sm rounded-md bg-red-500 text-white hover:bg-red-600"
-                            >
-                                Logout
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <AnimatePresence>
+                {showLogoutModal && (
+                    <motion.div
+                        className="fixed inset-0 z-50 bg-black bg-opacity-40 flex items-center justify-center"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                    >
+                        <motion.div
+                            className="bg-white p-6 rounded-xl shadow-lg w-80"
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Confirm Logout</h3>
+                            <p className="text-sm text-gray-600 mb-6">Are you sure you want to log out?</p>
+                            <div className="flex justify-end gap-3">
+                                <button
+                                    onClick={() => setShowLogoutModal(false)}
+                                    className="px-4 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowLogoutModal(false);
+                                        handleLogout();
+                                    }}
+                                    className="px-4 py-2 text-sm rounded-md bg-red-500 text-white hover:bg-red-600"
+                                >
+                                    Logout
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
             {/* Create Group Modal */}
             {showCreateModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
