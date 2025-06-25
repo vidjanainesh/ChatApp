@@ -41,6 +41,7 @@ export default function Dashboard() {
     // const [groups, setGroups] = useState([]);
     // const [unreadGroupMap, setUnreadGroupMap] = useState({});
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [groupName, setGroupName] = useState("");
     const [selectedFriendIds, setSelectedFriendIds] = useState([]);
     const [activeMenuGroupId, setActiveMenuGroupId] = useState(null);
@@ -70,8 +71,9 @@ export default function Dashboard() {
 
     useEffect(() => {
         const fetchData = async () => {
+            setLoading(true);
             try {
-                if(!token) {
+                if (!token) {
                     return;
                 }
                 const response = await getDashboardData(token);
@@ -103,13 +105,13 @@ export default function Dashboard() {
                 } else {
                     toast.error(errorMessage, { autoClose: 3000 });
                 }
+            } finally {
+                setLoading(false);
             }
         };
 
-        if (!friends.length || !groups.length || !user) {
-            fetchData();
-        }
-    }, [token, navigate, dispatch, friends.length, groups.length, user]);
+        fetchData();
+    }, [token, navigate, dispatch]);
 
     const handleLogout = () => {
         localStorage.removeItem("jwt");
@@ -194,19 +196,19 @@ export default function Dashboard() {
 
     // Handle leave group
     const handleLeaveGroup = async (groupId) => {
-            try {
-                const res = await leaveGroup(groupId, token);
-                if (res.data.status === "success") {
-                    toast.success("You left the group");
-                    dispatch(setGroups(groups.filter((g) => g.id !== groupId)));
-                } else {
-                    toast.error(res.data.message || "Failed to leave group");
-                }
-            } catch (err) {
-                const msg = err.response?.data?.message || "Error leaving group";
-                toast.error(msg);
+        try {
+            const res = await leaveGroup(groupId, token);
+            if (res.data.status === "success") {
+                toast.success("You left the group");
+                dispatch(setGroups(groups.filter((g) => g.id !== groupId)));
+            } else {
+                toast.error(res.data.message || "Failed to leave group");
             }
-        };
+        } catch (err) {
+            const msg = err.response?.data?.message || "Error leaving group";
+            toast.error(msg);
+        }
+    };
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -248,9 +250,8 @@ export default function Dashboard() {
                     <div>
                         <h1 className="text-3xl font-bold text-indigo-700">
                             {user
-                                ? `Welcome Back ${
-                                      user?.name.trim().split(" ")[0]
-                                  }!`
+                                ? `Welcome Back ${user?.name.trim().split(" ")[0]
+                                }!`
                                 : "Welcome Back!"}
                         </h1>
                         <p className="text-gray-500 text-sm sm:text-base">
@@ -290,14 +291,36 @@ export default function Dashboard() {
                 </div>
 
                 {/* Friends List */}
-                <h2 className="text-xl font-semibold text-gray-700 mb-4">
-                    Your Friends:
-                </h2>
-
-                {friends.length === 0 ? (
-                    <p className="text-center text-gray-500 mt-10">
-                        No friends yet. Send some requests!
-                    </p>
+                <h2 className="text-xl font-semibold text-gray-700 mb-4">Your Friends:</h2>
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center text-gray-500 mt-6 h-[20vh]">
+                        <svg
+                            className="animate-spin h-6 w-6 text-indigo-500 mb-2"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                        >
+                            <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                            />
+                            <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8v8H4z"
+                            />
+                        </svg>
+                        <p className="text-sm">Fetching your friends list...</p>
+                    </div>
+                ) : friends.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center text-gray-500 mt-10 h-[20vh]">
+                        <span className="text-2xl mb-1">👋</span>
+                        <p className="text-sm">No friends yet. Send some requests!</p>
+                    </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10">
                         {friends.map((user, index) => (
@@ -318,12 +341,8 @@ export default function Dashboard() {
                                         {user.name?.charAt(0).toUpperCase()}
                                     </div>
                                     <div>
-                                        <p className="font-medium text-gray-800">
-                                            {user.name}
-                                        </p>
-                                        <p className="text-sm text-gray-500">
-                                            {user.email}
-                                        </p>
+                                        <p className="font-medium text-gray-800">{user.name}</p>
+                                        <p className="text-sm text-gray-500">{user.email}</p>
                                     </div>
                                 </div>
 
@@ -331,17 +350,14 @@ export default function Dashboard() {
                                 <div
                                     className="absolute top-2 right-2"
                                     ref={(el) => {
-                                        if (el)
-                                            friendRefs.current[user.id] = el;
+                                        if (el) friendRefs.current[user.id] = el;
                                     }}
                                 >
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             setActiveFriendMenuId((prev) =>
-                                                prev === user.id
-                                                    ? null
-                                                    : user.id
+                                                prev === user.id ? null : user.id
                                             );
                                         }}
                                         className="text-gray-500 hover:text-gray-800 text-lg"
@@ -353,9 +369,7 @@ export default function Dashboard() {
                                         <div className="absolute right-0 mt-2 w-28 bg-white border rounded-md shadow-md z-50">
                                             <button
                                                 onClick={() => {
-                                                    setConfirmUnfriendId(
-                                                        user.id
-                                                    );
+                                                    setConfirmUnfriendId(user.id);
                                                     setActiveFriendMenuId(null);
                                                 }}
                                                 className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
@@ -375,12 +389,10 @@ export default function Dashboard() {
                     </div>
                 )}
 
-                {/* Groups List */}
-                {groups.length > 0 && (
+                {/* Group List - Only show if friends exist */}
+                {!loading && friends.length > 0 && groups.length > 0 && (
                     <>
-                        <h2 className="text-xl font-semibold text-gray-700 mb-4">
-                            Your Groups:
-                        </h2>
+                        <h2 className="text-xl font-semibold text-gray-700 mb-4">Your Groups:</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 items-start">
                             {groups.map((group, index) => (
                                 <motion.div
@@ -396,17 +408,13 @@ export default function Dashboard() {
                                         title={`Enter group ${group.name}`}
                                     >
                                         <div className="w-12 h-12 flex items-center justify-center rounded-full bg-green-100 text-green-600 font-bold text-lg">
-                                            {group.name
-                                                ?.charAt(0)
-                                                .toUpperCase()}
+                                            {group.name?.charAt(0).toUpperCase()}
                                         </div>
                                         <div className="max-w-[10rem]">
                                             <p className="font-medium text-gray-800 break-words leading-snug">
                                                 {group.name}
                                             </p>
-                                            <p className="text-sm text-gray-500">
-                                                Group Chat
-                                            </p>
+                                            <p className="text-sm text-gray-500">Group Chat</p>
                                         </div>
                                     </div>
 
@@ -414,19 +422,15 @@ export default function Dashboard() {
                                     <div
                                         className="absolute top-2 right-2"
                                         ref={(el) => {
-                                            if (el)
-                                                groupRefs.current[group.id] =
-                                                    el;
+                                            if (el) groupRefs.current[group.id] = el;
                                         }}
                                     >
                                         <button
                                             className="text-gray-500 hover:text-gray-800 text-lg"
                                             onClick={(e) => {
-                                                e.stopPropagation(); // ⛔ Stop bubbling to window
+                                                e.stopPropagation();
                                                 setActiveMenuGroupId((prev) =>
-                                                    prev === group.id
-                                                        ? null
-                                                        : group.id
+                                                    prev === group.id ? null : group.id
                                                 );
                                             }}
                                         >
@@ -437,12 +441,8 @@ export default function Dashboard() {
                                             <div className="absolute right-0 mt-2 w-28 bg-white border rounded-md shadow-md z-50">
                                                 <button
                                                     onClick={() => {
-                                                        setConfirmingDeleteId(
-                                                            group.id
-                                                        );
-                                                        setActiveMenuGroupId(
-                                                            false
-                                                        );
+                                                        setConfirmingDeleteId(group.id);
+                                                        setActiveMenuGroupId(null);
                                                     }}
                                                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                                                 >
@@ -462,16 +462,18 @@ export default function Dashboard() {
                     </>
                 )}
             </div>
-            {/* Floating + Button aligned to container but fixed on screen */}
-            <div className="fixed bottom-6 left-1/2 w-full max-w-4xl px-4 transform -translate-x-1/2 flex justify-end z-50">
-                <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-2xl w-14 h-14 rounded-full shadow-lg transition duration-300"
-                    title="Create Group"
-                >
-                    +
-                </button>
-            </div>
+            {/* Floating + Button aligned to container but fixed on screen (Only show if atleast one friend exists)*/}
+            {friends.length > 0 &&
+                <div className="fixed bottom-6 left-1/2 w-full max-w-4xl px-4 transform -translate-x-1/2 flex justify-end z-50">
+                    <button
+                        onClick={() => setShowCreateModal(true)}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-2xl w-14 h-14 rounded-full shadow-lg transition duration-300"
+                        title="Create Group"
+                    >
+                        +
+                    </button>
+                </div>
+            }
 
             {/* Create Group Modal */}
             {showCreateModal && (
@@ -508,8 +510,8 @@ export default function Dashboard() {
                                                 e.target.checked
                                                     ? [...prev, f.id]
                                                     : prev.filter(
-                                                          (id) => id !== f.id
-                                                      )
+                                                        (id) => id !== f.id
+                                                    )
                                             )
                                         }
                                     />
