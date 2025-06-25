@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { resetPassword } from "../../api";
 import { toast } from "react-toastify";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Eye, EyeOff } from "lucide-react";
 

@@ -22,7 +22,7 @@ import {
 } from "../../store/chatSlice";
 import { motion } from "framer-motion";
 import EmojiPicker from "emoji-picker-react";
-import { HiOutlineLogout, HiUserAdd, HiOutlineUsers, HiDotsHorizontal } from "react-icons/hi";
+import { HiOutlineLogout, HiUserAdd, HiOutlineUsers, HiDotsHorizontal, HiOutlineChat } from "react-icons/hi";
 import { setGroups } from "../../store/userSlice";
 
 export default function GroupChatbox() {
@@ -43,6 +43,7 @@ export default function GroupChatbox() {
     // const [members, setMembers] = useState([]);
     const [input, setInput] = useState("");
     const [isTyping, setIsTyping] = useState(false);
+    const [messageLoading, setMessageLoading] = useState(true);
     const [showMembers, setShowMembers] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -81,6 +82,7 @@ export default function GroupChatbox() {
     });
 
     const fetchGroupMessages = useCallback(async () => {
+        setMessageLoading(true);
         try {
             const res = await getGroupData(id, token);
             if (res.data.status === "success") {
@@ -101,6 +103,8 @@ export default function GroupChatbox() {
             } else {
                 toast.error(msg, { autoClose: 3000 });
             }
+        } finally {
+            setMessageLoading(false);
         }
     }, [id, token, dispatch, navigate]);
 
@@ -390,90 +394,96 @@ export default function GroupChatbox() {
                     className="flex-1 overflow-y-auto overflow-x-hidden space-y-2 px-2 pb-4 scrollbar-thin scrollbar-thumb-indigo-400 scrollbar-track-transparent"
                     ref={chatWindowRef}
                 >
-                    {messages.length === 0 ? (
+                    {messageLoading ? (
                         <div className="text-center text-gray-400 mt-4 text-sm">Loading chat...</div>
+                    ) : messages.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center text-center text-gray-500 mt-10 space-y-2">
+                            <HiOutlineChat className="text-3xl text-indigo-400" />
+                            <p className="text-sm font-medium">No messages yet</p>
+                            <p className="text-xs text-gray-400">Send a message to start the conversation</p>
+                        </div>
                     ) : (
-                            messages.map((msg, i) => {
-                                const isSender = msg.senderId === loggedInUserId;
-                                const currentDate = formatDate(msg.createdAt);
-                                const prevDate =
-                                    i > 0
-                                        ? formatDate(messages[i - 1].createdAt)
-                                        : null;
+                        messages.map((msg, i) => {
+                            const isSender = msg.senderId === loggedInUserId;
+                            const currentDate = formatDate(msg.createdAt);
+                            const prevDate =
+                                i > 0
+                                    ? formatDate(messages[i - 1].createdAt)
+                                    : null;
 
-                                return (
-                                    <React.Fragment key={msg.id}>
-                                        {/* Date Divider */}
-                                        {prevDate !== currentDate && (
-                                            <div className="flex items-center justify-center my-4">
-                                                <hr className="flex-1 border-gray-300" />
-                                                <span className="px-3 text-xs text-gray-500">
-                                                    {currentDate}
-                                                </span>
-                                                <hr className="flex-1 border-gray-300" />
+                            return (
+                                <React.Fragment key={msg.id}>
+                                    {/* Date Divider */}
+                                    {prevDate !== currentDate && (
+                                        <div className="flex items-center justify-center my-4">
+                                            <hr className="flex-1 border-gray-300" />
+                                            <span className="px-3 text-xs text-gray-500">
+                                                {currentDate}
+                                            </span>
+                                            <hr className="flex-1 border-gray-300" />
+                                        </div>
+                                    )}
+
+                                    {/* System message */}
+                                    {msg.type === "system" ? (
+                                        <motion.div
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="flex justify-center"
+                                        >
+                                            <div className="text-gray-700 text-xs px-4 py-1">
+                                                {msg.message}
                                             </div>
-                                        )}
-
-                                        {/* System message */}
-                                        {msg.type === "system" ? (
+                                        </motion.div>
+                                    ) : (
+                                        // Normal message
+                                        <div
+                                            className={`flex ${isSender
+                                                ? "justify-end"
+                                                : "justify-start"
+                                                }`}
+                                        >
                                             <motion.div
-                                                initial={{ opacity: 0, scale: 0.95 }}
-                                                animate={{ opacity: 1, scale: 1 }}
+                                                initial={{
+                                                    opacity: 0,
+                                                    x: isSender ? 50 : -50,
+                                                }}
+                                                animate={{ opacity: 1, x: 0 }}
                                                 transition={{ duration: 0.2 }}
-                                                className="flex justify-center"
+                                                className={`relative group p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap ${isSender ? "bg-indigo-100 self-end" : "bg-white self-start"}`}
                                             >
-                                                <div className="text-gray-700 text-xs px-4 py-1">
-                                                    {msg.message}
+                                                {!isSender && (
+                                                    <div className={`text-xs font-semibold ${getUserColor(msg.senderId)} mb-1`}>
+                                                        {msg.sender?.name?.split(" ")[0]}
+                                                    </div>
+                                                )}
+                                                <div className="text-left">{msg.isDeleted ? (
+                                                    <span className="italic text-gray-400">This message was deleted</span>
+                                                ) : msg.message}
                                                 </div>
-                                            </motion.div>
-                                        ) : (
-                                            // Normal message
-                                            <div
-                                                className={`flex ${isSender
-                                                    ? "justify-end"
-                                                    : "justify-start"
-                                                    }`}
-                                            >
-                                                <motion.div
-                                                    initial={{
-                                                        opacity: 0,
-                                                        x: isSender ? 50 : -50,
-                                                    }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    transition={{ duration: 0.2 }}
-                                                    className={`relative group p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap ${isSender ? "bg-indigo-100 self-end" : "bg-white self-start"}`}
-                                                >
-                                                    {!isSender && (
-                                                        <div className={`text-xs font-semibold ${getUserColor(msg.senderId)} mb-1`}>
-                                                            {msg.sender?.name?.split(" ")[0]}
-                                                        </div>
-                                                    )}
-                                                    <div className="text-left">{msg.isDeleted ? (
-                                                        <span className="italic text-gray-400">This message was deleted</span>
-                                                    ) : msg.message}
-                                                    </div>
-                                                    <div className="text-[10px] text-gray-400 mt-1 text-right">
-                                                        {formatTime(msg.createdAt)}{" "}
-                                                        {!msg.isDeleted && msg.isEdited && <span className="italic">(edited)</span>}
-                                                    </div>
+                                                <div className="text-[10px] text-gray-400 mt-1 text-right">
+                                                    {formatTime(msg.createdAt)}{" "}
+                                                    {!msg.isDeleted && msg.isEdited && <span className="italic">(edited)</span>}
+                                                </div>
 
-                                                    {/* Add this edit/delete menu button only for the sender */}
-                                                    {isSender && !msg.isDeleted && (
-                                                        <div className="absolute top-1 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <button
-                                                                onClick={() => setSelectedMessage(msg)}
-                                                                className="text-gray-500 hover:text-indigo-600 focus:outline-none"
-                                                            >
-                                                                <HiDotsHorizontal className="w-5 h-5" />
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </motion.div>
-                                            </div>
-                                        )}
-                                    </React.Fragment>
-                                );
-                            })
+                                                {/* Add this edit/delete menu button only for the sender */}
+                                                {isSender && !msg.isDeleted && (
+                                                    <div className="absolute top-1 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => setSelectedMessage(msg)}
+                                                            className="text-gray-500 hover:text-indigo-600 focus:outline-none"
+                                                        >
+                                                            <HiDotsHorizontal className="w-5 h-5" />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </motion.div>
+                                        </div>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })
                     )}
                 </div>
                 {selectedMessage && selectedMessage.mode !== "edit" && (
