@@ -7,7 +7,7 @@ import useSocket from "../../hooks/useSocket";
 import { motion } from "framer-motion";
 import EmojiPicker from "emoji-picker-react";
 import { useDispatch, useSelector } from "react-redux";
-import { setMessages, addMessage, editPrivateMessage, deletePrivateMessage } from "../../store/chatSlice";
+import { setMessages, editPrivateMessage, deletePrivateMessage, clearMessages } from "../../store/chatSlice";
 import { HiDotsHorizontal } from "react-icons/hi";
 
 export default function Chatbox() {
@@ -52,7 +52,7 @@ export default function Chatbox() {
     onNewMessageAlert: stableAlert, // prevents global notification while inside Chatbox
   });
 
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     try {
       const res = await getMessages(id, token);
       if (res.data.status === "success") {
@@ -69,11 +69,12 @@ export default function Chatbox() {
         toast.error(msg, { autoClose: 3000 });
       }
     }
-  };
+  }, [id, token, dispatch, navigate]);
 
   useEffect(() => {
+    dispatch(clearMessages());
     fetchMessages();
-  }, [id]);
+  }, [id, fetchMessages, dispatch]);
 
   useEffect(() => {
     if (chatWindowRef.current) {
@@ -168,7 +169,7 @@ export default function Chatbox() {
       }
 
       if (modalRef.current && !modalRef.current.contains(event.target)) {
-        setSelectedMessage(null); 
+        setSelectedMessage(null);
       }
     }
 
@@ -199,57 +200,62 @@ export default function Chatbox() {
           className="flex-1 overflow-y-auto overflow-x-hidden space-y-2 px-2 pb-4 scrollbar-thin scrollbar-thumb-indigo-400 scrollbar-track-transparent"
           ref={chatWindowRef}
         >
-          {messages.map((msg, i) => {
-            const isSender = msg.sender_id === loggedInUserId;
-            const currentDate = formatDate(msg.timestamp);
-            const prevDate = i > 0 ? formatDate(messages[i - 1].timestamp) : null;
+          {messages.length === 0 ? (
+            <div className="text-center text-gray-400 mt-4 text-sm">Loading chat...</div>
+          ) : (
+              messages.map((msg, i) => {
+                const isSender = msg.sender_id === loggedInUserId;
+                const currentDate = formatDate(msg.timestamp);
+                const prevDate = i > 0 ? formatDate(messages[i - 1].timestamp) : null;
 
-            return (
-              <React.Fragment key={msg.id}>
-                {prevDate !== currentDate && (
-                  <div className="flex items-center justify-center my-4">
-                    <hr className="flex-1 border-gray-300" />
-                    <span className="px-3 text-xs text-gray-500">{currentDate}</span>
-                    <hr className="flex-1 border-gray-300" />
-                  </div>
-                )}
-                <div className={`flex ${isSender ? "justify-end" : "justify-start"} relative`}>
-                  <motion.div
-                    initial={{ opacity: 0, x: isSender ? 50 : -50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className={`group p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap ${isSender ? "bg-indigo-100 self-end" : "bg-white self-start"
-                      }`}
-                  >
-                    <div className="text-left">
-                      {msg.is_deleted ? (
-                        <span className="italic text-gray-400">This message was deleted</span>
-                      ) : (
-                        msg.message
-                      )}
-                    </div>
-                    <div className="text-[10px] text-gray-400 mt-1 text-right">
-                      {formatTime(msg.createdAt)}{" "}
-                      {!msg.is_deleted && msg.is_edited && <span className="italic">(edited)</span>}
-                    </div>
-                    {/* Icon positioned slightly outside top-right corner */}
-                    {isSender && !msg.is_deleted && (
-                      <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => setSelectedMessage(msg)}
-                          className="text-gray-700 hover:text-indigo-600 focus:outline-none bg-gray-100 border border-gray-300 rounded-full p-1 shadow-sm"
-                          title="Options"
-                        >
-                          <HiDotsHorizontal className="w-4 h-4" />
-                        </button>
+                return (
+                  <React.Fragment key={msg.id}>
+                    {prevDate !== currentDate && (
+                      <div className="flex items-center justify-center my-4">
+                        <hr className="flex-1 border-gray-300" />
+                        <span className="px-3 text-xs text-gray-500">{currentDate}</span>
+                        <hr className="flex-1 border-gray-300" />
                       </div>
                     )}
-                  </motion.div>
+                    <div className={`flex ${isSender ? "justify-end" : "justify-start"} relative`}>
+                      <motion.div
+                        initial={{ opacity: 0, x: isSender ? 50 : -50 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className={`group p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap ${isSender ? "bg-indigo-100 self-end" : "bg-white self-start"
+                          }`}
+                      >
+                        <div className="text-left">
+                          {msg.is_deleted ? (
+                            <span className="italic text-gray-400">This message was deleted</span>
+                          ) : (
+                            msg.message
+                          )}
+                        </div>
+                        <div className="text-[10px] text-gray-400 mt-1 text-right">
+                          {formatTime(msg.createdAt)}{" "}
+                          {!msg.is_deleted && msg.is_edited && <span className="italic">(edited)</span>}
+                        </div>
+                        {/* Icon positioned slightly outside top-right corner */}
+                        {isSender && !msg.is_deleted && (
+                          <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => setSelectedMessage(msg)}
+                              className="text-gray-700 hover:text-indigo-600 focus:outline-none bg-gray-100 border border-gray-300 rounded-full p-1 shadow-sm"
+                              title="Options"
+                            >
+                              <HiDotsHorizontal className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                      </motion.div>
 
-                </div>
-              </React.Fragment>
-            );
-          })}
+                    </div>
+                  </React.Fragment>
+                );
+              })
+          )}
+
         </div>
 
         {selectedMessage && selectedMessage.mode !== "edit" && (
