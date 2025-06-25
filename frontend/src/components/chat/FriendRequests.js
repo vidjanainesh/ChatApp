@@ -13,8 +13,10 @@ export default function FriendRequests() {
 
   const friendReqCount = useSelector((state => state.user.friendReqCount));
   const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     const fetchRequests = async () => {
       try {
         const response = await getFriendReq(token);
@@ -30,6 +32,8 @@ export default function FriendRequests() {
           localStorage.removeItem("jwt");
           navigate("/");
         }
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -38,12 +42,12 @@ export default function FriendRequests() {
 
   const handleAction = async (id, status) => {
     try {
-      dispatch(setFriendReqCount(friendReqCount-1));
+      dispatch(setFriendReqCount(friendReqCount - 1));
       const response = await manageFriendReq(id, status, token);
       if (response.data.status === "success") {
         // toast.success(`Request ${status}`, { autoClose: 2000 });
         setRequests((prev) => prev.filter((req) => req.senderId !== id));
-        dispatch(setFriends([]));       
+        dispatch(setFriends([]));
       } else {
         toast.error(response.data.message || "Action failed");
       }
@@ -65,7 +69,31 @@ export default function FriendRequests() {
           </button>
         </div>
 
-        {requests.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center text-gray-500 mt-6 h-[20vh]">
+            <svg
+              className="animate-spin h-6 w-6 text-indigo-500 mb-2"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v8H4z"
+              />
+            </svg>
+            <p className="text-sm">Hold on — retrieving your friend requests...</p>
+          </div>
+        ) : requests.length === 0 ? (
           <p className="text-center text-gray-500 mt-10">No pending friend requests.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">

@@ -48,6 +48,7 @@ export default function Dashboard() {
     const [confirmingDeleteId, setConfirmingDeleteId] = useState(null);
     const [activeFriendMenuId, setActiveFriendMenuId] = useState(null);
     const [confirmUnfriendId, setConfirmUnfriendId] = useState(null);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
 
     const groupRefs = useRef({});
     const friendRefs = useRef({});
@@ -282,7 +283,7 @@ export default function Dashboard() {
                         </motion.div>
 
                         <button
-                            onClick={handleLogout}
+                            onClick={() => setShowLogoutModal(true)}
                             className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition duration-300 text-sm sm:text-base"
                         >
                             Logout
@@ -314,7 +315,7 @@ export default function Dashboard() {
                                 d="M4 12a8 8 0 018-8v8H4z"
                             />
                         </svg>
-                        <p className="text-sm">Fetching your friends list...</p>
+                        <p className="text-sm">Just a sec — getting your friends list...</p>
                     </div>
                 ) : friends.length === 0 ? (
                     <div className="flex flex-col items-center justify-center text-gray-500 mt-10 h-[20vh]">
@@ -474,7 +475,31 @@ export default function Dashboard() {
                     </button>
                 </div>
             }
-
+            {showLogoutModal && (
+                <div className="fixed inset-0 z-50 bg-black bg-opacity-40 flex items-center justify-center">
+                    <div className="bg-white p-6 rounded-xl shadow-lg w-80">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Confirm Logout</h3>
+                        <p className="text-sm text-gray-600 mb-6">Are you sure you want to log out?</p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowLogoutModal(false)}
+                                className="px-4 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowLogoutModal(false);
+                                    handleLogout();
+                                }}
+                                className="px-4 py-2 text-sm rounded-md bg-red-500 text-white hover:bg-red-600"
+                            >
+                                Logout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             {/* Create Group Modal */}
             {showCreateModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">

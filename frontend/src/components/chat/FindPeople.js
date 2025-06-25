@@ -9,8 +9,10 @@ export default function FindPeople() {
   const token = localStorage.getItem("jwt");
   const [users, setUsers] = useState([]);
   const [requestedIds, setRequestedIds] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     const fetchUsers = async () => {
       try {
         const response = await getUsers(token);
@@ -26,6 +28,8 @@ export default function FindPeople() {
           localStorage.removeItem("jwt");
           navigate("/");
         }
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -61,7 +65,31 @@ export default function FindPeople() {
           </button>
         </div>
 
-        {users.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center text-gray-500 mt-6 h-[20vh]">
+            <svg
+              className="animate-spin h-6 w-6 text-indigo-500 mb-2"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v8H4z"
+              />
+            </svg>
+            <p className="text-sm">Hang tight — searching for users to connect with...</p>
+          </div>
+        ) : users.length === 0 ? (
           <p className="text-center text-gray-500 mt-10">No more users to connect with.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
@@ -85,11 +113,10 @@ export default function FindPeople() {
                 <button
                   onClick={() => handleSendRequest(user.id)}
                   disabled={requestedIds.includes(user.id)}
-                  className={`w-full ${
-                    requestedIds.includes(user.id)
-                      ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                      : "bg-indigo-500 hover:bg-indigo-600 text-white"
-                  } py-2 px-4 rounded-lg transition duration-300`}
+                  className={`w-full ${requestedIds.includes(user.id)
+                    ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                    : "bg-indigo-500 hover:bg-indigo-600 text-white"
+                    } py-2 px-4 rounded-lg transition duration-300`}
                 >
                   {requestedIds.includes(user.id) ? "Request Sent" : "Send Friend Request"}
                 </button>
