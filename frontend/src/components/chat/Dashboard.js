@@ -24,6 +24,8 @@ import {
     clearUser,
 } from "../../store/userSlice";
 
+import { setCurrentChat, clearChatState } from "../../store/chatSlice";
+
 export default function Dashboard() {
     const navigate = useNavigate();
     const token = localStorage.getItem("jwt");
@@ -124,16 +126,19 @@ export default function Dashboard() {
         localStorage.removeItem("jwt");
         toast.success("Logged out", { autoClose: 3000 });
         dispatch(clearUser());
+        dispatch(clearChatState());
         navigate("/");
     };
 
     const handleUserClick = (user) => {
         dispatch(clearUnreadPrivateMapEntry(user.id));
+        dispatch(setCurrentChat({ id: user.id, type: "private" }));
         navigate(`/chatbox/${user.id}?name=${encodeURIComponent(user.name)}`);
     };
 
     const handleGroupClick = (group) => {
         dispatch(clearUnreadGroupMapEntry(group.id));
+        dispatch(setCurrentChat({ id: group.id, type: "group" }));
         navigate(
             `/groupchatbox/${group.id}?name=${encodeURIComponent(group.name)}`
         );

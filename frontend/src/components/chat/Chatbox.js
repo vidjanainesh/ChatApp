@@ -1,14 +1,14 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
-import { getMessages, sendMessage, deleteMessage, editMessage } from "../../api";
+import { getMessages, sendMessage, deleteMessage, editMessage, reactMessage, deleteReactions } from "../../api";
 import { toast } from "react-toastify";
 import { jwtDecode } from "jwt-decode";
 import useSocket from "../../hooks/useSocket";
 import { motion } from "framer-motion";
 import EmojiPicker from "emoji-picker-react";
 import { useDispatch, useSelector } from "react-redux";
-import { setMessages, editPrivateMessage, deletePrivateMessage, clearMessages } from "../../store/chatSlice";
-import { HiDotsHorizontal, HiOutlineChat } from "react-icons/hi";
+import { setMessages, editPrivateMessage, deletePrivateMessage, clearMessages, clearChatState, addReactionToPrivateMessage} from "../../store/chatSlice";
+import { HiDotsHorizontal, HiOutlineChat, HiEmojiHappy, HiPlusSm } from "react-icons/hi";
 
 export default function Chatbox() {
   const navigate = useNavigate();
@@ -18,10 +18,13 @@ export default function Chatbox() {
   const name = queryParams.get("name");
 
   const token = localStorage.getItem("jwt");
+
   const chatWindowRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const dropdownRef = useRef(null);
   const modalRef = useRef();
+  const reactionPickerRef = useRef();
+  const fullReactionPickerRef = useRef();
 
   const dispatch = useDispatch();
   const messages = useSelector((state) => state.chat.messages);
@@ -42,6 +45,10 @@ export default function Chatbox() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [editingInput, setEditingInput] = useState("");
+  const [reactionPickerId, setReactionPickerId] = useState(null);
+  const [showFullEmojiPickerId, setShowFullEmojiPickerId] = useState(null);
+  const availableReactions = ["👍", "❤️", "😂", "😮", "😢", "😡"];
+
 
   const stableAlert = useCallback(() => { }, []);
   const socketRef = useSocket({
@@ -81,10 +88,17 @@ export default function Chatbox() {
   }, [id, fetchMessages, dispatch]);
 
   useEffect(() => {
+    return () => {
+      dispatch(clearChatState()); // ✅ this clears messages, groupMessages, currentChat, etc.
+    };
+  }, [dispatch]);
+
+
+  useEffect(() => {
     if (chatWindowRef.current) {
       chatWindowRef.current.scrollTop = chatWindowRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages.length]);
 
   const handleInputChange = (e) => {
     setInput(e.target.value);
@@ -117,6 +131,11 @@ export default function Chatbox() {
       if (res.data.status === "success") {
         setInput("");
         // dispatch(addMessage(res.data.data)) - Not needed since it is being dispatched from socket
+        socketRef.emit("typing", {
+          senderId: loggedInUserId,
+          receiverId: parseInt(id),
+          isTyping: false,
+        });
       } else {
         toast.error("Could not send message", { autoClose: 3000 });
       }
@@ -157,11 +176,31 @@ export default function Chatbox() {
     }
   };
 
+  const handleReact = async (messageId, emoji, existingReaction) => {
+    try {
+      if (existingReaction && existingReaction.reaction === emoji) {
+        await deleteReactions(messageId, token);
+      } else {
+        const response = await reactMessage(messageId, { targetType: "private", reaction: emoji }, token);
+        dispatch(addReactionToPrivateMessage({
+          messageId: response.data.data.messageId,
+          reaction: response.data.data,
+        }))
+      }
+      // fetchMessages(); // refresh reactions
+    } catch (err) {
+      toast.error("Failed to react to message");
+    } finally {
+      setReactionPickerId(null);
+      setShowFullEmojiPickerId(null);
+    }
+  };
 
   const formatTime = (ts) =>
-    new Date(ts).toLocaleTimeString([], {
+    new Date(ts).toLocaleTimeString('en-US', {
       hour: "2-digit",
       minute: "2-digit",
+      hour12: true
     });
 
   const formatDate = (ts) => new Date(ts).toISOString().split("T")[0];
@@ -174,6 +213,14 @@ export default function Chatbox() {
 
       if (modalRef.current && !modalRef.current.contains(event.target)) {
         setSelectedMessage(null);
+      }
+
+      if (reactionPickerRef.current && !reactionPickerRef.current.contains(event.target)) {
+        setReactionPickerId(null);
+      }
+
+      if (fullReactionPickerRef.current && !fullReactionPickerRef.current.contains(event.target)) {
+        setShowFullEmojiPickerId(null);
       }
     }
 
@@ -214,9 +261,12 @@ export default function Chatbox() {
             </div>
           ) : (
             messages.map((msg, i) => {
-              const isSender = msg.sender_id === loggedInUserId;
-              const currentDate = formatDate(msg.timestamp);
-              const prevDate = i > 0 ? formatDate(messages[i - 1].timestamp) : null;
+              const isSender = msg.senderId === loggedInUserId;
+              const currentDate = formatDate(msg.createdAt);
+              const prevDate = i > 0 ? formatDate(messages[i - 1].createdAt) : null;
+
+              // Get user's existing reaction for this message
+              const userReaction = msg.reactions?.find(r => r.userId === loggedInUserId);
 
               return (
                 <React.Fragment key={msg.id}>
@@ -232,32 +282,133 @@ export default function Chatbox() {
                       initial={{ opacity: 0, x: isSender ? 50 : -50 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.2 }}
-                      className={`group p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap ${isSender ? "bg-indigo-100 self-end" : "bg-white self-start"
-                        }`}
+                      className={`group mb-2 p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap relative ${isSender ? "bg-indigo-100 self-end" : "bg-white self-start"}`}
                     >
                       <div className="text-left">
-                        {msg.is_deleted ? (
+                        {msg.isDeleted === 1 ? (
                           <span className="italic text-gray-400">This message was deleted</span>
                         ) : (
                           msg.message
                         )}
                       </div>
-                      <div className="text-[10px] text-gray-400 mt-1 text-right">
-                        {formatTime(msg.createdAt)}{" "}
-                        {!msg.is_deleted && msg.is_edited && <span className="italic">(edited)</span>}
+
+                      <div className={`flex items-center mt-1 ${isSender ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`text-[10px] pr-0 text-gray-400 ${isSender ? 'text-right' : 'text-left'}`}>
+                          {formatTime(msg.createdAt)}{" "}
+                          {msg.isDeleted === 0 && msg.isEdited === 1 && <span className="italic">(edited)</span>}
+                        </div>
                       </div>
+
+
+                      {/* WhatsApp-style Message Reactions - Positioned at bottom-right of message bubble */}
+                      {msg.reactions && msg.reactions.length > 0 && msg.isDeleted !== 1 && (
+                        <div className={`absolute -bottom-3 ${isSender ? '-left-2' : '-right-2'} flex flex-wrap gap-1 max-w-[200px]`}>
+                          {Object.entries(
+                            msg.reactions.reduce((acc, reaction) => {
+                              if (!acc[reaction.reaction]) {
+                                acc[reaction.reaction] = [];
+                              }
+                              acc[reaction.reaction].push(reaction);
+                              return acc;
+                            }, {})
+                          ).map(([emoji, reactions]) => (
+                            <button
+                              key={emoji}
+                              onClick={() => handleReact(msg.id, emoji, userReaction)}
+                              className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs transition-all duration-200 shadow-md border-2 backdrop-blur-sm ${reactions.some(r => r.userId === loggedInUserId)
+                                ? 'bg-indigo-100/90 text-indigo-800 border-indigo-200 hover:bg-indigo-200/90'
+                                : 'bg-white/90 text-gray-600 border-gray-200 hover:bg-gray-50/90 hover:shadow-lg'
+                                } transform hover:scale-105`}
+                              title={reactions.map(r => r.userName?.split(' ')[0] || 'Someone').join(', ')}
+                            >
+                              <span className="text-[12px]">{emoji}</span>
+                              {reactions.length > 1 && (
+                                <span className="font-semibold min-w-[12px] text-center text-[10px]">{reactions.length}</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Quick Reactions Picker */}
+                      {reactionPickerId === msg.id && (
+                        <div
+                          ref={reactionPickerRef}
+                          className={`absolute ${isSender ? 'right-0' : 'left-0'} bottom-full mb-2 bg-white border border-gray-200 rounded-lg shadow-lg p-2 z-20 flex gap-1`}
+                          style={{ transform: 'scale(0.9)', transformOrigin: isSender ? 'bottom right' : 'bottom left' }}
+                        >
+                          {availableReactions.map((emoji) => (
+                            <button
+                              key={emoji}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleReact(msg.id, emoji, userReaction);
+                              }}
+                              className="hover:bg-gray-100 p-1 rounded text-lg transition-colors"
+                              title={`React with ${emoji}`}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowFullEmojiPickerId(msg.id);
+                              setReactionPickerId(null);
+                            }}
+                            className="hover:bg-gray-100 p-1 rounded text-gray-500 transition-colors"
+                            title="More reactions"
+                          >
+                            <HiPlusSm className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Full Emoji Picker for Reactions */}
+                      {showFullEmojiPickerId === msg.id && (
+                        <div className={`absolute ${isSender ? 'right-0' : 'left-0'} ${i < 3 ? 'top-full mt-2' : 'bottom-full mb-2'} z-30`}>
+                          <div
+                            ref={fullReactionPickerRef} 
+                            style={{
+                              transform: "scale(0.6)",
+                              transformOrigin: isSender
+                                ? (i < 3 ? 'top right' : 'bottom right')
+                                : (i < 3 ? 'top left' : 'bottom left')
+                            }}
+                          >
+                            <EmojiPicker
+                              onEmojiClick={(emojiData) => handleReact(msg.id, emojiData.emoji, userReaction)}
+                              theme="light"
+                            />
+                          </div>
+                        </div>
+                      )}
+
                       {/* Icon positioned slightly outside top-right corner */}
-                      {isSender && !msg.is_deleted && (
-                        <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className={`absolute -top-2 ${isSender ? '-right-2' : '-left-2'} flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
+                        {msg.isDeleted === 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setReactionPickerId(reactionPickerId === msg.id ? null : msg.id);
+                            }}
+                            className="text-gray-700 hover:text-indigo-600 focus:outline-none bg-gray-100 border border-gray-300 rounded-full p-1 shadow-sm transition-colors"
+                            title="React"
+                          >
+                            <HiEmojiHappy className="w-3 h-3" />
+                          </button>
+                        )}
+
+                        {msg.isDeleted === 0 && isSender && (
                           <button
                             onClick={() => setSelectedMessage(msg)}
                             className="text-gray-700 hover:text-indigo-600 focus:outline-none bg-gray-100 border border-gray-300 rounded-full p-1 shadow-sm"
                             title="Options"
                           >
-                            <HiDotsHorizontal className="w-4 h-4" />
+                            <HiDotsHorizontal className="w-3 h-3" />
                           </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </motion.div>
 
                   </div>

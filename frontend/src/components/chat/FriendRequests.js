@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
-import { setFriends, setFriendReqCount } from "../../store/userSlice";
+import { decrementFriendReqCount, setHasFetchedDashboardData } from "../../store/userSlice";
 
 export default function FriendRequests() {
   const dispatch = useDispatch();
@@ -42,12 +42,12 @@ export default function FriendRequests() {
 
   const handleAction = async (id, status) => {
     try {
-      dispatch(setFriendReqCount(friendReqCount - 1));
+      dispatch(decrementFriendReqCount());
       const response = await manageFriendReq(id, status, token);
       if (response.data.status === "success") {
         // toast.success(`Request ${status}`, { autoClose: 2000 });
         setRequests((prev) => prev.filter((req) => req.senderId !== id));
-        dispatch(setFriends([]));
+        dispatch(setHasFetchedDashboardData(false));
       } else {
         toast.error(response.data.message || "Action failed");
       }

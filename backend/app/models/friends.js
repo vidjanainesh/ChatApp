@@ -21,10 +21,6 @@ const Friends = sequelize.define('friends', {
         type: DataTypes.ENUM('pending', 'accepted', 'rejected'),
         allowNull: true,
         defaultValue: 'pending'
-    },
-    timestamp: {
-        type: DataTypes.DATE,
-        defaultValue: null,
     }
 }, {
   indexes: [

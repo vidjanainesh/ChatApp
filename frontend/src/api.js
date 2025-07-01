@@ -19,7 +19,7 @@ export const verifyToken = (data) => {
 }
 
 export const resetPassword = (data, token) => {
-    return axios.post(`${API_BASE}/authenticate/reset-password`, 
+    return axios.post(`${API_BASE}/authenticate/reset-password`,
         data,
         {
             headers: {
@@ -44,7 +44,7 @@ export const getDashboardData = (token) => {
 
 export const sendMessage = (message, receiverId, token) => {
     return axios.post(`${API_BASE}/chat`,
-        { message, receiverId }, 
+        { message, receiverId },
         {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -63,7 +63,7 @@ export const deleteMessage = (id, token) => {
 }
 export const editMessage = (id, msg, token) => {
     return axios.patch(`${API_BASE}/chat/${id}`,
-        { msg }, 
+        { msg },
         {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -73,7 +73,7 @@ export const editMessage = (id, msg, token) => {
 }
 
 export const getMessages = (id, token) => {
-    return axios.get(`${API_BASE}/chat/${id}`, 
+    return axios.get(`${API_BASE}/chat/${id}`,
         {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -104,8 +104,8 @@ export const getFriendReq = (token) => {
 }
 
 export const sendFriendReq = (id, token) => {
-    return axios.post(`${API_BASE}/friend/send`,
-        { id }, 
+    return axios.post(`${API_BASE}/friend`,
+        { id },
         {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -125,8 +125,8 @@ export const unFriend = (id, token) => {
 }
 
 export const manageFriendReq = (id, status, token) => {
-    return axios.post(`${API_BASE}/friend/update`,
-        { id, status }, 
+    return axios.patch(`${API_BASE}/friend`,
+        { id, status },
         {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -137,7 +137,7 @@ export const manageFriendReq = (id, status, token) => {
 
 // ---------------------------------------------------------
 export const createGroup = (data, token) => {
-    return axios.post(`${API_BASE}/group`, 
+    return axios.post(`${API_BASE}/group`,
         data,
         {
             headers: {
@@ -148,8 +148,8 @@ export const createGroup = (data, token) => {
 }
 
 export const joinGroup = (data, token) => {
-    return axios.post(`${API_BASE}/group/join`, 
-        data, 
+    return axios.post(`${API_BASE}/group/join`,
+        data,
         {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -159,7 +159,7 @@ export const joinGroup = (data, token) => {
 };
 
 export const leaveGroup = (id, token) => {
-    return axios.get(`${API_BASE}/group/leave/${id}`, 
+    return axios.get(`${API_BASE}/group/leave/${id}`,
         {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -169,7 +169,7 @@ export const leaveGroup = (id, token) => {
 };
 
 export const sendGroupMessage = (data, token) => {
-    return axios.post(`${API_BASE}/group/send-message`, 
+    return axios.post(`${API_BASE}/group/send-message`,
         data,
         {
             headers: {
@@ -190,7 +190,7 @@ export const deleteGroupMessage = (id, token) => {
 }
 export const editGroupMessage = (id, msg, token) => {
     return axios.patch(`${API_BASE}/group/message/${id}`,
-        { msg }, 
+        { msg },
         {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -200,7 +200,7 @@ export const editGroupMessage = (id, msg, token) => {
 }
 
 export const getGroupData = (id, token) => {
-    return axios.get(`${API_BASE}/group/data/${id}`, 
+    return axios.get(`${API_BASE}/group/data/${id}`,
         {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -221,7 +221,7 @@ export const getGroupData = (id, token) => {
 // } 
 
 export const getGroups = (token) => {
-    return axios.get(`${API_BASE}/group`, 
+    return axios.get(`${API_BASE}/group`,
         {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -231,7 +231,7 @@ export const getGroups = (token) => {
 }
 
 export const deleteGroup = (id, token) => {
-    return axios.delete(`${API_BASE}/group/${id}`, 
+    return axios.delete(`${API_BASE}/group/${id}`,
         {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -239,4 +239,26 @@ export const deleteGroup = (id, token) => {
         }
     )
 }
- 
+
+// -------------------------------------------------------------------
+
+export const reactMessage = (id, { targetType, reaction }, token) => {
+    return axios.post(`${API_BASE}/react/${id}`,
+        { targetType, reaction },
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    )
+}
+
+export const deleteReactions = (id, token) => {
+    return axios.delete(`${API_BASE}/react/${id}`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    )
+}

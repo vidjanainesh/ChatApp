@@ -27,6 +27,7 @@ const userSlice = createSlice({
             state.unreadPrivateMap = {};
             state.unreadGroupMap = {};
             state.friendReqCount = 0;
+            state.hasFetchedDashboardData = false;
         },
         setHasFetchedDashboardData: (state, action) => {
             state.hasFetchedDashboardData = action.payload;
@@ -36,6 +37,10 @@ const userSlice = createSlice({
         },
         addFriend: (state, action) => {
             state.friends.push(action.payload);
+        },
+        removeFriend: (state, action) => {
+            const unFriendId = action.payload;
+            state.friends = state.friends.filter((friend) => friend.id !== unFriendId);
         },
         setGroups: (state, action) => {
             state.groups = action.payload;
@@ -74,7 +79,10 @@ const userSlice = createSlice({
             state.friendReqCount = action.payload;
         },
         incrementFriendReqCount: (state, action) => {
-            state.friendReqCount += 1
+            state.friendReqCount += 1;
+        },
+        decrementFriendReqCount: (state, action) => {
+            state.friendReqCount -= 1;
         },
         resetFriendRequestCount: (state) => {
             state.friendReqCount = 0;
@@ -91,6 +99,7 @@ export const {
     setGroups,
     addGroup,
     addFriend,
+    removeFriend,
     setUnreadPrivateMap,
     setUnreadGroupMap,
     appendUnreadPrivate,
@@ -99,6 +108,7 @@ export const {
     clearUnreadGroupMapEntry,
     setFriendReqCount,
     incrementFriendReqCount,
+    decrementFriendReqCount,
     resetFriendRequestCount,
 } = userSlice.actions;
 

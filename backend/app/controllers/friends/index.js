@@ -39,13 +39,12 @@ const sendFriendReq = async (req, res) => {
         const obj = {
             sender_id: user.id,
             receiver_id: id,
-            timestamp: Date.now(),
         };
 
         await Friends.create(obj);
 
         const io = req.app.get('io');
-        io.to(`user_${id}`).emit('friendReqSent');
+        io.to(`user_${id}`).emit('newFriendReqSent');
 
         return successResponse(res, {}, "Friend request sent");
     } catch (error) {
@@ -73,6 +72,9 @@ const unFriend = async (req, res) => {
             // existing.status = "rejected";
             // await existing.save();
             await existing.destroy();
+
+            // const io = req.app.get('io');
+            // io.to(`user_${friendId}`).emit('unFriend', {friendId: user.id});
 
             return successResponse(
                 res,
