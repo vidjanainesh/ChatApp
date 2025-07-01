@@ -26,7 +26,7 @@ const chatSlice = createSlice({
       const updatedMsg = action.payload;
       state.messages = state.messages.map((msg) =>
         // msg.id === updatedMsg.id ? updatedMsg : msg
-        msg.id === updatedMsg.id ? { ...msg, message: updatedMsg.message, isEdited: 1 } : msg
+        msg.id === updatedMsg.id ? { ...msg, message: updatedMsg.message, isEdited: true } : msg
       );
       // console.log('Updated messages (edit):', JSON.parse(JSON.stringify(state.messages)));
     },
@@ -35,7 +35,7 @@ const chatSlice = createSlice({
       // console.log("Deleted Msg: ", deletedMsg);s
       state.messages = state.messages.map((msg) =>
         // msg.id === deletedMsg.id ? deletedMsg : msg
-        msg.id === deletedMsg.id ? { ...msg, isDeleted: 1 } : msg
+        msg.id === deletedMsg.id ? { ...msg, isDeleted: true } : msg
       );
       // console.log('Updated messages (del):', JSON.parse(JSON.stringify(state.messages)));
     },
@@ -80,14 +80,14 @@ const chatSlice = createSlice({
       const updatedMsg = action.payload;
       state.groupMessages = state.groupMessages.map((msg) =>
         // msg.id === updatedMsg.id ? updatedMsg : msg
-        msg.id === updatedMsg.id ? { ...msg, message: updatedMsg.message, isEdited: 1 } : msg
+        msg.id === updatedMsg.id ? { ...msg, message: updatedMsg.message, isEdited: true } : msg
       );
     },
     deleteGroupMsgAction: (state, action) => {
       const deletedMsg = action.payload;
       state.groupMessages = state.groupMessages.map((msg) =>
         // msg.id === deletedMsg.id ? deletedMsg : msg
-        msg.id === deletedMsg.id ? { ...msg, isDeleted: 1 } : msg
+        msg.id === deletedMsg.id ? { ...msg, isDeleted: true } : msg
       );
     },
     setCurrentChat: (state, action) => {
@@ -125,13 +125,12 @@ const chatSlice = createSlice({
       }
     },
     removeReactionFromGroupMessage: (state, action) => {
-      console.log('Group messages (Brem):', JSON.parse(JSON.stringify(state.groupMessages)));
+      // console.log('Group messages (Brem):', JSON.parse(JSON.stringify(state.groupMessages)));
       const { messageId, userId } = action.payload;
       const message = state.groupMessages.find((m) => m.id === messageId);
       if (message) {
         message.reactions = message.reactions.filter((r) => r.userId !== userId);
       }
-      console.log('Group messages (Arem):', JSON.parse(JSON.stringify(state.groupMessages)));
     },
   },
 });

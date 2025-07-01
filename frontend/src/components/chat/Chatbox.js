@@ -50,14 +50,11 @@ export default function Chatbox() {
   const availableReactions = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
 
-  const stableAlert = useCallback(() => { }, []);
   const socketRef = useSocket({
     token,
     chatUserId: id,
     loggedInUserId,
-    setMessages: (msgs) => dispatch(setMessages(msgs)),
     setIsTyping,
-    onNewMessageAlert: stableAlert, // prevents global notification while inside Chatbox
   });
 
   const fetchMessages = useCallback(async () => {
@@ -117,13 +114,18 @@ export default function Chatbox() {
           receiverId: parseInt(id),
           isTyping: false,
         });
-      }, 1500);
+      }, 1000);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
+    socketRef.emit("typing", {
+      senderId: loggedInUserId,
+      receiverId: parseInt(id),
+      isTyping: false,
+    });
 
     setShowEmojiPicker(false);
     try {
@@ -131,11 +133,6 @@ export default function Chatbox() {
       if (res.data.status === "success") {
         setInput("");
         // dispatch(addMessage(res.data.data)) - Not needed since it is being dispatched from socket
-        socketRef.emit("typing", {
-          senderId: loggedInUserId,
-          receiverId: parseInt(id),
-          isTyping: false,
-        });
       } else {
         toast.error("Could not send message", { autoClose: 3000 });
       }
@@ -285,23 +282,23 @@ export default function Chatbox() {
                       className={`group mb-2 p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap relative ${isSender ? "bg-indigo-100 self-end" : "bg-white self-start"}`}
                     >
                       <div className="text-left">
-                        {msg.isDeleted === 1 ? (
+                        {msg.isDeleted ? (
                           <span className="italic text-gray-400">This message was deleted</span>
                         ) : (
                           msg.message
                         )}
                       </div>
-
-                      <div className={`flex items-center mt-1 ${isSender ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`text-[10px] pr-0 text-gray-400 ${isSender ? 'text-right' : 'text-left'}`}>
-                          {formatTime(msg.createdAt)}{" "}
-                          {msg.isDeleted === 0 && msg.isEdited === 1 && <span className="italic">(edited)</span>}
+                      {!msg.isDeleted && (
+                        <div className={`flex items-center mt-1 ${isSender ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`text-[10px] pr-0 text-gray-400 ${isSender ? 'text-right' : 'text-left'}`}>
+                            {formatTime(msg.createdAt)}{" "}
+                            {!!msg.isEdited && <span className="italic">(edited)</span>}
+                          </div>
                         </div>
-                      </div>
-
+                      )}
 
                       {/* WhatsApp-style Message Reactions - Positioned at bottom-right of message bubble */}
-                      {msg.reactions && msg.reactions.length > 0 && msg.isDeleted !== 1 && (
+                      {msg.reactions && msg.reactions.length > 0 && !msg.isDeleted && (
                         <div className={`absolute -bottom-3 ${isSender ? '-left-2' : '-right-2'} flex flex-wrap gap-1 max-w-[200px]`}>
                           {Object.entries(
                             msg.reactions.reduce((acc, reaction) => {
@@ -386,7 +383,7 @@ export default function Chatbox() {
 
                       {/* Icon positioned slightly outside top-right corner */}
                       <div className={`absolute -top-2 ${isSender ? '-right-2' : '-left-2'} flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
-                        {msg.isDeleted === 0 && (
+                        {!msg.isDeleted && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -399,7 +396,7 @@ export default function Chatbox() {
                           </button>
                         )}
 
-                        {msg.isDeleted === 0 && isSender && (
+                        {!msg.isDeleted && isSender && (
                           <button
                             onClick={() => setSelectedMessage(msg)}
                             className="text-gray-700 hover:text-indigo-600 focus:outline-none bg-gray-100 border border-gray-300 rounded-full p-1 shadow-sm"

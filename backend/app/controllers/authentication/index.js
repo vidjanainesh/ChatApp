@@ -5,7 +5,7 @@ const bcrypt = require('bcrypt');
 const {
   successResponse,
   successPostResponse,
-  errorResponse
+  errorThrowResponse
 } = require("../../helper/response");
 
 const register = async (req, res) => {
@@ -34,7 +34,7 @@ const register = async (req, res) => {
         return successPostResponse(res, {}, "User Registered");
 
     } catch (error) {
-        return errorResponse(res, `${error.message}`, 400);
+        return errorThrowResponse(res, `${error.message}`, error);
     }
 }
 
@@ -64,7 +64,7 @@ const login = async (req, res) => {
         }
 
     } catch (error) {
-        return errorResponse(res, error.message, 400);
+        return errorResponse(res, error.message, error);
     }
 }
 

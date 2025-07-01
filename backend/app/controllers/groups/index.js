@@ -114,8 +114,8 @@ const sendGroupMessage = async (req, res) => {
             message: msg,
             createdAt: groupMessage.createdAt,
             type: 'text',
-            isDeleted: 0,
-            isEdited: 0,
+            isDeleted: false,
+            isEdited: false,
             sender: {
                 name: user.name
             },
@@ -141,7 +141,7 @@ const deleteGroupMessage = async (req, res) => {
             return errorResponse(res, 'Invalid user');
         }
 
-        groupMessage.is_deleted = 1;
+        groupMessage.is_deleted = true;
         await groupMessage.save();
 
         const message = {
@@ -179,7 +179,7 @@ const editGroupMessage = async (req, res) => {
         }
 
         groupMessage.message = msg;
-        groupMessage.is_edited = 1;
+        groupMessage.is_edited = true;
         groupMessage.updatedAt = new Date();
         await groupMessage.save();
 
@@ -227,7 +227,7 @@ const getGroupData = async (req, res) => {
                 {
                     model: GroupMessages,
                     as: "messages",
-                    where: { is_deleted: 0 },
+                    where: { is_deleted: false },
                     attributes: [
                         "id",
                         ["sender_id", "senderId"],

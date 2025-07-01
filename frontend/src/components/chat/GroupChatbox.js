@@ -16,7 +16,6 @@ import useSocket from "../../hooks/useSocket";
 import { useDispatch, useSelector } from "react-redux";
 import {
     setGroupMessages,
-    addGroupMessage,
     setGroupMembers,
     deleteGroupMsgAction,
     editGroupMsgAction,
@@ -83,14 +82,11 @@ export default function GroupChatbox() {
         navigate("/");
     }
 
-    const stableAlert = useCallback(() => { }, []);
     const socketRef = useSocket({
         token,
         groupId: id,
         loggedInUserId,
-        setMessages: (msg) => dispatch(addGroupMessage(msg)),
         setIsTyping,
-        onNewMessageAlert: stableAlert,
     });
 
     const fetchGroupMessages = useCallback(async () => {
@@ -144,23 +140,29 @@ export default function GroupChatbox() {
             socketRef.emit("groupTyping", {
                 senderId: loggedInUserId,
                 groupId: parseInt(id),
+                isTyping: true,
             });
 
-            if (typingTimeoutRef.current)
-                clearTimeout(typingTimeoutRef.current);
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
             typingTimeoutRef.current = setTimeout(() => {
                 socketRef.emit("groupTyping", {
                     senderId: loggedInUserId,
                     groupId: parseInt(id),
+                    isTyping: false,
                 });
-            }, 1500);
+            }, 1000);
         }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!input.trim()) return;
+        socketRef.emit("groupTyping", {
+            senderId: loggedInUserId,
+            groupId: parseInt(id),
+            isTyping: false,
+        });
 
         setShowEmojiPicker(false);
 
@@ -438,15 +440,7 @@ export default function GroupChatbox() {
                                             return (
                                                 <li
                                                     key={member.id}
-                                                    onClick={() =>
-                                                        !isCurrentUser &&
-                                                        navigate(
-                                                            `/chatbox/${member.id
-                                                            }?name=${encodeURIComponent(
-                                                                member.name
-                                                            )}`
-                                                        )
-                                                    }
+                                                    onClick={() => !isCurrentUser && navigate(`/chatbox/${member.id}?name=${encodeURIComponent(member.name)}`)}
                                                     className={`px-4 py-3 transition ${isCurrentUser
                                                         ? "cursor-default bg-gray-50"
                                                         : "cursor-pointer hover:bg-indigo-50"
@@ -502,7 +496,7 @@ export default function GroupChatbox() {
                             const isSender = msg.senderId === loggedInUserId;
                             const currentDate = formatDate(msg.createdAt);
                             const prevDate = i > 0 ? formatDate(messages[i - 1].createdAt) : null;
-                            if(msg.type !== "system") msgCount += 1;
+                            if (msg.type !== "system") msgCount += 1;
 
                             const existingReaction = msg.reactions?.find(r => r.userId === loggedInUserId);
 
@@ -547,20 +541,21 @@ export default function GroupChatbox() {
                                                 )}
 
                                                 <div className="text-left">
-                                                    {msg.isDeleted === 1 ? (
+                                                    {msg.isDeleted ? (
                                                         <span className="italic text-gray-400">This message was deleted</span>
                                                     ) : msg.message}
                                                 </div>
-
-                                                <div className={`flex items-center mt-1 ${isSender ? 'justify-end' : 'justify-start'}`}>
-                                                    <div className={`text-[10px] pr-0 text-gray-400 ${isSender ? 'text-right' : 'text-left'}`}>
-                                                        {formatTime(msg.createdAt)}{" "}
-                                                        {msg.isDeleted === 0 && msg.isEdited === 1 && <span className="italic">(edited)</span>}
+                                                {!msg.isDeleted && (
+                                                    <div className={`flex items-center mt-1 ${isSender ? 'justify-end' : 'justify-start'}`}>
+                                                        <div className={`text-[10px] pr-0 text-gray-400 ${isSender ? 'text-right' : 'text-left'}`}>
+                                                            {formatTime(msg.createdAt)}{" "}
+                                                            {!!msg.isEdited && <span className="italic">(edited)</span>}
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                )}
 
                                                 {/* WhatsApp-style reactions at bottom */}
-                                                {msg.reactions && msg.reactions.length > 0 && msg.isDeleted !== 1 && (
+                                                {msg.reactions && msg.reactions.length > 0 && !msg.isDeleted && (
                                                     <div className={`absolute -bottom-3 ${isSender ? '-left-2' : '-right-2'} flex gap-1 flex-nowrap`}>
                                                         {Object.entries(
                                                             msg.reactions.reduce((acc, reaction) => {
@@ -643,7 +638,7 @@ export default function GroupChatbox() {
 
                                                 {/* Floating top icons */}
                                                 <div className={`absolute -top-2 ${isSender ? '-right-2' : '-left-2'} flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
-                                                    {msg.isDeleted === 0 && (
+                                                    {!msg.isDeleted && (
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -655,7 +650,7 @@ export default function GroupChatbox() {
                                                             <HiEmojiHappy className="w-3 h-3" />
                                                         </button>
                                                     )}
-                                                    {msg.isDeleted === 0 && isSender && (
+                                                    {!msg.isDeleted && isSender && (
                                                         <button
                                                             onClick={() => setSelectedMessage(msg)}
                                                             className="text-gray-700 hover:text-indigo-600 focus:outline-none bg-gray-100 border border-gray-300 rounded-full p-1 shadow-sm"

@@ -6,7 +6,7 @@ import { addMessage, addGroupMessage } from "../store/chatSlice";
 import { addFriend, addGroup, appendUnreadPrivate, appendUnreadGroup, incrementFriendReqCount } from "../store/userSlice";
 import { deletePrivateMessage, editPrivateMessage, deleteGroupMsgAction, editGroupMsgAction, addReactionToPrivateMessage, removeReactionFromPrivateMessage, addReactionToGroupMessage, removeReactionFromGroupMessage } from "../store/chatSlice";
 
-export default function useSocket({ token, chatUserId, groupId, loggedInUserId, setMessages, setIsTyping, onNewMessageAlert }) {
+export default function useSocket({ token, chatUserId, groupId, loggedInUserId, setIsTyping }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [socketInstance, setSocketInstance] = useState(null);
@@ -93,14 +93,12 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
           (senderIdStr === loggedInUserIdStr && receiverIdStr === chatUserId) ||
           (receiverIdStr === loggedInUserIdStr && senderIdStr === chatUserId)
         ) {
-          // setMessages((prev) => [...prev, message]);
           dispatch(addMessage(message));
         }
       }
 
       // 2. Global notification logic
       if (senderIdStr !== loggedInUserIdStr) {
-        // onNewMessageAlert(senderIdStr);
         dispatch(appendUnreadPrivate(senderIdStr));
       }
 
@@ -123,6 +121,7 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
     });
 
     socket.on("typing", ({ senderId, receiverId, isTyping }) => {
+      console.log("senderId: ", senderId, "receiverId: ", receiverId, "isTyping: ", isTyping);
       if (setIsTyping && senderId === parseInt(chatUserId) && receiverId === loggedInUserId) {
         setIsTyping(isTyping);
       }
@@ -183,9 +182,8 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
     // New: Handle newGroupMessage
     socket.on("newGroupMessage", (data) => {
       const { message, groupId: msgGroupId } = data;
-
-      if (groupId && parseInt(groupId) === parseInt(msgGroupId) && setMessages) {
-        // setMessages((prev) => [...prev, message]);
+      console.log(message);
+      if (groupId && parseInt(groupId) === parseInt(msgGroupId)) {
         dispatch(addGroupMessage(message));
       }
 
@@ -196,7 +194,7 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
         document.visibilityState !== "visible"
       ) {
         const notif = new Notification("New Group Message", {
-          body: `${message.sender_name}: ${message.message}`,
+          body: `${message.sender.name}: ${message.message}`,
           icon: "/icon.png",
         });
 
@@ -218,14 +216,9 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
     });
 
     // New: Handle groupTyping
-    socket.on("groupTyping", ({ groupId: typingGroupId, senderId }) => {
-      if (
-        setIsTyping &&
-        typingGroupId === parseInt(groupId) &&
-        senderId !== loggedInUserId
-      ) {
-        setIsTyping(true);
-        setTimeout(() => setIsTyping(false), 2000);
+    socket.on("groupTyping", ({ groupId: typingGroupId, senderId, isTyping }) => {
+      if (setIsTyping && typingGroupId === parseInt(groupId) && senderId !== loggedInUserId) {
+        setIsTyping(isTyping);
       }
     });
 
@@ -246,7 +239,7 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
       socket.off("editGroupMessage");
       socket.off("groupTyping");
     };
-  }, [token, chatUserId, groupId, loggedInUserId, onNewMessageAlert, setIsTyping, setMessages, groups, chatType, dispatch, navigate]);
+  }, [token, chatUserId, groupId, loggedInUserId, setIsTyping, groups, chatType, dispatch, navigate]);
 
   return socketInstance;
 }

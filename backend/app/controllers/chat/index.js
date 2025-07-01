@@ -57,9 +57,9 @@ const sendMessage = async (req, res) => {
         // Add sender_name to the emitted message
         const messageWithSender = {
             ...camelCasedMessage,
-            isDeleted: 0,
-            isEdited: 0,
-            isRead: 0,
+            isDeleted: false,
+            isEdited: false,
+            isRead: false,
             reactions: [],
             senderName: user.name || user.email || "Unknown",
         };
@@ -73,7 +73,7 @@ const sendMessage = async (req, res) => {
 
         return successResponse(res, sentMessage, "Message sent");
     } catch (error) {
-        return errorThrowResponse(res, error.message, 500);
+        return errorThrowResponse(res, error.message, error);
     }
 }
 
@@ -88,8 +88,8 @@ const deleteMessage = async (req, res) => {
             return errorResponse(res, 'Invalid user');
         }
 
-        // message.is_deleted = true;
-        // await message.save();
+        message.is_deleted = true;
+        await message.save();
 
         await MessageReactions.destroy({
             where: {target_id: id, target_type: 'private'}
@@ -117,7 +117,7 @@ const editMessage = async (req, res) => {
         const { msg } = req.body;
         const user = req.user;
 
-        const message = await Message.findOne({ where: { id, is_deleted: 0 } });
+        const message = await Message.findOne({ where: { id, is_deleted: false } });
         if(!message) return errorResponse(res, 'Invalid Message')
 
         if (message.sender_id !== user.id) {
@@ -179,7 +179,7 @@ const getUsers = async (req, res) => {
 
     } catch (error) {
         // console.error(error);
-        return errorThrowResponse(res, error.message, 500);
+        return errorThrowResponse(res, error.message, error);
     }
 };
 

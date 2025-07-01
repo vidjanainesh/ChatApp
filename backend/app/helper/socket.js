@@ -61,8 +61,8 @@ function setupSocket(server) {
     });
 
     // Group typing
-    socket.on("groupTyping", ({ groupId, senderId }) => {
-      socket.to(`group_${groupId}`).emit("groupTyping", { groupId, senderId });
+    socket.on("groupTyping", ({ groupId, senderId, isTyping }) => {
+      socket.to(`group_${groupId}`).emit("groupTyping", { groupId, senderId, isTyping });
     });
 
     socket.on("disconnect", (reason) => {

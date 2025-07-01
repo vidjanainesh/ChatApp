@@ -125,7 +125,7 @@ const manageFriendReq = async (req, res) => {
 
         return successResponse(res, {}, "Friend request status updated");
     } catch (error) {
-        return errorThrowResponse(res, error.message, 500);
+        return errorThrowResponse(res, error.message, error);
     }
 };
 
@@ -150,8 +150,7 @@ const getAllFriendReq = async (req, res) => {
 
         return successResponse(res, result, "Fetched all req");
     } catch (error) {
-        console.log("Error: ", error);
-        return errorThrowResponse(res, error.message, 500);
+        return errorThrowResponse(res, error.message, error);
     }
 };
 
