@@ -17,22 +17,55 @@ const chatSlice = createSlice({
     },
     addMessage: (state, action) => {
       state.messages.push(action.payload);
+      // console.log('Messages (Send):', JSON.parse(JSON.stringify(state.messages)));
     },
     clearMessages: (state) => {
       state.messages = [];
     },
     editPrivateMessage: (state, action) => {
-        const updatedMsg = action.payload;
-        state.messages = state.messages.map((msg) =>
-          msg.id === updatedMsg.id ? updatedMsg : msg
-        );
+      const updatedMsg = action.payload;
+      state.messages = state.messages.map((msg) =>
+        // msg.id === updatedMsg.id ? updatedMsg : msg
+        msg.id === updatedMsg.id ? { ...msg, message: updatedMsg.message, isEdited: 1 } : msg
+      );
+      // console.log('Updated messages (edit):', JSON.parse(JSON.stringify(state.messages)));
     },
     deletePrivateMessage: (state, action) => {
-        const deletedMsg = action.payload;
-        state.messages = state.messages.map((msg) => 
-          msg.id === deletedMsg.id ? deletedMsg : msg
-          // msg.id === deletedMsg.id ? { ...msg, is_deleted: true } : msg
+      const deletedMsg = action.payload;
+      // console.log("Deleted Msg: ", deletedMsg);s
+      state.messages = state.messages.map((msg) =>
+        // msg.id === deletedMsg.id ? deletedMsg : msg
+        msg.id === deletedMsg.id ? { ...msg, isDeleted: 1 } : msg
+      );
+      // console.log('Updated messages (del):', JSON.parse(JSON.stringify(state.messages)));
+    },
+    addReactionToPrivateMessage: (state, action) => {
+      const messageId = Number(action.payload.messageId);
+      const reaction = action.payload.reaction;
+      const message = state.messages.find((m) => m.id === messageId);
+      if (message) {
+        const existingIndex = message.reactions.findIndex(
+          (r) => r.userId === reaction.userId
         );
+        if (existingIndex !== -1) {
+          // message.reactions = [
+          //   ...message.reactions.slice(0, existingIndex),
+          //   reaction,
+          //   ...message.reactions.slice(existingIndex + 1)
+          // ];
+          message.reactions[existingIndex] = reaction;
+        } else {
+          // message.reactions = [...message.reactions, reaction];
+          message.reactions.push(reaction);
+        }
+      }
+    },
+    removeReactionFromPrivateMessage: (state, action) => {
+      const { messageId, userId } = action.payload;
+      const message = state.messages.find((m) => m.id === messageId);
+      if (message) {
+        message.reactions = message.reactions.filter((r) => r.userId !== userId);
+      }
     },
     setGroupMessages: (state, action) => {
       state.groupMessages = action.payload;
@@ -46,14 +79,15 @@ const chatSlice = createSlice({
     editGroupMsgAction: (state, action) => {
       const updatedMsg = action.payload;
       state.groupMessages = state.groupMessages.map((msg) =>
-        msg.id === updatedMsg.id ? updatedMsg : msg
+        // msg.id === updatedMsg.id ? updatedMsg : msg
+        msg.id === updatedMsg.id ? { ...msg, message: updatedMsg.message, isEdited: 1 } : msg
       );
     },
     deleteGroupMsgAction: (state, action) => {
       const deletedMsg = action.payload;
       state.groupMessages = state.groupMessages.map((msg) =>
-        msg.id === deletedMsg.id ? deletedMsg : msg
-        // msg.id === deletedMsg.id ? { ...msg, isDeleted: true } : msg
+        // msg.id === deletedMsg.id ? deletedMsg : msg
+        msg.id === deletedMsg.id ? { ...msg, isDeleted: 1 } : msg
       );
     },
     setCurrentChat: (state, action) => {
@@ -67,9 +101,38 @@ const chatSlice = createSlice({
       state.chatType = "private";
     },
     setGroupMembers: (state, action) => {
-        state.groupMembers = action.payload;
-    }
-
+      state.groupMembers = action.payload;
+    },
+    addReactionToGroupMessage: (state, action) => {
+      const messageId = Number(action.payload.messageId);
+      const reaction = action.payload.reaction;
+      const message = state.groupMessages.find((m) => m.id === messageId);
+      if (message) {
+        const existingIndex = message.reactions.findIndex(
+          (r) => r.userId === reaction.userId
+        );
+        if (existingIndex !== -1) {
+          // message.reactions = [
+          //   ...message.reactions.slice(0, existingIndex),
+          //   reaction,
+          //   ...message.reactions.slice(existingIndex + 1)
+          // ];
+          message.reactions[existingIndex] = reaction;
+        } else {
+          // message.reactions = [...message.reactions, reaction];
+          message.reactions.push(reaction);
+        }
+      }
+    },
+    removeReactionFromGroupMessage: (state, action) => {
+      console.log('Group messages (Brem):', JSON.parse(JSON.stringify(state.groupMessages)));
+      const { messageId, userId } = action.payload;
+      const message = state.groupMessages.find((m) => m.id === messageId);
+      if (message) {
+        message.reactions = message.reactions.filter((r) => r.userId !== userId);
+      }
+      console.log('Group messages (Arem):', JSON.parse(JSON.stringify(state.groupMessages)));
+    },
   },
 });
 
@@ -79,6 +142,8 @@ export const {
   clearMessages,
   editPrivateMessage,
   deletePrivateMessage,
+  addReactionToPrivateMessage,
+  removeReactionFromPrivateMessage,
   setGroupMessages,
   addGroupMessage,
   clearGroupMessages,
@@ -86,7 +151,9 @@ export const {
   deleteGroupMsgAction,
   setCurrentChat,
   clearChatState,
-  setGroupMembers
+  setGroupMembers,
+  addReactionToGroupMessage,
+  removeReactionFromGroupMessage,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

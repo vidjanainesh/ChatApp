@@ -7,6 +7,7 @@ const Groups = require('./groups');
 const GroupMembers = require('./groupMembers');
 const GroupMessages = require('./groupMessages');
 const GroupMessageRead = require('./groupMessageRead');
+const MessageReactions = require('./messageReactions'); 
 
 // -----------------------------------------
 
@@ -95,6 +96,19 @@ GroupMessageRead.belongsTo(GroupMessages, { foreignKey: "group_message_id", as: 
 User.hasMany(GroupMessageRead, { foreignKey: "user_id", as: "readGroupMessages"});
 GroupMessageRead.belongsTo(User, { foreignKey: "user_id", as: "reader"});
 
+// --------------------------------------------------------------------------------------------------
+
+// User–MessageReactions
+User.hasMany(MessageReactions, {
+  foreignKey: 'user_id',
+  as: 'reactions'
+});
+
+MessageReactions.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user'
+});
+
 module.exports = {
   User,
   Message,
@@ -102,5 +116,6 @@ module.exports = {
   Groups,
   GroupMembers,
   GroupMessages,
-  GroupMessageRead
+  GroupMessageRead,
+  MessageReactions,
 };

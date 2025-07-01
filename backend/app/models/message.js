@@ -25,10 +25,6 @@ const Message = sequelize.define('messages', {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
     },
-    timestamp: {
-        type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
-    },
     is_deleted: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,

@@ -3,16 +3,15 @@ import { initSocket } from "./socketManager";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { addMessage, addGroupMessage } from "../store/chatSlice";
-import { addFriend, setGroups, addGroup, appendUnreadPrivate, appendUnreadGroup, setFriendReqCount } from "../store/userSlice";
-import { deletePrivateMessage, editPrivateMessage, deleteGroupMsgAction, editGroupMsgAction} from "../store/chatSlice";
+import { addFriend, addGroup, appendUnreadPrivate, appendUnreadGroup, incrementFriendReqCount } from "../store/userSlice";
+import { deletePrivateMessage, editPrivateMessage, deleteGroupMsgAction, editGroupMsgAction, addReactionToPrivateMessage, removeReactionFromPrivateMessage, addReactionToGroupMessage, removeReactionFromGroupMessage } from "../store/chatSlice";
 
 export default function useSocket({ token, chatUserId, groupId, loggedInUserId, setMessages, setIsTyping, onNewMessageAlert }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [socketInstance, setSocketInstance] = useState(null);
-  const friendReqCount = useSelector((state) => state.user.friendReqCount);
   const groups = useSelector(state => state.user.groups);
-  // const groupMessages = useSelector(state => state.chat.groupMessages);
+  const chatType = useSelector(state => state.chat.chatType);
 
   useEffect(() => {
     if (!token) return;
@@ -28,13 +27,13 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
       console.log("Socket connected:", socket.id);
     });
 
-    socket.on('friendReqSent', () => {
-      dispatch(setFriendReqCount(friendReqCount+1));
+    socket.on('newFriendReqSent', () => {
+      dispatch(incrementFriendReqCount());
     })
 
     socket.on("friendAccepted", (data) => {
-      const {friend} = data;
-      if(friend) {
+      const { friend } = data;
+      if (friend) {
         dispatch(addFriend(friend));
         if (Notification.permission === "granted") {
           const notif = new Notification("Friend Request Accepted", {
@@ -50,10 +49,42 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
       }
     });
 
+    // socket.on('unFriend', (data) => {
+    //   const {friendId} = data;
+    //   if(friendId) {
+    //     dispatch(removeFriend(friendId));
+    //   }
+    // })
+
+    socket.on('messageReaction', (data) => {
+      const { reactionObj } = data;
+      if (reactionObj.targetType === 'private') {
+        dispatch(addReactionToPrivateMessage({
+          messageId: reactionObj.messageId,
+          reaction: reactionObj,
+        }));
+      }
+      if (reactionObj.targetType === 'group') {
+        dispatch(addReactionToGroupMessage({
+          messageId: reactionObj.messageId,
+          reaction: reactionObj,
+        }));
+      }
+    });
+
+    socket.on('messageReactionRemoved', ({ messageId, userId }) => {
+      console.log("ChatType: ", chatType);
+      if (chatType === 'private') {
+        dispatch(removeReactionFromPrivateMessage({ messageId, userId }));
+      } else if (chatType === 'group') {
+        dispatch(removeReactionFromGroupMessage({ messageId, userId }));
+      }
+    });
+
     socket.on("newMessage", (data) => {
       const message = data?.message || data;
-      const senderIdStr = String(message.sender_id);
-      const receiverIdStr = String(message.receiver_id);
+      const senderIdStr = String(message.senderId);
+      const receiverIdStr = String(message.receiverId);
       const loggedInUserIdStr = String(loggedInUserId);
 
       // 1. Push to chat messages if it's the active conversation
@@ -63,7 +94,7 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
           (receiverIdStr === loggedInUserIdStr && senderIdStr === chatUserId)
         ) {
           // setMessages((prev) => [...prev, message]);
-          dispatch(addMessage(message)); 
+          dispatch(addMessage(message));
         }
       }
 
@@ -86,7 +117,7 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
 
         notif.onclick = () => {
           window.focus();
-          navigate(`/chatbox/${message.sender_id}?name=${encodeURIComponent(message.sender_name || "User")}`);
+          navigate(`/chatbox/${message.senderId}?name=${encodeURIComponent(message.senderName || "User")}`);
         };
       }
     });
@@ -100,17 +131,17 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
     socket.on('deleteMessage', (message) => {
       dispatch(deletePrivateMessage(message));
     })
-    
+
     socket.on('editMessage', (message) => {
       dispatch(editPrivateMessage(message));
     })
 
     // New Group Created
     socket.on("groupCreated", (data) => {
-      const {group} = data;
-      if(group) {
-        dispatch(setGroups(group));
-        socket.emit('joinGroupRoom',`group_${group.id}`)
+      const { group } = data;
+      if (group) {
+        dispatch(addGroup(group));
+        socket.emit('joinGroupRoom', `group_${group.id}`)
         if (Notification.permission === "granted") {
           const notif = new Notification("Group Joined", {
             body: `New group created: ${group.name}!`,
@@ -127,7 +158,7 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
 
     // Group invitation
     socket.on("groupJoined", (data) => {
-      const {group} = data;
+      const { group } = data;
       if (group) {
         const alreadyPresent = groups.some((g) => g.id === group.id);
         if (!alreadyPresent) {
@@ -147,8 +178,7 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
           }
         }
       }
-
-    })
+    });
 
     // New: Handle newGroupMessage
     socket.on("newGroupMessage", (data) => {
@@ -178,12 +208,12 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
     });
 
     socket.on('deleteGroupMessage', (data) => {
-      const {message} = data;
+      const { message } = data;
       dispatch(deleteGroupMsgAction(message));
     });
-    
+
     socket.on('editGroupMessage', (data) => {
-      const {message} = data;
+      const { message } = data;
       dispatch(editGroupMsgAction(message));
     });
 
@@ -201,11 +231,13 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
 
     return () => {
       // Detach only listeners, not socket itself
-      socket.off("friendReqSent");
+      socket.off("newFriendReqSent");
       socket.off("friendAccepted");
       socket.off("newMessage");
       socket.off('deleteMessage');
       socket.off('editMessage');
+      socket.off('messageReaction');
+      socket.off('messageReactionRemoved');
       socket.off("typing");
       socket.off("groupCreated");
       socket.off("groupJoined");
@@ -214,7 +246,7 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
       socket.off("editGroupMessage");
       socket.off("groupTyping");
     };
-  }, [token, chatUserId, groupId, loggedInUserId, onNewMessageAlert, dispatch, navigate, setIsTyping, setMessages, friendReqCount, groups]);
+  }, [token, chatUserId, groupId, loggedInUserId, onNewMessageAlert, setIsTyping, setMessages, groups, chatType, dispatch, navigate]);
 
   return socketInstance;
 }
