@@ -46,6 +46,7 @@ export default function GroupChatbox() {
     // const [messages, setMessages] = useState([]);
     // const [members, setMembers] = useState([]);
     const [input, setInput] = useState("");
+    const [editMode, setEditMode] = useState(null);
     const [isTyping, setIsTyping] = useState(false);
     const [messageLoading, setMessageLoading] = useState(true);
     const [showMembers, setShowMembers] = useState(false);
@@ -54,7 +55,6 @@ export default function GroupChatbox() {
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [selectedFriends, setSelectedFriends] = useState([]);
     const [selectedMessage, setSelectedMessage] = useState(null);
-    const [editingInput, setEditingInput] = useState("");
     const [reactionPickerId, setReactionPickerId] = useState(null);
     const availableReactions = ["👍", "❤️", "😂", "😮", "😢", "😡"];
     const [showFullEmojiPickerId, setShowFullEmojiPickerId] = useState(null);
@@ -67,6 +67,7 @@ export default function GroupChatbox() {
     const inviteModalRef = useRef(null);
     const reactionPickerRef = useRef();
     const fullReactionPickerRef = useRef();
+    const inputRef = useRef(null);
 
     let msgCount = -1;
 
@@ -158,31 +159,43 @@ export default function GroupChatbox() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!input.trim()) return;
-        socketRef.emit("groupTyping", {
-            senderId: loggedInUserId,
-            groupId: parseInt(id),
-            isTyping: false,
-        });
-
         setShowEmojiPicker(false);
 
-        try {
-            const res = await sendGroupMessage(
-                { groupId: parseInt(id), msg: input },
-                token
-            );
-            if (res.data.status === "success") {
-                setInput("");
-            } else {
-                toast.error("Could not send message", { autoClose: 3000 });
+        if (editMode) {
+            try {
+                const res = await editGroupMessage(editMode.id, input, token);
+                if (res.data.status === "success") {
+                    dispatch(editGroupMsgAction(res.data.data));
+                    setEditMode(null);  // exit edit mode
+                    setInput("");       // clear input
+                }
+            } catch {
+                toast.error("Failed to edit message");
             }
-        } catch (err) {
-            const msg = err.response?.data?.message || "Failed to send message";
-            if (msg === "Invalid or expired token") {
-                localStorage.removeItem("jwt");
-                navigate("/");
-            } else {
-                toast.error(msg, { autoClose: 3000 });
+        } else {
+            socketRef.emit("groupTyping", {
+                senderId: loggedInUserId,
+                groupId: parseInt(id),
+                isTyping: false,
+            });
+            try {
+                const res = await sendGroupMessage(
+                    { groupId: parseInt(id), msg: input },
+                    token
+                );
+                if (res.data.status === "success") {
+                    setInput("");
+                } else {
+                    toast.error("Could not send message", { autoClose: 3000 });
+                }
+            } catch (err) {
+                const msg = err.response?.data?.message || "Failed to send message";
+                if (msg === "Invalid or expired token") {
+                    localStorage.removeItem("jwt");
+                    navigate("/");
+                } else {
+                    toast.error(msg, { autoClose: 3000 });
+                }
             }
         }
     };
@@ -200,18 +213,20 @@ export default function GroupChatbox() {
         }
     };
 
-    const handleEditSave = async (id, editingInput) => {
-        try {
-            const res = await editGroupMessage(id, editingInput, token);
-            if (res.data.status === "success") {
-                dispatch(editGroupMsgAction(res.data.data));
-                setSelectedMessage(null);
-            }
-        } catch {
-            toast.error("Failed to edit message");
-        }
-    };
+    const handleEditClick = (msg) => {
+        setEditMode(msg);          // mark as editing this message
+        setInput(msg.message);     // prefill the bottom textarea
+        setShowEmojiPicker(false); // close emoji picker
 
+        setTimeout(() => {
+            if (inputRef.current) {
+                inputRef.current.focus();
+                inputRef.current.selectionStart = inputRef.current.selectionEnd = inputRef.current.value.length;
+            }
+        }, 0);
+
+    };
+    
     const handleReact = async (messageId, emoji, existingReaction) => {
         try {
             if (existingReaction && existingReaction.reaction === emoji) {
@@ -675,8 +690,8 @@ export default function GroupChatbox() {
                             <div className="flex justify-end gap-4">
                                 <button
                                     onClick={() => {
-                                        setEditingInput(selectedMessage.message);
-                                        setSelectedMessage({ ...selectedMessage, mode: "edit" });
+                                        handleEditClick(selectedMessage);
+                                        setSelectedMessage(null);
                                     }}
                                     className="text-indigo-600 text-sm"
                                 >
@@ -698,31 +713,6 @@ export default function GroupChatbox() {
                         </div>
                     </div>
                 )}
-                {selectedMessage?.mode === "edit" && (
-                    <div className="mb-2 flex gap-2 items-c enter bg-yellow-50 border border-yellow-300 p-2 rounded-md">
-                        <input
-                            className="flex-1 px-2 py-1 border border-gray-300 rounded-md text-sm"
-                            value={editingInput}
-                            onChange={(e) => setEditingInput(e.target.value)}
-                        />
-                        <button
-                            onClick={() => handleEditSave(selectedMessage.id, editingInput)}
-                            className="text-white bg-indigo-500 px-2 py-1 rounded-md text-sm"
-                        >
-                            Save
-                        </button>
-                        <button
-                            onClick={() => {
-                                setSelectedMessage(null);
-                                setEditingInput("");
-                            }}
-                            className="text-gray-500 text-sm"
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                )}
-
 
                 <div className="text-sm text-gray-500 mb-2 h-5 px-1">
                     {isTyping ? "Someone is typing..." : "\u00A0"}
@@ -742,6 +732,22 @@ export default function GroupChatbox() {
                             />
                         </div>
                     )}
+
+                    {editMode && (
+                        <div className="flex items-center justify-between text-xs text-yellow-700 bg-yellow-50 border border-yellow-300 rounded p-1 px-2 mb-1">
+                            Editing message...
+                            <button
+                                onClick={() => {
+                                    setEditMode(null);
+                                    setInput("");
+                                }}
+                                className="text-red-500 hover:underline text-xs"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    )}
+
                     <form
                         onSubmit={handleSubmit}
                         className="relative flex items-center gap-2 bg-white p-2 mb-2.5 rounded-lg shadow-sm"
@@ -769,6 +775,7 @@ export default function GroupChatbox() {
                             </svg>
                         </button>
                         <textarea
+                            ref={inputRef}
                             value={input}
                             onChange={handleInputChange}
                             onKeyDown={(e) => {

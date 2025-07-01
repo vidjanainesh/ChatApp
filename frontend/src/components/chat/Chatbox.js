@@ -7,7 +7,7 @@ import useSocket from "../../hooks/useSocket";
 import { motion } from "framer-motion";
 import EmojiPicker from "emoji-picker-react";
 import { useDispatch, useSelector } from "react-redux";
-import { setMessages, editPrivateMessage, deletePrivateMessage, clearMessages, clearChatState, addReactionToPrivateMessage} from "../../store/chatSlice";
+import { setMessages, editPrivateMessage, deletePrivateMessage, clearMessages, clearChatState, addReactionToPrivateMessage } from "../../store/chatSlice";
 import { HiDotsHorizontal, HiOutlineChat, HiEmojiHappy, HiPlusSm } from "react-icons/hi";
 
 export default function Chatbox() {
@@ -25,6 +25,7 @@ export default function Chatbox() {
   const modalRef = useRef();
   const reactionPickerRef = useRef();
   const fullReactionPickerRef = useRef();
+  const inputRef = useRef(null);
 
   const dispatch = useDispatch();
   const messages = useSelector((state) => state.chat.messages);
@@ -40,11 +41,11 @@ export default function Chatbox() {
   }
 
   const [input, setInput] = useState("");
+  const [editMode, setEditMode] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
   const [messageLoading, setMessageLoading] = useState(true);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
-  const [editingInput, setEditingInput] = useState("");
   const [reactionPickerId, setReactionPickerId] = useState(null);
   const [showFullEmojiPickerId, setShowFullEmojiPickerId] = useState(null);
   const availableReactions = ["👍", "❤️", "😂", "😮", "😢", "😡"];
@@ -121,28 +122,43 @@ export default function Chatbox() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
-    socketRef.emit("typing", {
-      senderId: loggedInUserId,
-      receiverId: parseInt(id),
-      isTyping: false,
-    });
 
     setShowEmojiPicker(false);
-    try {
-      const res = await sendMessage(input, id, token);
-      if (res.data.status === "success") {
-        setInput("");
-        // dispatch(addMessage(res.data.data)) - Not needed since it is being dispatched from socket
-      } else {
-        toast.error("Could not send message", { autoClose: 3000 });
+
+    if (editMode) {
+      try {
+        const res = await editMessage(editMode.id, input, token);
+        if (res.data.status === "success") {
+          dispatch(editPrivateMessage(res.data.data));
+          setEditMode(null);  // exit edit mode
+          setInput("");       // clear input
+        }
+      } catch {
+        toast.error("Failed to edit message");
       }
-    } catch (err) {
-      const msg = err.response?.data?.message || "Failed to send message";
-      if (msg === "Invalid or expired token") {
-        localStorage.removeItem("jwt");
-        navigate("/");
-      } else {
-        toast.error(msg, { autoClose: 3000 });
+    } else {
+
+      socketRef.emit("typing", {
+        senderId: loggedInUserId,
+        receiverId: parseInt(id),
+        isTyping: false,
+      });
+
+      try {
+        const res = await sendMessage(input, id, token);
+        if (res.data.status === "success") {
+          setInput("");  // clear input
+        } else {
+          toast.error("Could not send message", { autoClose: 3000 });
+        }
+      } catch (err) {
+        const msg = err.response?.data?.message || "Failed to send message";
+        if (msg === "Invalid or expired token") {
+          localStorage.removeItem("jwt");
+          navigate("/");
+        } else {
+          toast.error(msg, { autoClose: 3000 });
+        }
       }
     }
   };
@@ -160,17 +176,18 @@ export default function Chatbox() {
     }
   };
 
-  const handleEditSave = async () => {
-    try {
-      const res = await editMessage(selectedMessage.id, editingInput, token);
-      if (res.data.status === "success") {
-        dispatch(editPrivateMessage(res.data.data));
-        setSelectedMessage(null);
-        setEditingInput("");
+  const handleEditClick = (msg) => {
+    setEditMode(msg);          // mark as editing this message
+    setInput(msg.message);     // prefill the bottom textarea
+    setShowEmojiPicker(false); // close emoji picker
+
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.selectionStart = inputRef.current.selectionEnd = inputRef.current.value.length;
       }
-    } catch {
-      toast.error("Failed to edit message");
-    }
+    }, 0);
+
   };
 
   const handleReact = async (messageId, emoji, existingReaction) => {
@@ -184,7 +201,6 @@ export default function Chatbox() {
           reaction: response.data.data,
         }))
       }
-      // fetchMessages(); // refresh reactions
     } catch (err) {
       toast.error("Failed to react to message");
     } finally {
@@ -238,7 +254,6 @@ export default function Chatbox() {
             ← Back
           </button>
           <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
-            {/* {name.split().length === 0 ? `Chat with ${name}` : `Chat with ${name.split(' ')[0]}`} */}
             Chat with {name?.split(' ')[0]}
           </h2>
           <div className="w-12" />
@@ -365,7 +380,7 @@ export default function Chatbox() {
                       {showFullEmojiPickerId === msg.id && (
                         <div className={`absolute ${isSender ? 'right-0' : 'left-0'} ${i < 3 ? 'top-full mt-2' : 'bottom-full mb-2'} z-30`}>
                           <div
-                            ref={fullReactionPickerRef} 
+                            ref={fullReactionPickerRef}
                             style={{
                               transform: "scale(0.6)",
                               transformOrigin: isSender
@@ -423,8 +438,8 @@ export default function Chatbox() {
               <div className="flex justify-end gap-4">
                 <button
                   onClick={() => {
-                    setEditingInput(selectedMessage.message);
-                    setSelectedMessage({ ...selectedMessage, mode: "edit" });
+                    handleEditClick(selectedMessage);
+                    setSelectedMessage(null); // close modal immediately({ ...selectedMessage, mode: "edit" });
                   }}
                   className="text-indigo-600 text-sm"
                 >
@@ -447,31 +462,6 @@ export default function Chatbox() {
           </div>
         )}
 
-        {selectedMessage?.mode === "edit" && (
-          <div className="mb-2 flex gap-2 items-center bg-yellow-50 border border-yellow-300 p-2 rounded-md">
-            <input
-              className="flex-1 px-2 py-1 border border-gray-300 rounded-md text-sm"
-              value={editingInput}
-              onChange={(e) => setEditingInput(e.target.value)}
-            />
-            <button
-              onClick={handleEditSave}
-              className="text-white bg-indigo-500 px-2 py-1 rounded-md text-sm"
-            >
-              Save
-            </button>
-            <button
-              onClick={() => {
-                setSelectedMessage(null);
-                setEditingInput("");
-              }}
-              className="text-gray-500 text-sm"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-
         <div className="text-sm text-gray-500 mb-2 h-5 px-1">
           {isTyping ? "Typing..." : "\u00A0"}
         </div>
@@ -489,6 +479,22 @@ export default function Chatbox() {
               />
             </div>
           )}
+
+          {editMode && (
+            <div className="flex items-center justify-between text-xs text-yellow-700 bg-yellow-50 border border-yellow-300 rounded p-1 px-2 mb-1">
+              Editing message...
+              <button
+                onClick={() => {
+                  setEditMode(null);
+                  setInput("");
+                }}
+                className="text-red-500 hover:underline text-xs"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+
           <form
             onSubmit={handleSubmit}
             className="relative flex items-center gap-2 bg-white p-2 mb-2.5 rounded-lg shadow-sm"
@@ -518,6 +524,7 @@ export default function Chatbox() {
             </button>
             {/* Textarea - Compact Height */}
             <textarea
+              ref={inputRef}
               value={input}
               onChange={handleInputChange}
               onKeyDown={(e) => {
