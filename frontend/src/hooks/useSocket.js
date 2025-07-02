@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { initSocket } from "./socketManager";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { addMessage, addGroupMessage } from "../store/chatSlice";
+import { addMessage, addGroupMessage, markMessagesAsSeen } from "../store/chatSlice";
 import { addFriend, addGroup, appendUnreadPrivate, appendUnreadGroup, incrementFriendReqCount } from "../store/userSlice";
 import { deletePrivateMessage, editPrivateMessage, deleteGroupMsgAction, editGroupMsgAction, addReactionToPrivateMessage, removeReactionFromPrivateMessage, addReactionToGroupMessage, removeReactionFromGroupMessage } from "../store/chatSlice";
 
@@ -73,7 +73,6 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
     });
 
     socket.on('messageReactionRemoved', ({ messageId, userId }) => {
-      console.log("ChatType: ", chatType);
       if (chatType === 'private') {
         dispatch(removeReactionFromPrivateMessage({ messageId, userId }));
       } else if (chatType === 'group') {
@@ -118,6 +117,10 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
           navigate(`/chatbox/${message.senderId}?name=${encodeURIComponent(message.senderName || "User")}`);
         };
       }
+    });
+
+    socket.on("messages-seen", ({ by, chatUserId }) => {
+      dispatch(markMessagesAsSeen({ userId: by, chatUserId }));
     });
 
     socket.on("typing", ({ senderId, receiverId, isTyping }) => {
@@ -182,7 +185,6 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
     // New: Handle newGroupMessage
     socket.on("newGroupMessage", (data) => {
       const { message, groupId: msgGroupId } = data;
-      console.log(message);
       if (groupId && parseInt(groupId) === parseInt(msgGroupId)) {
         dispatch(addGroupMessage(message));
       }

@@ -1,6 +1,6 @@
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
-const { GroupMembers } = require("../models"); // adjust path as needed
+const { GroupMembers, Message } = require("../models"); // adjust path as needed
 
 const allowedOrigins = [
   "http://localhost:3001",
@@ -58,6 +58,26 @@ function setupSocket(server) {
     socket.on("typing", (data) => {
       const receiverRoom = `user_${data.receiverId}`;
       socket.to(receiverRoom).emit("typing", data);
+    });
+
+    socket.on("mark-messages-seen", async ({ userId, chatUserId }) => {
+      // Mark all messages where chatUser sent to userId as read
+      await Message.update(
+        { is_read: true },
+        {
+          where: {
+            sender_id: chatUserId,
+            receiver_id: userId,
+            is_read: false
+          }
+        }
+      );
+
+      // Notify the sender (chatUserId) that their messages have been seen
+      io.to(`user_${chatUserId}`).emit("messages-seen", {
+        by: userId,
+        chatUserId
+      });
     });
 
     // Group typing

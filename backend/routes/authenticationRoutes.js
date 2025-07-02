@@ -3,7 +3,8 @@ const router = express.Router();
 
 const {
     register,
-    login
+    login,
+    googleLogin,
 } = require('../app/controllers/authentication');
 
 const {
@@ -17,6 +18,7 @@ const handleValidation = require('../app/middlewares/validators/handleValidation
 
 router.post('/register', authenticationValidationRules.register, handleValidation, register);
 router.post('/login', authenticationValidationRules.login, handleValidation, login);
+router.post('/google-login', googleLogin);
 
 router.post('/forget-password', authenticationValidationRules.forgetPassword, handleValidation, forgetPassword);
 router.post('/verify-token', authenticationValidationRules.verifyToken, handleValidation, verifyToken);

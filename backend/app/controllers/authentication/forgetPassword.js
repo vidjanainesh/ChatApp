@@ -104,16 +104,13 @@ const verifyToken = async (req, res) => {
 const resetPassword = async (req, res) => {
     try {
 
-        const {password} = req.body;
-        const token = req.headers.authorization?.split(' ')[1]; // Bearer token
+        const {password, email} = req.body;
+        // const token = req.headers.authorization?.split(' ')[1]; // Bearer token
         // console.log(password);
         // console.log(token);
         if(!token) {
             return unAuthorizedResponse(res, "Reset token missing");
         }
-
-        const decode = jwt.decode(token, process.env.JWT_SECRET);
-        const email = decode.email;
 
         const hashedPassword = await bcrypt.hash(password, 10);
 

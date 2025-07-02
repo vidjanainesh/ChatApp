@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { loginUser } from "../../api";
+import { GoogleLogin, useGoogleLogin } from '@react-oauth/google';
+import { loginUser, googleLogin } from "../../api";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Eye, EyeOff } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { setUser } from '../../store/userSlice';
-import {jwtDecode} from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ export default function Login() {
 
   useEffect(() => {
     const token = localStorage.getItem('jwt');
-    if(token) {
+    if (token) {
       navigate('/dashboard')
     }
   });
@@ -50,6 +51,44 @@ export default function Login() {
     }
   };
 
+  const handleGoogleLogin = async (googleToken) => {
+    try {
+      const decodedUser = jwtDecode(googleToken);
+      // console.log(decodedUser);
+
+      const data = {
+        name: decodedUser.name,
+        email: decodedUser.email
+      };
+      const response = await googleLogin(data);
+
+      if (response.data.status === "success") {
+        console.log(response.data);
+        const token = response.data.data;
+        const decodedUser = jwtDecode(token);
+        localStorage.setItem("jwt", response.data.data);
+        dispatch(setUser({ user: decodedUser, token }));
+        navigate("/dashboard");
+      } else {
+        toast.error(response.data.message || "Google login failed", { autoClose: 3000 });
+      }
+    } catch (error) {
+      const message = error.response?.data?.message || "Google login failed";
+      toast.error(message, { autoClose: 3000 });
+    }
+  };
+
+  const login = useGoogleLogin({
+    onSuccess: (tokenResponse) => {
+      const googleToken = tokenResponse.credential;
+      handleGoogleLogin(googleToken);
+    },
+    onError: () => {
+      toast.error("Google Login Failed", { autoClose: 3000 });
+    },
+  });
+
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-blue-100 via-white to-purple-100 px-4">
       <motion.div
@@ -62,7 +101,7 @@ export default function Login() {
         <p className="text-sm text-center text-gray-500 mb-6">
           Login to your account to continue
         </p>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 mb-4">
           <div>
             <label htmlFor="email" className="text-gray-700 text-sm font-medium">
               Email
@@ -110,6 +149,18 @@ export default function Login() {
             Log In
           </button>
         </form>
+
+        <button
+          onClick={() => login()}
+          className="w-full border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 font-semibold py-2 rounded-xl transition duration-300 mt-4 flex items-center justify-center shadow-sm"
+        >
+          <img
+            src="https://developers.google.com/identity/images/g-logo.png"
+            alt="Google"
+            className="w-5 h-5 mr-2"
+          />
+          Continue with Google
+        </button>
 
         <div className="text-sm text-center mt-4 space-y-1">
           <p>

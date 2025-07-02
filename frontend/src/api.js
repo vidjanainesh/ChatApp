@@ -10,6 +10,10 @@ export const loginUser = (data) => {
     return axios.post(`${API_BASE}/authenticate/login`, data);
 }
 
+export const googleLogin = (data) => {
+    return axios.post(`${API_BASE}/authenticate/google-login`, data);
+}
+
 export const forgetPassword = (data) => {
     return axios.post(`${API_BASE}/authenticate/forget-password`, data);
 }
@@ -18,15 +22,8 @@ export const verifyToken = (data) => {
     return axios.post(`${API_BASE}/authenticate/verify-token`, data);
 }
 
-export const resetPassword = (data, token) => {
-    return axios.post(`${API_BASE}/authenticate/reset-password`,
-        data,
-        {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        }
-    );
+export const resetPassword = (data) => {
+    return axios.post(`${API_BASE}/authenticate/reset-password`, data);
 }
 // ---------------------------------------------------------------------
 
@@ -42,9 +39,9 @@ export const getDashboardData = (token) => {
 
 // ---------------------------------------------------------------------
 
-export const sendMessage = (message, receiverId, token) => {
+export const sendMessage = (message, receiverId, token, replyTo) => {
     return axios.post(`${API_BASE}/chat`,
-        { message, receiverId },
+        { message, receiverId, replyTo },
         {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -72,8 +69,9 @@ export const editMessage = (id, msg, token) => {
     );
 }
 
-export const getMessages = (id, token) => {
-    return axios.get(`${API_BASE}/chat/${id}`,
+export const getMessages = (id, beforeId, token) => {
+    const params = beforeId ? `?beforeId=${beforeId}` : '';
+    return axios.get(`${API_BASE}/chat/${id}${params}`,
         {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -199,8 +197,9 @@ export const editGroupMessage = (id, msg, token) => {
     );
 }
 
-export const getGroupData = (id, token) => {
-    return axios.get(`${API_BASE}/group/data/${id}`,
+export const getGroupData = (id, token, beforeMessageId) => {
+    const params = beforeMessageId ? `?beforeMessageId=${beforeMessageId}` : '';
+    return axios.get(`${API_BASE}/group/data/${id}${params}`,
         {
             headers: {
                 Authorization: `Bearer ${token}`

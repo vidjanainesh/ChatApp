@@ -20,6 +20,7 @@ const toCamelCase = (obj) => {
 const sendMessage = async (req, res) => {
     try {
         const { message, receiverId } = req.body;
+        const replyTo = req.body.replyTo || null;
         const user = req.user;
         // console.log(message, receiverId, user);
 
@@ -44,8 +45,11 @@ const sendMessage = async (req, res) => {
         const sentMessage = await Message.create({
             sender_id: user.id,
             receiver_id: receiverId,
-            message
+            message,
+            reply_to: replyTo,
         });
+
+        const repliedMessage = await Message.findOne({ where: { id: replyTo }, attributes: ['id', 'message'], raw: true });
 
         const io = req.app.get("io");
         const receiverRoom = `user_${receiverId}`;
@@ -61,6 +65,7 @@ const sendMessage = async (req, res) => {
             isEdited: false,
             isRead: false,
             reactions: [],
+            repliedMessage,
             senderName: user.name || user.email || "Unknown",
         };
 
@@ -92,7 +97,7 @@ const deleteMessage = async (req, res) => {
         await message.save();
 
         await MessageReactions.destroy({
-            where: {target_id: id, target_type: 'private'}
+            where: { target_id: id, target_type: 'private' }
         })
 
         const rawMessage = message.toJSON(); // Convert Sequelize model to plain object
@@ -118,7 +123,7 @@ const editMessage = async (req, res) => {
         const user = req.user;
 
         const message = await Message.findOne({ where: { id, is_deleted: false } });
-        if(!message) return errorResponse(res, 'Invalid Message')
+        if (!message) return errorResponse(res, 'Invalid Message')
 
         if (message.sender_id !== user.id) {
             return errorResponse(res, 'Invalid user');
@@ -187,29 +192,45 @@ const getMessages = async (req, res) => {
     try {
         const id = req.params.id;
         const user = req.user;
+        const beforeId = req.query.beforeId;
 
         if (!id) {
             return unAuthorizedResponse(res, "Person ID is required");
         }
-        const allMessages = await Message.findAll({
-            where: {
-                is_deleted: false,
-                [Op.or]: [
-                    {
-                        [Op.and]: [
-                            { sender_id: user.id },
-                            { receiver_id: id }
-                        ]
-                    },
-                    {
-                        [Op.and]: [
-                            { sender_id: id },
-                            { receiver_id: user.id }
-                        ]
-                    }
-                ]
-            },
-            order: [['createdAt', 'ASC']],
+
+        const whereClause = {
+            is_deleted: false,
+            [Op.or]: [
+                {
+                    [Op.and]: [
+                        { sender_id: user.id },
+                        { receiver_id: id }
+                    ]
+                },
+                {
+                    [Op.and]: [
+                        { sender_id: id },
+                        { receiver_id: user.id }
+                    ]
+                }
+            ]
+        }
+
+        if (beforeId) {
+            whereClause.id = { [Op.lt]: beforeId };  // fetch older than last id
+        }
+
+        const messages = await Message.findAll({
+            where: whereClause,
+            include: [
+                {
+                    model: Message,
+                    as: 'repliedMessage',
+                    attributes: ['id', 'message'],
+                    // where: {is_deleted: false},
+                }
+            ],
+            order: [['id', 'DESC']],
             attributes: [
                 'id',
                 ['sender_id', 'senderId'],
@@ -221,8 +242,10 @@ const getMessages = async (req, res) => {
                 'createdAt',
                 'updatedAt'
             ],
-            raw: true,
+            limit: 9
         });
+
+        const allMessages = messages.map(msg => msg.toJSON());
 
         // Get message reactions for each message
         const messageIds = allMessages.map((msg) => msg.id);
@@ -271,19 +294,19 @@ const getMessages = async (req, res) => {
             return newMsg;
         })
 
-        // Update is_read to true
-        await Message.update(
-            { is_read: true },
-            {
-                where: {
-                    sender_id: id,
-                    receiver_id: user.id,
-                    is_read: false,
-                },
-            }
-        );
+        // // Update is_read to true
+        // await Message.update(
+        //     { is_read: true },
+        //     {
+        //         where: {
+        //             sender_id: id,
+        //             receiver_id: user.id,
+        //             is_read: false,
+        //         },
+        //     }
+        // );
 
-        return successResponse(res, response, "All messages retrieved between the two people");
+        return successResponse(res, response.reverse(), "All messages retrieved between the two people");
 
     } catch (error) {
         return errorThrowResponse(res, error.message, error);

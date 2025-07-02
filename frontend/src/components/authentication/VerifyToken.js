@@ -19,7 +19,7 @@ export default function VerifyToken() {
         const emailToken = res.data.emailToken;
         localStorage.setItem('reset-jwt', emailToken); 
         // toast.success("Token verified", { autoClose: 3000 });
-        navigate("/reset-password");
+        navigate("/reset-password", { state: { email: email } });
       } else {
         toast.error(res.data.message || "Token verification failed", {
           autoClose: 3000,
