@@ -149,21 +149,23 @@ export default function Login() {
           </button>
         </form>
 
-        <GoogleLogin
-          text="continue_with"
-          shape="pill"
-          theme="outline"
-          size="large"
-          onSuccess={credentialResponse => {
-            // this gives you the Google ID token
-            const googleToken = credentialResponse.credential;
-            handleGoogleLogin(googleToken);
-          }}
-          onError={() => {
-            toast.error("Google Login Failed", { autoClose: 3000 });
-          }}
-        />
-
+        <div className="w-full flex justify-center">
+          <div className="w-full max-w-xs flex justify-center">
+            <GoogleLogin
+              text="continue_with"
+              shape="pill"
+              theme="outline"
+              size="large"
+              onSuccess={credentialResponse => {
+                const googleToken = credentialResponse.credential;
+                handleGoogleLogin(googleToken);
+              }}
+              onError={() => {
+                toast.error("Google Login Failed", { autoClose: 3000 });
+              }}
+            />
+          </div>
+        </div>
         <div className="text-sm text-center mt-3 space-y-1">
           <p>
             <button
