@@ -78,16 +78,15 @@ export default function Login() {
     }
   };
 
-  const login = useGoogleLogin({
-    onSuccess: (tokenResponse) => {
-      const googleToken = tokenResponse.credential;
-      handleGoogleLogin(googleToken);
-    },
-    onError: () => {
-      toast.error("Google Login Failed", { autoClose: 3000 });
-    },
-  });
-
+  // const login = useGoogleLogin({
+  //   onSuccess: (tokenResponse) => {
+  //     const googleToken = tokenResponse.credential;
+  //     handleGoogleLogin(googleToken);
+  //   },
+  //   onError: () => {
+  //     toast.error("Google Login Failed", { autoClose: 3000 });
+  //   },
+  // });
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-blue-100 via-white to-purple-100 px-4">
@@ -97,7 +96,7 @@ export default function Login() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h2 className="text-2xl font-semibold text-center mb-2 text-gray-800">Welcome Back</h2>
+        <h2 className="text-2xl font-semibold text-center mb-2 text-gray-800">Welcome!</h2>
         <p className="text-sm text-center text-gray-500 mb-6">
           Login to your account to continue
         </p>
@@ -150,19 +149,22 @@ export default function Login() {
           </button>
         </form>
 
-        <button
-          onClick={() => login()}
-          className="w-full border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 font-semibold py-2 rounded-xl transition duration-300 mt-4 flex items-center justify-center shadow-sm"
-        >
-          <img
-            src="https://developers.google.com/identity/images/g-logo.png"
-            alt="Google"
-            className="w-5 h-5 mr-2"
-          />
-          Continue with Google
-        </button>
+        <GoogleLogin
+          text="continue_with"
+          shape="pill"
+          theme="outline"
+          size="large"
+          onSuccess={credentialResponse => {
+            // this gives you the Google ID token
+            const googleToken = credentialResponse.credential;
+            handleGoogleLogin(googleToken);
+          }}
+          onError={() => {
+            toast.error("Google Login Failed", { autoClose: 3000 });
+          }}
+        />
 
-        <div className="text-sm text-center mt-4 space-y-1">
+        <div className="text-sm text-center mt-3 space-y-1">
           <p>
             <button
               onClick={() => navigate("/forgot-password")}
