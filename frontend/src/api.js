@@ -10,6 +10,10 @@ export const loginUser = (data) => {
     return axios.post(`${API_BASE}/authenticate/login`, data);
 }
 
+export const googleLogin = (data) => {
+    return axios.post(`${API_BASE}/authenticate/google-login`, data);
+}
+
 export const forgetPassword = (data) => {
     return axios.post(`${API_BASE}/authenticate/forget-password`, data);
 }
@@ -18,15 +22,8 @@ export const verifyToken = (data) => {
     return axios.post(`${API_BASE}/authenticate/verify-token`, data);
 }
 
-export const resetPassword = (data, token) => {
-    return axios.post(`${API_BASE}/authenticate/reset-password`,
-        data,
-        {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        }
-    );
+export const resetPassword = (data) => {
+    return axios.post(`${API_BASE}/authenticate/reset-password`, data);
 }
 // ---------------------------------------------------------------------
 

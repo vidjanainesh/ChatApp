@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import { resetPassword } from "../../api";
 import { toast } from "react-toastify";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
-  const token = localStorage.getItem('reset-jwt');
+  const location = useLocation();
+  const email = location.state?.email;
 
   const [formData, setFormData] = useState({
     password: "",
@@ -39,7 +40,7 @@ export default function ResetPassword() {
     }
 
     try {
-      const res = await resetPassword({password}, token);
+      const res = await resetPassword({password, email});
       if (res.data.status === "success") {
         toast.success("Password reset successful", { autoClose: 3000 });
         navigate("/");
