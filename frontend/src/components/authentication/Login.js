@@ -157,6 +157,7 @@ export default function Login() {
               theme="outline"
               size="large"
               onSuccess={credentialResponse => {
+                // this gives you the Google ID token
                 const googleToken = credentialResponse.credential;
                 handleGoogleLogin(googleToken);
               }}
