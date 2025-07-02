@@ -80,6 +80,7 @@ const createGroup = async (req, res) => {
 const sendGroupMessage = async (req, res) => {
     try {
         const { groupId, msg } = req.body;
+        const replyTo = req.body.replyTo || null;
         const user = req.user;
 
         const group = await Groups.findOne({ where: { id: groupId } });
@@ -96,6 +97,7 @@ const sendGroupMessage = async (req, res) => {
             group_id: groupId,
             sender_id: user.id,
             message: msg,
+            reply_to: replyTo,
         });
 
         userIds = userIds.filter((curr) => {
@@ -107,6 +109,18 @@ const sendGroupMessage = async (req, res) => {
             user_id: id,
         }));
         await GroupMessageRead.bulkCreate(readEntries);
+
+        const repliedMessage = await GroupMessages.findOne({
+            where: { id: replyTo },
+            attributes: ['id', 'message'],
+            include: [
+                {
+                    model: User,
+                    as: 'sender',
+                    attributes: ['id','name'],
+                }
+            ]
+        });
 
         const message = {
             id: groupMessage.id,
@@ -120,6 +134,7 @@ const sendGroupMessage = async (req, res) => {
                 name: user.name
             },
             reactions: [],
+            repliedMessage,
         };
         const io = req.app.get("io");
         io.to(`group_${groupId}`).emit("newGroupMessage", { message, groupId });
@@ -143,6 +158,10 @@ const deleteGroupMessage = async (req, res) => {
 
         groupMessage.is_deleted = true;
         await groupMessage.save();
+
+        await GroupMessageRead.destroy({
+            where: { group_message_id: id }
+        });
 
         const message = {
             id: groupMessage.id,
@@ -209,6 +228,7 @@ const getGroupData = async (req, res) => {
     try {
         const groupId = req.params.id;
         const user = req.user;
+        const beforeMessageId = req.query.beforeMessageId;
 
         const group = await Groups.findOne({ where: { id: groupId } });
         if (!group) notFoundResponse(res, "Group not found");
@@ -220,6 +240,14 @@ const getGroupData = async (req, res) => {
             return errorResponse(res, "User is not a part of this group");
         }
 
+        const gmWhereClause = {
+            is_deleted: false,
+        }
+
+        if (beforeMessageId) {
+            gmWhereClause.id = { [Op.lt]: beforeMessageId }
+        }
+
         const groupMessages = await Groups.findOne({
             where: { id: groupId },
             attributes: ["id", "name"],
@@ -227,7 +255,7 @@ const getGroupData = async (req, res) => {
                 {
                     model: GroupMessages,
                     as: "messages",
-                    where: { is_deleted: false },
+                    where: gmWhereClause,
                     attributes: [
                         "id",
                         ["sender_id", "senderId"],
@@ -237,13 +265,26 @@ const getGroupData = async (req, res) => {
                         "type",
                         "createdAt",
                     ],
+                    order: [['id', 'DESC']],
+                    limit: 9,
                     include: [
                         {
                             model: User,
                             as: "sender",
                             attributes: ["name"],
-                            raw: true
                         },
+                        {
+                            model: GroupMessages,
+                            as: 'repliedMessage',
+                            attributes: ['id', 'message'],
+                            include: [
+                                {
+                                    model: User,
+                                    as: 'sender',
+                                    attributes: ['id','name'],
+                                }
+                            ]
+                        }
                     ],
                 },
             ],
@@ -326,7 +367,7 @@ const getGroupData = async (req, res) => {
 
         const plainMembers = members.toJSON();
 
-        const result = { messages: {...plainGroupMessages, messages: messagesWithReactions}, members: plainMembers }
+        const result = { messages: messagesWithReactions.reverse(), members: plainMembers }
 
         return successResponse(res, result, "Fetched all messages");
     } catch (error) {

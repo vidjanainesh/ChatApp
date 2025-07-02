@@ -14,10 +14,14 @@ const chatSlice = createSlice({
   reducers: {
     setMessages: (state, action) => {
       state.messages = action.payload;
+      // console.log('Messages (Set):', JSON.parse(JSON.stringify(state.messages)));
     },
     addMessage: (state, action) => {
       state.messages.push(action.payload);
-      // console.log('Messages (Send):', JSON.parse(JSON.stringify(state.messages)));
+      console.log('Messages (Send):', JSON.parse(JSON.stringify(state.messages)));
+    },
+    prependMessages: (state, action) => {
+      state.messages = [...action.payload, ...state.messages];
     },
     clearMessages: (state) => {
       state.messages = [];
@@ -38,6 +42,12 @@ const chatSlice = createSlice({
         msg.id === deletedMsg.id ? { ...msg, isDeleted: true } : msg
       );
       // console.log('Updated messages (del):', JSON.parse(JSON.stringify(state.messages)));
+    },
+    markMessagesAsSeen: (state, action) => {
+      const { chatUserId } = action.payload;
+      state.messages = state.messages.map(msg =>
+        msg.senderId === chatUserId ? { ...msg, isRead: true } : msg
+      );
     },
     addReactionToPrivateMessage: (state, action) => {
       const messageId = Number(action.payload.messageId);
@@ -69,9 +79,13 @@ const chatSlice = createSlice({
     },
     setGroupMessages: (state, action) => {
       state.groupMessages = action.payload;
+      // console.log('Updated Group Messages (ini):', JSON.parse(JSON.stringify(state?.groupMessages)));
     },
     addGroupMessage: (state, action) => {
       state.groupMessages.push(action.payload);
+    },
+    prependGroupMessages: (state, action) => {
+      state.groupMessages = [...action.payload, ...state.groupMessages];
     },
     clearGroupMessages: (state) => {
       state.groupMessages = [];
@@ -138,13 +152,16 @@ const chatSlice = createSlice({
 export const {
   setMessages,
   addMessage,
+  prependMessages,
   clearMessages,
   editPrivateMessage,
   deletePrivateMessage,
+  markMessagesAsSeen,
   addReactionToPrivateMessage,
   removeReactionFromPrivateMessage,
   setGroupMessages,
   addGroupMessage,
+  prependGroupMessages,
   clearGroupMessages,
   editGroupMsgAction,
   deleteGroupMsgAction,

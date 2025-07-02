@@ -32,8 +32,11 @@ const Message = sequelize.define('messages', {
     is_edited: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
-    }
-
+    },
+    reply_to: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
 });
 
 module.exports = Message;

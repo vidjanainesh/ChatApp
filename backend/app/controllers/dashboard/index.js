@@ -64,14 +64,14 @@ const getDashboardData = async (req, res) => {
             },
             attributes: [
                 'sender_id',
-                [Sequelize.fn('COUNT', Sequelize.col('id')), 'unreadCount']
+                // [Sequelize.fn('COUNT', Sequelize.col('id')), 'unreadCount']
             ],
             group: ['sender_id']
         });
 
         const unreadMap = {};
         unreadCounts.forEach(row => {
-            unreadMap[row.sender_id] = parseInt(row.get('unreadCount'));
+            unreadMap[row.sender_id] = true;
         });
 
         // Get Groups ----------------------------------------------------------------------------

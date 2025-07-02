@@ -14,6 +14,7 @@ import { toast } from "react-toastify";
 import { jwtDecode } from "jwt-decode";
 import useSocket from "../../hooks/useSocket";
 import { useDispatch, useSelector } from "react-redux";
+import GroupChatMessage from "./GroupChatMessage";
 import {
     setGroupMessages,
     setGroupMembers,
@@ -23,10 +24,10 @@ import {
     clearChatState,
     addReactionToGroupMessage,
     setCurrentChat,
+    prependGroupMessages,
 } from "../../store/chatSlice";
-import { motion } from "framer-motion";
 import EmojiPicker from "emoji-picker-react";
-import { HiOutlineLogout, HiUserAdd, HiOutlineUsers, HiDotsHorizontal, HiOutlineChat, HiEmojiHappy, HiPlusSm } from "react-icons/hi";
+import { HiOutlineLogout, HiUserAdd, HiOutlineUsers, HiOutlineChat } from "react-icons/hi";
 import { setGroups } from "../../store/userSlice";
 
 export default function GroupChatbox() {
@@ -43,10 +44,9 @@ export default function GroupChatbox() {
     const friends = useSelector((state) => state.user.friends);
     const groups = useSelector((state) => state.user.groups);
 
-    // const [messages, setMessages] = useState([]);
-    // const [members, setMembers] = useState([]);
     const [input, setInput] = useState("");
     const [editMode, setEditMode] = useState(null);
+    const [replyTo, setReplyTo] = useState(null);
     const [isTyping, setIsTyping] = useState(false);
     const [messageLoading, setMessageLoading] = useState(true);
     const [showMembers, setShowMembers] = useState(false);
@@ -58,6 +58,10 @@ export default function GroupChatbox() {
     const [reactionPickerId, setReactionPickerId] = useState(null);
     const availableReactions = ["👍", "❤️", "😂", "😮", "😢", "😡"];
     const [showFullEmojiPickerId, setShowFullEmojiPickerId] = useState(null);
+    const [hasMore, setHasMore] = useState(true);
+    const [loadingOlder, setLoadingOlder] = useState(false);
+    const [firstLoadDone, setFirstLoadDone] = useState(false);
+    const hasInitScrolled = useRef(false);
 
     const emojiRef = useRef(null);
     const membersDropdownRef = useRef(null);
@@ -90,14 +94,28 @@ export default function GroupChatbox() {
         setIsTyping,
     });
 
-    const fetchGroupMessages = useCallback(async () => {
-        setMessageLoading(true);
+    const fetchGroupMessages = useCallback(async (beforeId = null) => {
+        if (beforeId) {
+            setLoadingOlder(true);
+        } else {
+            setMessageLoading(true);
+        };
+
         dispatch(setCurrentChat({ id, type: "group" }));
         try {
-            const res = await getGroupData(id, token);
+            const res = await getGroupData(id, token, beforeId);
             if (res.data.status === "success") {
-                dispatch(setGroupMessages(res.data.data.messages.messages));
-                dispatch(setGroupMembers(res.data.data.members.members));
+                const newMessages = res.data.data.messages;
+
+                if (beforeId) {
+                    if (newMessages.length < 9) setHasMore(false);
+                    dispatch(prependGroupMessages(newMessages));
+                    dispatch(setGroupMembers(res.data.data.members.members));
+                } else {
+                    dispatch(setGroupMessages(newMessages));
+                    dispatch(setGroupMembers(res.data.data.members.members));
+                    setFirstLoadDone(true);
+                }
             } else {
                 toast.error(
                     res.data.message || "Failed to get group messages",
@@ -114,7 +132,11 @@ export default function GroupChatbox() {
                 toast.error(msg, { autoClose: 3000 });
             }
         } finally {
-            setMessageLoading(false);
+            if (beforeId) {
+                setLoadingOlder(false);
+            } else {
+                setMessageLoading(false);
+            }
         }
     }, [id, token, dispatch, navigate]);
 
@@ -129,11 +151,69 @@ export default function GroupChatbox() {
         };
     }, [dispatch]);
 
+    // Infinite scroll: load older and maintain position
     useEffect(() => {
-        if (chatWindowRef.current) {
-            chatWindowRef.current.scrollTop = chatWindowRef.current.scrollHeight;
+        const handleScroll = () => {
+            if (!chatWindowRef.current || !hasMore) return;
+
+            if (chatWindowRef.current.scrollTop === 0) {
+                const oldestMsgId = messages[0]?.id;
+                if (oldestMsgId) {
+                    chatWindowRef.current.previousScrollHeight = chatWindowRef.current.scrollHeight;
+                    fetchGroupMessages(oldestMsgId);
+                }
+            }
+        };
+
+        const ref = chatWindowRef.current;
+        if (ref) {
+            ref.addEventListener("scroll", handleScroll);
         }
-    }, [messages.length]);
+
+        return () => {
+            if (ref) ref.removeEventListener("scroll", handleScroll);
+        };
+    }, [messages, hasMore, fetchGroupMessages]);
+
+    // 1. Initial load scroll
+    useEffect(() => {
+        if (!messageLoading && messages.length && chatWindowRef.current) {
+            if (!hasInitScrolled.current) {
+                chatWindowRef.current.scrollTop = chatWindowRef.current.scrollHeight;
+                hasInitScrolled.current = true;
+            }
+        }
+    }, [messageLoading, messages]);
+
+    const lastMessageId = useRef(null);
+
+    // 2. Maintain scroll after fetching older
+    useEffect(() => {
+        const el = chatWindowRef.current;
+        if (!loadingOlder && el?.previousScrollHeight) {
+            el.scrollTop = el.scrollHeight - el.previousScrollHeight;
+            el.previousScrollHeight = null;
+        }
+    }, [loadingOlder]);
+
+    // 3. Scroll to bottom if new and you are near bottom
+    useEffect(() => {
+        const el = chatWindowRef.current;
+        if (!el || messages.length === 0) return;
+
+        const newLastMessageId = messages[messages.length - 1]?.id;
+
+        if (lastMessageId.current !== newLastMessageId) {
+            const threshold = 400;
+            const isNearBottom = el.scrollHeight - (el.scrollTop + el.clientHeight) < threshold;
+
+            if (isNearBottom) {
+                el.scrollTop = el.scrollHeight;
+            }
+
+            lastMessageId.current = newLastMessageId;
+        }
+    }, [messages]);
 
     const handleInputChange = (e) => {
         setInput(e.target.value);
@@ -168,6 +248,7 @@ export default function GroupChatbox() {
                     dispatch(editGroupMsgAction(res.data.data));
                     setEditMode(null);  // exit edit mode
                     setInput("");       // clear input
+                    setReplyTo(null);
                 }
             } catch {
                 toast.error("Failed to edit message");
@@ -180,11 +261,12 @@ export default function GroupChatbox() {
             });
             try {
                 const res = await sendGroupMessage(
-                    { groupId: parseInt(id), msg: input },
+                    { groupId: parseInt(id), msg: input, replyTo: replyTo?.id || null },
                     token
                 );
                 if (res.data.status === "success") {
                     setInput("");
+                    setReplyTo(null);
                 } else {
                     toast.error("Could not send message", { autoClose: 3000 });
                 }
@@ -224,9 +306,19 @@ export default function GroupChatbox() {
                 inputRef.current.selectionStart = inputRef.current.selectionEnd = inputRef.current.value.length;
             }
         }, 0);
-
     };
-    
+
+    const handleReplyClick = (msg) => {
+        setReplyTo(msg);
+
+        setTimeout(() => {
+            if (inputRef.current) {
+                inputRef.current.focus();
+                inputRef.current.selectionStart = inputRef.current.selectionEnd = inputRef.current.value.length;
+            }
+        }, 0);
+    };
+
     const handleReact = async (messageId, emoji, existingReaction) => {
         try {
             if (existingReaction && existingReaction.reaction === emoji) {
@@ -356,7 +448,7 @@ export default function GroupChatbox() {
     }
 
     const getMinWidth = (msg) => {
-        if (!msg.reactions || msg.reactions.length === 0) return "";
+        if (!msg.reactions || msg.reactions?.length === 0) return "0px";
 
         // Unique emojis (reaction groups)
         const uniqueEmojis = Object.keys(
@@ -498,6 +590,12 @@ export default function GroupChatbox() {
                     className="flex-1 overflow-y-auto overflow-x-hidden space-y-2 px-2 pb-4 scrollbar-thin scrollbar-thumb-indigo-400 scrollbar-track-transparent"
                     ref={chatWindowRef}
                 >
+                    {loadingOlder && (
+                        <div className="flex justify-center py-2">
+                            <div className="w-5 h-5 border-2 border-t-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                    )}
+
                     {messageLoading ? (
                         <div className="text-center text-gray-400 mt-4 text-sm">Loading chat...</div>
                     ) : messages.length === 0 ? (
@@ -513,172 +611,32 @@ export default function GroupChatbox() {
                             const prevDate = i > 0 ? formatDate(messages[i - 1].createdAt) : null;
                             if (msg.type !== "system") msgCount += 1;
 
-                            const existingReaction = msg.reactions?.find(r => r.userId === loggedInUserId);
-
                             return (
-                                <React.Fragment key={msg.id}>
-                                    {/* Date Divider */}
-                                    {prevDate !== currentDate && (
-                                        <div className="flex items-center justify-center my-4">
-                                            <hr className="flex-1 border-gray-300" />
-                                            <span className="px-3 text-xs text-gray-500">{currentDate}</span>
-                                            <hr className="flex-1 border-gray-300" />
-                                        </div>
-                                    )}
-
-                                    {/* System message */}
-                                    {msg.type === "system" ? (
-                                        <motion.div
-                                            initial={{ opacity: 0, scale: 0.95 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            transition={{ duration: 0.2 }}
-                                            className="flex justify-center"
-                                        >
-                                            <div className="text-gray-700 text-xs px-4 py-1">
-                                                {msg.message}
-                                            </div>
-                                        </motion.div>
-                                    ) : (
-                                        // Normal message
-                                        < div className={`flex ${isSender ? "justify-end" : "justify-start"} relative`}>
-                                            <motion.div
-                                                initial={{ opacity: 0, x: isSender ? 50 : -50 }}
-                                                animate={{ opacity: 1, x: 0, minWidth: getMinWidth(msg), maxWidth: getMaxWidth(msg) }}
-                                                transition={{ duration: 0.3 }}
-                                                className={`group mb-2 p-3 rounded-xl text-sm shadow-md w-fit break-words whitespace-pre-wrap relative ${isSender ? "bg-indigo-100 self-end" : "bg-white self-start"}`}
-                                                style={{ minWidth: getMinWidth(msg), maxWidth: getMaxWidth(msg) }}
-                                            >
-                                                {/* Show sender name on top for non-sender */}
-                                                {!isSender && (
-                                                    <div className={`text-xs font-semibold ${getUserColor(msg.senderId)} mb-1`}>
-                                                        {msg.sender?.name?.split(" ")[0]}
-                                                    </div>
-                                                )}
-
-                                                <div className="text-left">
-                                                    {msg.isDeleted ? (
-                                                        <span className="italic text-gray-400">This message was deleted</span>
-                                                    ) : msg.message}
-                                                </div>
-                                                {!msg.isDeleted && (
-                                                    <div className={`flex items-center mt-1 ${isSender ? 'justify-end' : 'justify-start'}`}>
-                                                        <div className={`text-[10px] pr-0 text-gray-400 ${isSender ? 'text-right' : 'text-left'}`}>
-                                                            {formatTime(msg.createdAt)}{" "}
-                                                            {!!msg.isEdited && <span className="italic">(edited)</span>}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* WhatsApp-style reactions at bottom */}
-                                                {msg.reactions && msg.reactions.length > 0 && !msg.isDeleted && (
-                                                    <div className={`absolute -bottom-3 ${isSender ? '-left-2' : '-right-2'} flex gap-1 flex-nowrap`}>
-                                                        {Object.entries(
-                                                            msg.reactions.reduce((acc, reaction) => {
-                                                                if (!acc[reaction.reaction]) acc[reaction.reaction] = [];
-                                                                acc[reaction.reaction].push(reaction);
-                                                                return acc;
-                                                            }, {})
-                                                        ).map(([emoji, reactions]) => (
-                                                            <button
-                                                                key={emoji}
-                                                                onClick={() => handleReact(msg.id, emoji, existingReaction)}
-                                                                className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs transition-all duration-200 shadow-md border-2 backdrop-blur-sm ${reactions.some(r => r.userId === loggedInUserId)
-                                                                    ? 'bg-indigo-100/90 text-indigo-800 border-indigo-200 hover:bg-indigo-200/90'
-                                                                    : 'bg-white/90 text-gray-600 border-gray-200 hover:bg-gray-50/90 hover:shadow-lg'
-                                                                    } transform hover:scale-105`}
-                                                                title={reactions.map(r => r?.userName?.split(' ')[0] || 'Someone').join(', ')}
-                                                            >
-                                                                <span className="text-[12px]">{emoji}</span>
-                                                                {reactions.length > 1 && (
-                                                                    <span className="font-semibold min-w-[12px] text-center text-[10px]">{reactions.length}</span>
-                                                                )}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                )}
-
-                                                {/* Quick reaction picker */}
-                                                {reactionPickerId === msg.id && (
-                                                    <div
-                                                        ref={reactionPickerRef}
-                                                        className={`absolute ${isSender ? 'right-0' : 'left-0'} bottom-full mb-2 bg-white border border-gray-200 rounded-lg shadow-lg p-2 z-20 flex gap-1`}
-                                                        style={{ transform: 'scale(0.9)', transformOrigin: isSender ? 'bottom right' : 'bottom left' }}
-                                                    >
-                                                        {availableReactions.map((emoji) => (
-                                                            <button
-                                                                key={emoji}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleReact(msg.id, emoji, existingReaction);
-                                                                }}
-                                                                className="hover:bg-gray-100 p-1 rounded text-lg transition-colors"
-                                                                title={`React with ${emoji}`}
-                                                            >
-                                                                {emoji}
-                                                            </button>
-                                                        ))}
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setShowFullEmojiPickerId(msg.id);
-                                                                setReactionPickerId(null);
-                                                            }}
-                                                            className="hover:bg-gray-100 p-1 rounded text-gray-500 transition-colors"
-                                                            title="More reactions"
-                                                        >
-                                                            <HiPlusSm className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                )}
-
-                                                {/* Full emoji picker */}
-                                                {showFullEmojiPickerId === msg.id && (
-                                                    <div className={`absolute ${isSender ? 'right-0' : 'left-0'} ${msgCount < 3 ? 'top-full mt-3' : 'bottom-full mb-2'} z-30`}>
-                                                        <div
-                                                            ref={fullReactionPickerRef}
-                                                            style={{
-                                                                transform: "scale(0.6)",
-                                                                transformOrigin: isSender
-                                                                    ? (msgCount < 3 ? 'top right' : 'bottom right')
-                                                                    : (msgCount < 3 ? 'top left' : 'bottom left')
-                                                            }}
-                                                        >
-                                                            <EmojiPicker
-                                                                onEmojiClick={(emojiData) => handleReact(msg.id, emojiData.emoji, existingReaction)}
-                                                                theme="light"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* Floating top icons */}
-                                                <div className={`absolute -top-2 ${isSender ? '-right-2' : '-left-2'} flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
-                                                    {!msg.isDeleted && (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setReactionPickerId(reactionPickerId === msg.id ? null : msg.id);
-                                                            }}
-                                                            className="text-gray-700 hover:text-indigo-600 focus:outline-none bg-gray-100 border border-gray-300 rounded-full p-1 shadow-sm transition-colors"
-                                                            title="React"
-                                                        >
-                                                            <HiEmojiHappy className="w-3 h-3" />
-                                                        </button>
-                                                    )}
-                                                    {!msg.isDeleted && isSender && (
-                                                        <button
-                                                            onClick={() => setSelectedMessage(msg)}
-                                                            className="text-gray-700 hover:text-indigo-600 focus:outline-none bg-gray-100 border border-gray-300 rounded-full p-1 shadow-sm"
-                                                            title="Options"
-                                                        >
-                                                            <HiDotsHorizontal className="w-3 h-3" />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </motion.div>
-                                        </div>
-                                    )}
-                                </React.Fragment>
+                                <GroupChatMessage
+                                    key={msg.id}
+                                    msg={msg}
+                                    i={i}
+                                    isSender={isSender}
+                                    prevDate={prevDate}
+                                    currentDate={currentDate}
+                                    msgCount={msgCount}
+                                    loggedInUserId={loggedInUserId}
+                                    reactionPickerId={reactionPickerId}
+                                    setReactionPickerId={setReactionPickerId}
+                                    showFullEmojiPickerId={showFullEmojiPickerId}
+                                    setShowFullEmojiPickerId={setShowFullEmojiPickerId}
+                                    handleReact={handleReact}
+                                    onReply={handleReplyClick}
+                                    handleEditClick={handleEditClick}
+                                    setSelectedMessage={setSelectedMessage}
+                                    getUserColor={getUserColor}
+                                    getMinWidth={getMinWidth}
+                                    getMaxWidth={getMaxWidth}
+                                    formatTime={formatTime}
+                                    reactionPickerRef={reactionPickerRef}
+                                    fullReactionPickerRef={fullReactionPickerRef}
+                                    availableReactions={availableReactions}
+                                />
                             );
                         })
                     )}
@@ -742,6 +700,20 @@ export default function GroupChatbox() {
                                     setInput("");
                                 }}
                                 className="text-red-500 hover:underline text-xs"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    )}
+
+                    {replyTo && (
+                        <div className="flex items-center justify-between bg-blue-50 border-l-4 border-blue-400 rounded-md shadow-sm p-2 mb-2">
+                            <div className="flex-1 text-xs text-grey-300 truncate">
+                                Replying to: <span className="font-semibold">{replyTo.message}</span>
+                            </div>
+                            <button
+                                onClick={() => setReplyTo(null)}
+                                className="text-xs text-red-500 hover:underline ml-3 shrink-0"
                             >
                                 Cancel
                             </button>

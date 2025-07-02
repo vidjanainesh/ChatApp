@@ -7,7 +7,7 @@ const Groups = require('./groups');
 const GroupMembers = require('./groupMembers');
 const GroupMessages = require('./groupMessages');
 const GroupMessageRead = require('./groupMessageRead');
-const MessageReactions = require('./messageReactions'); 
+const MessageReactions = require('./messageReactions');
 
 // -----------------------------------------
 
@@ -58,7 +58,7 @@ Friends.belongsTo(User, {
 // --------------------------------------------
 
 // Groups-GroupMembers
-Groups.hasMany(GroupMembers, { foreignKey: "group_id", as: "groupMembers",});
+Groups.hasMany(GroupMembers, { foreignKey: "group_id", as: "groupMembers", });
 GroupMembers.belongsTo(Groups, { foreignKey: "group_id", as: "group" });
 
 // User–GroupMember
@@ -81,20 +81,20 @@ Groups.belongsToMany(User, {
 });
 
 // Group–GroupMessage
-Groups.hasMany(GroupMessages, { foreignKey: "group_id", as: "messages"});
+Groups.hasMany(GroupMessages, { foreignKey: "group_id", as: "messages" });
 GroupMessages.belongsTo(Groups, { foreignKey: "group_id", as: "group" });
 
 // User–GroupMessage
-User.hasMany(GroupMessages, { foreignKey: "sender_id", as: "sentGroupMessages"});
-GroupMessages.belongsTo(User, { foreignKey: "sender_id", as: "sender"});
+User.hasMany(GroupMessages, { foreignKey: "sender_id", as: "sentGroupMessages" });
+GroupMessages.belongsTo(User, { foreignKey: "sender_id", as: "sender" });
 
 // GroupMessage–GroupMessageRead
-GroupMessages.hasMany(GroupMessageRead, { foreignKey: "group_message_id", as: "reads"});
-GroupMessageRead.belongsTo(GroupMessages, { foreignKey: "group_message_id", as: "message"});
+GroupMessages.hasMany(GroupMessageRead, { foreignKey: "group_message_id", as: "reads" });
+GroupMessageRead.belongsTo(GroupMessages, { foreignKey: "group_message_id", as: "message" });
 
 // User–GroupMessageRead
-User.hasMany(GroupMessageRead, { foreignKey: "user_id", as: "readGroupMessages"});
-GroupMessageRead.belongsTo(User, { foreignKey: "user_id", as: "reader"});
+User.hasMany(GroupMessageRead, { foreignKey: "user_id", as: "readGroupMessages" });
+GroupMessageRead.belongsTo(User, { foreignKey: "user_id", as: "reader" });
 
 // --------------------------------------------------------------------------------------------------
 
@@ -107,6 +107,30 @@ User.hasMany(MessageReactions, {
 MessageReactions.belongsTo(User, {
   foreignKey: 'user_id',
   as: 'user'
+});
+
+// --------------------------------------------------------------------------------------------------
+
+// Private message replies
+Message.belongsTo(Message, {
+  foreignKey: 'reply_to',
+  as: 'repliedMessage'
+});
+
+Message.hasMany(Message, {
+  foreignKey: 'reply_to',
+  as: 'replies'
+});
+
+// Group message replies
+GroupMessages.belongsTo(GroupMessages, {
+  foreignKey: 'reply_to',
+  as: 'repliedMessage'
+});
+
+GroupMessages.hasMany(GroupMessages, {
+  foreignKey: 'reply_to',
+  as: 'replies'
 });
 
 module.exports = {

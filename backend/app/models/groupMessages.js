@@ -26,7 +26,11 @@ const GroupMessages = sequelize.define('group_messages', {
     is_edited: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
-    }
+    },
+    reply_to: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
 });
 
 module.exports = GroupMessages;
