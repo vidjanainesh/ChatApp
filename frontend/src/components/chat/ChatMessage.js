@@ -48,7 +48,7 @@ const ChatMessage = ({
                         ) : (
                             <>
                                 {msg.repliedMessage && (
-                                    <div className="border-l-4 border-blue-300 pl-2 mb-1 text-xs text-gray-600">
+                                    <div className="border-l-4 border-blue-300 pl-2 mb-2 text-xs text-gray-600">
                                         {msg.repliedMessage.message}
                                     </div>
                                 )}
