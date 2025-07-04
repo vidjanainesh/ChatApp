@@ -14,7 +14,7 @@ const friendValidationRules = require('../app/middlewares/validators/friendValid
 const handleValidation = require('../app/middlewares/validators/handleValidation');
 
 router.post('/', authMiddleware, friendValidationRules.sendFriendReq, handleValidation, sendFriendReq);
-router.get('/unfriend/:id', authMiddleware, unFriend);
+router.get('/unfriend/:id', authMiddleware, friendValidationRules.unFriend, handleValidation, unFriend);
 router.patch('/', authMiddleware, friendValidationRules.manageFriendReq, handleValidation, manageFriendReq);
 router.get('/requests', authMiddleware, getAllFriendReq);
 

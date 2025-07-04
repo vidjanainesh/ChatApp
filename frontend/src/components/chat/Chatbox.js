@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import ChatMessage from "./ChatMessage";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
-import { getMessages, sendMessage, deleteMessage, editMessage, reactMessage, deleteReactions } from "../../api";
+import { getMessages, sendMessage, deleteMessage, editMessage, reactMessage, deleteReactions, sendFriendReq } from "../../api";
 import { toast } from "react-toastify";
 import { jwtDecode } from "jwt-decode";
 import useSocket from "../../hooks/useSocket";
@@ -54,6 +54,8 @@ export default function Chatbox() {
   const [hasMore, setHasMore] = useState(true);
   const [firstLoadDone, setFirstLoadDone] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
+  const [notFriend, setNotFriend] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
 
   const availableReactions = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
@@ -73,17 +75,30 @@ export default function Chatbox() {
     try {
       const res = await getMessages(id, beforeId, token);
       if (res.data.status === "success") {
-        const newMessages = res.data.data;
+        const friendshipStatus = res.data.data.friendship;
+        const newMessages = res.data.data.messages;
 
         if (beforeId) {
-          // Prepending older
           if (newMessages.length < 9) setHasMore(false);
           dispatch(prependMessages(newMessages));
         } else {
           dispatch(setMessages(newMessages));
           setFirstLoadDone(true);
         }
-      } else {
+
+        if (friendshipStatus === "accepted") {
+          setNotFriend(false);
+          setRequestSent(false);
+        } else if (friendshipStatus === "pending") {
+          setNotFriend(true);
+          setRequestSent(true);
+        } else {
+          setNotFriend(true);
+          setRequestSent(false);
+        }
+
+      }
+      else {
         toast.error(res.data.message || "Failed to get messages", { autoClose: 3000 });
       }
     } catch (err) {
@@ -91,7 +106,8 @@ export default function Chatbox() {
       if (msg === "Invalid or expired token") {
         localStorage.removeItem("jwt");
         navigate("/");
-      } else {
+      }
+      else {
         toast.error(msg, { autoClose: 3000 });
       }
     } finally {
@@ -102,6 +118,20 @@ export default function Chatbox() {
       }
     }
   }, [id, token, dispatch, navigate]);
+
+  const sendReq = async () => {
+    try {
+      const res = await sendFriendReq(parseInt(id), token);
+      if (res.data.status === "success") {
+        setRequestSent(true);
+        toast.success("Friend request sent!", { autoClose: 2000 });
+      } else {
+        toast.error(res.data.message || "Failed to send request");
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Error sending request");
+    }
+  }
 
   // On chat change: clear and fetch
   useEffect(() => {
@@ -415,6 +445,8 @@ export default function Chatbox() {
 
         </div>
 
+
+
         {selectedMessage && selectedMessage.mode !== "edit" && (
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
             <div className="bg-white p-4 rounded-xl shadow-xl w-72" ref={modalRef}>
@@ -493,68 +525,91 @@ export default function Chatbox() {
             </div>
           )}
 
-          <form
-            onSubmit={handleSubmit}
-            className="relative flex items-center gap-2 bg-white p-2 mb-2.5 rounded-lg shadow-sm"
-          >
-            {/* Emoji Button on Left Inside Input */}
-            <button
-              type="button"
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="text-gray-500 hover:text-indigo-500"
-              title="Insert Emoji"
-              style={{ transform: 'scale(1.3)' }}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-6 h-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="2"
+          {notFriend && (
+            <div className="flex flex-col items-center justify-center text-gray-500 mb-2 space-y-2">
+              <p className="text-sm text-center">
+                You're not friends currently — send a request to connect
+              </p>
+              <button
+                onClick={sendReq}
+                disabled={requestSent}
+                className={`px-3 py-1 rounded-md text-sm transition duration-300 ${requestSent
+                    ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                    : "bg-indigo-500 hover:bg-indigo-600 text-white"
+                  }`}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M12 20a8 8 0 100-16 8 8 0 000 16z"
-                />
-              </svg>
-            </button>
-            {/* Textarea - Compact Height */}
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={handleInputChange}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit(e);
-                }
-              }}
-              placeholder="Type a message..."
-              className="flex-1 px-3 py-1.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none min-h-[2.5rem] max-h-[5rem] overflow-y-auto"
-              autoComplete="off"
-              rows={1}
-            />
+                {requestSent ? "Request Sent" : "Send Request"}
+              </button>
+            </div>
+          )}
 
-            {/* Send Button */}
-            <button
-              type="submit"
-              className="bg-indigo-500 hover:bg-indigo-600 text-white p-2 rounded-full transition"
+          <div className={notFriend ? "pointer-events-none opacity-50" : ""}>
+            <form
+              onSubmit={handleSubmit}
+              className="relative flex items-center gap-2 bg-white p-2 mb-2.5 rounded-lg shadow-sm"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                width="20"
-                height="20"
+              {/* Emoji Button on Left Inside Input */}
+              <button
+                disabled={notFriend}
+                type="button"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className="text-gray-500 hover:text-indigo-500"
+                title="Insert Emoji"
+                style={{ transform: 'scale(1.3)' }}
               >
-                <path d="M2 21l21-9L2 3v7l15 2-15 2v7z" />
-              </svg>
-            </button>
-          </form>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-6 h-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M12 20a8 8 0 100-16 8 8 0 000 16z"
+                  />
+                </svg>
+              </button>
+              {/* Textarea - Compact Height */}
+              <textarea
+                disabled={notFriend}
+                ref={inputRef}
+                value={input}
+                onChange={handleInputChange}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit(e);
+                  }
+                }}
+                placeholder="Type a message..."
+                className="flex-1 px-3 py-1.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none min-h-[2.5rem] max-h-[5rem] overflow-y-auto"
+                autoComplete="off"
+                rows={1}
+              />
+
+              {/* Send Button */}
+              <button
+                type="submit"
+                disabled={notFriend}
+                className="bg-indigo-500 hover:bg-indigo-600 text-white p-2 rounded-full transition"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                  width="20"
+                  height="20"
+                >
+                  <path d="M2 21l21-9L2 3v7l15 2-15 2v7z" />
+                </svg>
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </div>

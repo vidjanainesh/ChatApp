@@ -1,10 +1,16 @@
-const { body } = require("express-validator");
+const { body, param } = require("express-validator");
 
 const friendValidationRules = {
   sendFriendReq: [
     body("id")
       .notEmpty().withMessage("Receiver ID is required")
       .isInt({ min: 1 }).withMessage("Receiver ID must be a valid positive integer"),
+  ],
+
+  unFriend: [
+    param("id")
+      .notEmpty().withMessage("Friend ID is required")
+      .isInt({ min: 1 }).withMessage("Friend ID must be a valid positive integer"),
   ],
 
   manageFriendReq: [
@@ -16,6 +22,8 @@ const friendValidationRules = {
       .notEmpty().withMessage("Status is required")
       .isIn(["accepted", "rejected"]).withMessage("Status must be 'accepted' or 'rejected'"),
   ]
+
+
 };
 
 module.exports = friendValidationRules;

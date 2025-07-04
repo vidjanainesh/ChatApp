@@ -124,7 +124,7 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
     });
 
     socket.on("typing", ({ senderId, receiverId, isTyping }) => {
-      console.log("senderId: ", senderId, "receiverId: ", receiverId, "isTyping: ", isTyping);
+      // console.log("senderId: ", senderId, "receiverId: ", receiverId, "isTyping: ", isTyping);
       if (setIsTyping && senderId === parseInt(chatUserId) && receiverId === loggedInUserId) {
         setIsTyping(isTyping);
       }

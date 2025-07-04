@@ -1,13 +1,15 @@
-const {body} = require('express-validator');
+const { body } = require('express-validator');
 
 const authenticationValidationRules = {
   register: [
     body("name")
+      .trim()
       .notEmpty().withMessage("Name is required")
       .isLength({ min: 2 }).withMessage("Name should be at least 2 characters long"),
 
     body("email")
       .trim()
+      .customSanitizer(value => value.toLowerCase())
       .notEmpty().withMessage("Email is required")
       .isEmail().withMessage("Invalid email address")
       .matches(/^(?!.*\.\.)[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/)
@@ -20,6 +22,7 @@ const authenticationValidationRules = {
       }),
 
     body("password")
+      .trim()
       .notEmpty().withMessage("Password is required")
       .isLength({ min: 8 }).withMessage("Password must be at least 6 characters long")
       .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?#&_])[A-Za-z\d@$!%*?#&_]{8,}$/)
@@ -28,6 +31,8 @@ const authenticationValidationRules = {
 
   login: [
     body("email")
+      .trim()
+      .customSanitizer(value => value.toLowerCase())
       .notEmpty().withMessage("Email is required")
       .isEmail().withMessage("Invalid email")
       .matches(/^(?!.*\.\.)[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/)
@@ -40,17 +45,22 @@ const authenticationValidationRules = {
       }),
 
     body("password")
+      .trim()
       .notEmpty().withMessage("Password is required"),
   ],
 
   forgetPassword: [
     body("email")
+      .trim()
+      .customSanitizer(value => value.toLowerCase())
       .notEmpty().withMessage("Email is required")
       .isEmail().withMessage("Invalid email"),
   ],
 
   verifyToken: [
     body("email")
+      .trim()
+      .customSanitizer(value => value.toLowerCase())
       .notEmpty().withMessage("Email is required")
       .isEmail().withMessage("Invalid email"),
 
@@ -61,6 +71,7 @@ const authenticationValidationRules = {
 
   resetPassword: [
     body("password")
+      .trim()
       .notEmpty().withMessage("Password is required")
       .isLength({ min: 6 }).withMessage("Password must be at least 6 characters"),
   ],
@@ -119,7 +130,7 @@ const authenticationValidationRules = {
 
 
 module.exports = {
-    // validateEmailMiddleware,
-    // validatePasswordMiddleware,
-    authenticationValidationRules
+  // validateEmailMiddleware,
+  // validatePasswordMiddleware,
+  authenticationValidationRules
 }

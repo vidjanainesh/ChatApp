@@ -402,7 +402,7 @@ export default function Dashboard() {
                 )}
 
                 {/* Group List - Only show if friends exist */}
-                {!loading && friends.length > 0 && groups.length > 0 && (
+                {!loading && groups.length > 0 && (
                     <>
                         <h2 className="text-xl font-semibold text-gray-700 mb-4">Your Groups:</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 items-start">
