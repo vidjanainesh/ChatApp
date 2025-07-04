@@ -528,7 +528,7 @@ export default function Chatbox() {
           {notFriend && (
             <div className="flex flex-col items-center justify-center text-gray-500 mb-2 space-y-2">
               <p className="text-sm text-center">
-                You're not friends currently — send a request to reconnect
+                You're not friends currently — send a request to connect
               </p>
               <button
                 onClick={sendReq}
