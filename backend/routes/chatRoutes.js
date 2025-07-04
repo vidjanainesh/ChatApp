@@ -17,7 +17,7 @@ const handleValidation = require('../app/middlewares/validators/handleValidation
 router.post('/', authMiddleware, chatValidationRules.sendMessage, handleValidation, sendMessage);
 router.get('/:id', authMiddleware, chatValidationRules.getMessages, handleValidation, getMessages);
 router.get('/', authMiddleware, getUsers);
-router.delete('/:id', authMiddleware, deleteMessage);
-router.patch('/:id', authMiddleware, editMessage);
+router.delete('/:id', authMiddleware, chatValidationRules.deleteMessage, handleValidation, deleteMessage);
+router.patch('/:id', authMiddleware, chatValidationRules.editMessage, handleValidation, editMessage);
 
 module.exports = router;

@@ -81,20 +81,22 @@ const verifyToken = async (req, res) => {
 
         const user = await User.findOne({
             where: {email},
-            raw: true
         });
         // console.log(user);
 
         if(user.token == token && user.token_expires > new Date()){
-            const emailToken = jwt.sign(
-                {email}, 
-                process.env.JWT_SECRET, 
-                {expiresIn: '15m'},
-            )
-            return successResponse(res, { emailToken }, "OTP verified");
+            // const emailToken = jwt.sign(
+            //     {email}, 
+            //     process.env.JWT_SECRET, 
+            //     {expiresIn: '15m'},
+            // );
+            user.token = null;
+            user.token_expires = null;
+            await user.save();
+            return successResponse(res, {}, "OTP verified");
         }
         else{
-            return errorResponse(res, "Invalid or Expired OTP", 400);
+            return errorResponse(res, "Invalid or Expired OTP, please try again.", 400);
         }
     } catch (error) {
         return errorResponse(res, error.message, 500);

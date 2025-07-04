@@ -63,7 +63,6 @@ export default function Login() {
       const response = await googleLogin(data);
 
       if (response.data.status === "success") {
-        console.log(response.data);
         const token = response.data.data;
         const decodedUser = jwtDecode(token);
         localStorage.setItem("jwt", response.data.data);

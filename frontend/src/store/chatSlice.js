@@ -18,7 +18,7 @@ const chatSlice = createSlice({
     },
     addMessage: (state, action) => {
       state.messages.push(action.payload);
-      console.log('Messages (Send):', JSON.parse(JSON.stringify(state.messages)));
+      // console.log('Messages (Send):', JSON.parse(JSON.stringify(state.messages)));
     },
     prependMessages: (state, action) => {
       state.messages = [...action.payload, ...state.messages];

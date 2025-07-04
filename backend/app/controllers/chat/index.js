@@ -198,6 +198,26 @@ const getMessages = async (req, res) => {
             return unAuthorizedResponse(res, "Person ID is required");
         }
 
+        const friendship = await Friends.findOne({
+            where: {
+                [Op.or]: [
+                    {
+                        [Op.and]: [
+                            { sender_id: user.id },
+                            { receiver_id: id }
+                        ]
+                    },
+                    {
+                        [Op.and]: [
+                            { sender_id: id },
+                            { receiver_id: user.id }
+                        ]
+                    }
+                ]
+            },
+            attributes: ['status']
+        });
+
         const whereClause = {
             is_deleted: false,
             [Op.or]: [
@@ -283,7 +303,7 @@ const getMessages = async (req, res) => {
         ))
 
         // Prepare the final object that attaches all the responses to each message
-        const response = allMessages.map((msg) => {
+        let response = allMessages.map((msg) => {
             const newMsg = ({
                 ...msg,
                 reactions: [],
@@ -306,7 +326,7 @@ const getMessages = async (req, res) => {
         //     }
         // );
 
-        return successResponse(res, response.reverse(), "All messages retrieved between the two people");
+        return successResponse(res, {friendship: friendship?.status, messages: response.reverse()}, "All messages retrieved between the two people");
 
     } catch (error) {
         return errorThrowResponse(res, error.message, error);

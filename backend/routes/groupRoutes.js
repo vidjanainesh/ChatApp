@@ -19,17 +19,17 @@ const groupValidationRules = require('../app/middlewares/validators/groupValidat
 const handleValidation = require('../app/middlewares/validators/handleValidation');
 
 router.post('/', groupValidationRules.createGroup, handleValidation, authMiddleware, createGroup);
-router.post('/join', authMiddleware, joinGroup);
-router.get('/leave/:id', authMiddleware, leaveGroup)
+router.post('/join', authMiddleware, groupValidationRules.joinGroup, handleValidation, joinGroup);
+router.get('/leave/:id', authMiddleware, groupValidationRules.leaveGroup, handleValidation, leaveGroup)
 router.post('/send-message', groupValidationRules.sendGroupMessage, handleValidation, authMiddleware, sendGroupMessage);
 
 router.get('/data/:id', groupValidationRules.getGroupData, handleValidation, authMiddleware, getGroupData);
 // router.get('/:id', groupValidationRules.getGroupMembers, handleValidation, authMiddleware, getGroupMembers); // Not needed now
 router.get('/', authMiddleware, getGroups);
 
-router.delete('/:id', authMiddleware, deleteGroup);
-router.delete('/message/:id', authMiddleware, deleteGroupMessage);
+router.delete('/:id', authMiddleware, groupValidationRules.deleteGroup, handleValidation, deleteGroup);
+router.delete('/message/:id', authMiddleware, groupValidationRules.deleteGroupMessage, handleValidation, deleteGroupMessage);
 
-router.patch('/message/:id', authMiddleware, editGroupMessage);
+router.patch('/message/:id', authMiddleware, groupValidationRules.editGroupMessage, handleValidation, editGroupMessage);
 
 module.exports = router;
