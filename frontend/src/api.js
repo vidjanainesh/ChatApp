@@ -80,15 +80,29 @@ export const getMessages = (id, beforeId, token) => {
     );
 }
 
+// ---------------------------------------------------------
+
 export const getUsers = (token) => {
-    return axios.get(`${API_BASE}/chat`,
+    return axios.get(`${API_BASE}/user`,
         {
             headers: {
                 Authorization: `Bearer ${token}`
             }
         }
     );
-}
+};
+
+export const searchUsers = (input, token) => {
+    return axios.post(`${API_BASE}/user/search`,
+        { input }, 
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+};
+
 // ---------------------------------------------------------
 
 export const getFriendReq = (token) => {

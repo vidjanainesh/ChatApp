@@ -150,44 +150,6 @@ const editMessage = async (req, res) => {
     }
 }
 
-const getUsers = async (req, res) => {
-    try {
-        const currentUserId = req.user.id;
-
-        const baseExclusions = [currentUserId];
-        if (currentUserId !== 2) {
-            baseExclusions.push(1);
-        }
-
-        const users = await sequelize.query(`
-            SELECT u.id, u.name, u.email
-            FROM users u
-            WHERE u.id NOT IN (:excludedIds)
-            AND NOT EXISTS (
-                SELECT 1 FROM friends f
-                WHERE (
-                    (f.sender_id = :currentUserId AND f.receiver_id = u.id)
-                    OR
-                    (f.sender_id = u.id AND f.receiver_id = :currentUserId)
-                )
-                AND f.status IN ('pending', 'accepted')
-            )
-        `, {
-            replacements: {
-                excludedIds: baseExclusions,
-                currentUserId
-            },
-            type: Sequelize.QueryTypes.SELECT
-        });
-
-        return successResponse(res, users, "Fetched eligible users");
-
-    } catch (error) {
-        // console.error(error);
-        return errorThrowResponse(res, error.message, error);
-    }
-};
-
 const getMessages = async (req, res) => {
     try {
         const id = req.params.id;
@@ -338,5 +300,4 @@ module.exports = {
     deleteMessage,
     editMessage,
     getMessages,
-    getUsers,
 }
