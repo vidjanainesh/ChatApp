@@ -1,16 +1,16 @@
 import { Routes, Route } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
+import { useEffect } from 'react';
 import 'react-toastify/dist/ReactToastify.css';
-import Login from './components/authentication/Login';
 import Register from './components/authentication/Register';
-import Dashboard from './components/chat/Dashboard';
+import Login from './components/authentication/Login';
 import ForgotPassword from './components/authentication/ForgotPassword';
 import VerifyToken from './components/authentication/VerifyToken';
 import ResetPassword from './components/authentication/ResetPassword';
+import Dashboard from './components/dashboard/Dashboard';
+import FindPeople from './components/dashboard/FindPeople';
+import FriendRequests from './components/dashboard/FriendRequests';
 import Chatbox from './components/chat/Chatbox';
-import { useEffect } from 'react';
-import FindPeople from './components/chat/FindPeople';
-import FriendRequests from './components/chat/FriendRequests';
 import GroupChatbox from './components/chat/GroupChatbox';
 
 function App() {

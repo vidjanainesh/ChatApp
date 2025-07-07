@@ -76,11 +76,7 @@ const unFriend = async (req, res) => {
             // const io = req.app.get('io');
             // io.to(`user_${friendId}`).emit('unFriend', {friendId: user.id});
 
-            return successResponse(
-                res,
-                {},
-                "User removed from your friends"
-            );
+            return successResponse(res, {}, "User removed from your friends");
         }
     } catch (error) {
         return errorThrowResponse(res, `${error.message}`, error);
