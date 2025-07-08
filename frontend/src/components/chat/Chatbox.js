@@ -8,7 +8,7 @@ import useSocket from "../../hooks/useSocket";
 import EmojiPicker from "emoji-picker-react";
 import { useDispatch, useSelector } from "react-redux";
 import { setMessages, editPrivateMessage, deletePrivateMessage, clearMessages, clearChatState, addReactionToPrivateMessage, prependMessages } from "../../store/chatSlice";
-import { HiOutlineChat } from "react-icons/hi";
+import { HiOutlineChat, HiPaperClip } from "react-icons/hi";
 
 export default function Chatbox() {
   const navigate = useNavigate();
@@ -28,6 +28,8 @@ export default function Chatbox() {
   const inputRef = useRef(null);
   const hasInitScrolled = useRef(false);
   const lastMessageId = useRef(null);
+  const fileInputRef = useRef();
+  const bottomRef = useRef(null);
 
   const dispatch = useDispatch();
   const messages = useSelector((state) => state.chat.messages);
@@ -44,6 +46,7 @@ export default function Chatbox() {
 
   const [input, setInput] = useState("");
   const [editMode, setEditMode] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [messageLoading, setMessageLoading] = useState(true);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -52,10 +55,11 @@ export default function Chatbox() {
   const [showFullEmojiPickerId, setShowFullEmojiPickerId] = useState(null);
   const [replyTo, setReplyTo] = useState(null);
   const [hasMore, setHasMore] = useState(true);
-  const [firstLoadDone, setFirstLoadDone] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [notFriend, setNotFriend] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
+  const [downloadedFiles, setDownloadedFiles] = useState({});
+  const [selectedFile, setSelectedFile] = useState(null);
 
   const availableReactions = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
@@ -83,7 +87,6 @@ export default function Chatbox() {
           dispatch(prependMessages(newMessages));
         } else {
           dispatch(setMessages(newMessages));
-          setFirstLoadDone(true);
         }
 
         if (friendshipStatus === "accepted") {
@@ -171,8 +174,13 @@ export default function Chatbox() {
   useEffect(() => {
     if (!messageLoading && messages.length && chatWindowRef.current) {
       if (!hasInitScrolled.current) {
-        chatWindowRef.current.scrollTop = chatWindowRef.current.scrollHeight;
-        hasInitScrolled.current = true;
+        setTimeout(() => {
+          chatWindowRef.current.scrollTo({
+            top: chatWindowRef.current.scrollHeight,
+            behavior: "smooth"
+          });
+          hasInitScrolled.current = true;
+        }, 50);
       }
     }
   }, [messageLoading, messages]);
@@ -239,8 +247,8 @@ export default function Chatbox() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!input.trim()) return;
-
+    if (!input.trim() && !selectedFile) return;
+    setIsSubmitting(true);
     setShowEmojiPicker(false);
 
     if (editMode) {
@@ -251,6 +259,7 @@ export default function Chatbox() {
           setEditMode(null);  // exit edit mode
           setInput("");       // clear input
           setReplyTo(null);
+          setIsSubmitting(false);
         }
       } catch {
         toast.error("Failed to edit message");
@@ -264,10 +273,18 @@ export default function Chatbox() {
       });
 
       try {
-        const res = await sendMessage(input, id, token, replyTo?.id || null);
+        const formData = new FormData();
+        formData.append("message", input);
+        formData.append("receiverId", id);
+        if (replyTo?.id) formData.append("replyTo", replyTo.id);
+        if (selectedFile) formData.append("file", selectedFile);
+
+        const res = await sendMessage(formData, token);
         if (res.data.status === "success") {
           setInput("");  // clear input
           setReplyTo(null);
+          setSelectedFile(null);
+          if (fileInputRef.current) fileInputRef.current.value = "";
         } else {
           toast.error("Could not send message", { autoClose: 3000 });
         }
@@ -279,6 +296,8 @@ export default function Chatbox() {
         } else {
           toast.error(msg, { autoClose: 3000 });
         }
+      } finally {
+        setIsSubmitting(false);
       }
     }
   };
@@ -338,6 +357,24 @@ export default function Chatbox() {
       setReactionPickerId(null);
       setShowFullEmojiPickerId(null);
     }
+  };
+
+  const handleDownload = (msg) => {
+    setDownloadedFiles(prev => ({
+      ...prev,
+      [msg.id]: { loading: true }
+    }));
+
+    setTimeout(() => {
+      setDownloadedFiles(prev => ({
+        ...prev,
+        [msg.id]: { loading: false, url: msg.fileUrl }
+      }));
+    }, 2000);
+  };
+
+  const handleFileChange = (e) => {
+    setSelectedFile(e.target.files[0]);
   };
 
   const formatTime = (ts) =>
@@ -438,15 +475,15 @@ export default function Chatbox() {
                   selectedMessage={selectedMessage}
                   setSelectedMessage={setSelectedMessage}
                   loggedInUserId={loggedInUserId}
+                  downloadedFile={downloadedFiles[msg.id]}
+                  onDownload={() => handleDownload(msg)}
                 />
               );
             })
           )}
 
+          <div ref={bottomRef}></div>
         </div>
-
-
-
         {selectedMessage && selectedMessage.mode !== "edit" && (
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
             <div className="bg-white p-4 rounded-xl shadow-xl w-72" ref={modalRef}>
@@ -534,8 +571,8 @@ export default function Chatbox() {
                 onClick={sendReq}
                 disabled={requestSent}
                 className={`px-3 py-1 rounded-md text-sm transition duration-300 ${requestSent
-                    ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                    : "bg-indigo-500 hover:bg-indigo-600 text-white"
+                  ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                  : "bg-indigo-500 hover:bg-indigo-600 text-white"
                   }`}
               >
                 {requestSent ? "Request Sent" : "Send Request"}
@@ -543,14 +580,28 @@ export default function Chatbox() {
             </div>
           )}
 
-          <div className={notFriend ? "pointer-events-none opacity-50" : ""}>
+          <div className={notFriend || isSubmitting ? "pointer-events-none opacity-50" : ""}>
+            {selectedFile && (
+              <div className="flex items-center justify-between bg-gray-50 border rounded p-2 mb-2">
+                <div className="text-xs text-gray-700 truncate max-w-[200px]">
+                  📎 {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                </div>
+                <button
+                  onClick={() => setSelectedFile(null)}
+                  className="text-red-500 text-xs hover:underline ml-2"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
             <form
               onSubmit={handleSubmit}
               className="relative flex items-center gap-2 bg-white p-2 mb-2.5 rounded-lg shadow-sm"
             >
+
               {/* Emoji Button on Left Inside Input */}
               <button
-                disabled={notFriend}
+                disabled={notFriend || isSubmitting}
                 type="button"
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className="text-gray-500 hover:text-indigo-500"
@@ -574,7 +625,7 @@ export default function Chatbox() {
               </button>
               {/* Textarea - Compact Height */}
               <textarea
-                disabled={notFriend}
+                disabled={notFriend || isSubmitting}
                 ref={inputRef}
                 value={input}
                 onChange={handleInputChange}
@@ -589,11 +640,30 @@ export default function Chatbox() {
                 autoComplete="off"
                 rows={1}
               />
+              {!editMode && (
+                <>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    style={{ display: "none" }}
+                    onChange={handleFileChange}
+                  />
+                  <button
+                    type="button"
+                    disabled={notFriend || isSubmitting}
+                    onClick={() => fileInputRef.current.click()}
+                    className="text-gray-500 hover:text-indigo-500"
+                    title="Attach File"
+                  >
+                    <HiPaperClip className="w-6 h-6" />
+                  </button>
+                </>
+              )}
 
               {/* Send Button */}
               <button
                 type="submit"
-                disabled={notFriend}
+                disabled={notFriend || isSubmitting}
                 className="bg-indigo-500 hover:bg-indigo-600 text-white p-2 rounded-full transition"
               >
                 <svg

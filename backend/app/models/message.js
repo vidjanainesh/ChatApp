@@ -1,5 +1,5 @@
 const sequelize = require('./database');
-const {DataTypes} = require('sequelize');
+const { DataTypes } = require('sequelize');
 
 const Message = sequelize.define('messages', {
     id: {
@@ -19,7 +19,7 @@ const Message = sequelize.define('messages', {
     },
     message: {
         type: DataTypes.TEXT,
-        allowNull: false,
+        allowNull: true,
     },
     is_read: {
         type: DataTypes.BOOLEAN,
@@ -34,6 +34,34 @@ const Message = sequelize.define('messages', {
         defaultValue: false,
     },
     reply_to: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
+    file_url: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+    },
+    file_type: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    file_name: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    file_size: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
+    file_blur_url: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+    },
+    file_blur_width: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
+    file_blur_height: {
         type: DataTypes.INTEGER,
         allowNull: true,
     },

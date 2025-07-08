@@ -329,7 +329,7 @@ export default function Dashboard() {
                         <p className="text-sm">Just a sec — getting your friends list...</p>
                     </div>
                 ) : friends.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center text-gray-500 mt-10 h-[20vh]">
+                    <div className="flex flex-col items-center justify-center text-gray-500 mb-10 h-[20vh]">
                         <span className="text-2xl mb-1">👋</span>
                         <p className="text-sm">No friends yet. Send some requests!</p>
                     </div>

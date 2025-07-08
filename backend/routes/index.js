@@ -11,7 +11,7 @@ const messageReactionRoutes = require('./messageReactionRoutes');
 const getDashboardData = require('../app/controllers/dashboard');
 const authMiddleware = require('../app/middlewares/authMiddleware');
 
-router.use('/authenticate', authenticationRoutes);
+router.use('/auth', authenticationRoutes);
 router.use('/chat', chatRoutes);
 router.use('/friend', friendRoutes);
 router.use('/user', userRoutes);

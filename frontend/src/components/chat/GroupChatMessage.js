@@ -1,17 +1,36 @@
 import React, { memo } from "react";
 import { motion } from "framer-motion";
 import EmojiPicker from "emoji-picker-react";
-import { HiEmojiHappy, HiDotsHorizontal, HiPlusSm, HiOutlineChat } from "react-icons/hi";
+import { HiEmojiHappy, HiDotsHorizontal, HiPlusSm, HiOutlineChat, HiDownload, HiPhotograph, HiVideoCamera } from "react-icons/hi";
 
 function GroupChatMessage({
-    msg, i, isSender, prevDate, currentDate, msgCount, loggedInUserId,
-    reactionPickerId, setReactionPickerId, showFullEmojiPickerId, setShowFullEmojiPickerId,
-    handleReact, handleEditClick, onReply, setSelectedMessage,
-    getUserColor, getMinWidth, getMaxWidth, formatTime,
-    reactionPickerRef, fullReactionPickerRef, availableReactions
+    msg,
+    i,
+    isSender,
+    prevDate,
+    currentDate,
+    msgCount,
+    loggedInUserId,
+    reactionPickerId,
+    setReactionPickerId,
+    showFullEmojiPickerId,
+    setShowFullEmojiPickerId,
+    handleReact,
+    handleEditClick,
+    onReply,
+    setSelectedMessage,
+    getUserColor,
+    getMinWidth,
+    getMaxWidth,
+    formatTime,
+    reactionPickerRef,
+    fullReactionPickerRef,
+    availableReactions,
+    downloadedFile,
+    onDownload,
 }) {
     const existingReaction = msg.reactions?.find(r => r.userId === loggedInUserId);
-
+    
     return (
         <>
             {/* Date Divider */}
@@ -62,7 +81,101 @@ function GroupChatMessage({
                                             {msg.repliedMessage.message}
                                         </div>
                                     )}
-                                    {msg.message}
+
+                                    {/* text message */}
+                                    {msg.message && (
+                                        <div>{msg.message}</div>
+                                    )}
+
+                                    {/* image file */}
+                                    {msg.fileType === "image" && (
+                                        <div className="relative mt-2">
+                                            <img
+                                                src={downloadedFile?.url
+                                                    ? downloadedFile?.url
+                                                    : msg.fileUrl.replace('/upload/', '/upload/e_blur:1000/')
+                                                }
+                                                alt="preview"
+                                                className="rounded-lg max-h-64 w-full object-contain"
+                                                onClick={() => downloadedFile && window.open(downloadedFile, "_blank")}
+                                            />
+
+                                            {!downloadedFile?.url && (
+                                                <>
+                                                    <div className="absolute top-2 left-2 bg-black/50 text-white p-1 rounded">
+                                                        <HiPhotograph className="w-5 h-5" />
+                                                    </div>
+                                                    <button
+                                                        onClick={() => {
+                                                            onDownload(msg)
+                                                        }}
+                                                        className="absolute inset-0 flex items-center justify-center bg-black/30 text-white rounded-lg hover:bg-black/40 transition"
+                                                    >
+                                                        {downloadedFile?.loading ? (
+                                                            <div className="animate-spin h-6 w-6 border-2 border-t-transparent border-white rounded-full"></div>
+                                                        ) : (
+                                                            <HiDownload className="w-8 h-8" />
+                                                        )}
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* video file */}
+                                    {msg.fileType === "video" && (
+                                        <div className="relative mt-2">
+                                            <video
+                                                src={downloadedFile?.url ? downloadedFile?.url : msg.fileUrl.replace('/upload/', '/upload/e_blur:1000/')}
+                                                controls={downloadedFile?.url ? true : false}
+                                                className="rounded-lg max-h-64 w-full cursor-pointer"
+                                            />
+                                            {!downloadedFile?.url && (
+                                                <>
+                                                    <div className="absolute top-2 left-2 bg-black/50 text-white p-1 rounded">
+                                                        <HiVideoCamera className="w-5 h-5" />
+                                                    </div>
+                                                    <button
+                                                        onClick={() => { onDownload(msg) }}
+                                                        className="absolute inset-0 flex items-center justify-center bg-black/30 text-white rounded-lg hover:bg-black/40 transition"
+                                                    >
+                                                        {downloadedFile?.loading ? (
+                                                            <div className="animate-spin h-6 w-6 border-2 border-t-transparent border-white rounded-full"></div>
+                                                        ) : (
+                                                            <HiDownload className="w-8 h-8" />
+                                                        )}
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* other files */}
+                                    {msg.fileType && msg.fileType !== "image" && msg.fileType !== "video" && (
+                                        <div className="relative mt-2 w-fit">
+                                            <div
+                                                className="flex items-center justify-between gap-3 p-2 border border-gray-300 rounded-md transition-colors w-60"
+                                            >
+                                                <div className="flex flex-col">
+                                                    <div className="font-medium text-sm truncate w-48">{msg.fileName}</div>
+                                                    {msg.fileSize && (
+                                                        <div className="text-xs text-gray-500">{(msg.fileSize / (1024 * 1024)).toFixed(2)} MB</div>
+                                                    )}
+                                                </div>
+
+                                                <a
+                                                    href={msg.fileUrl}
+                                                    download
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-gray-600 hover:text-gray-800 transition"
+                                                    title="Download File"
+                                                >
+                                                    <HiDownload className="w-6 h-6" />
+                                                </a>
+                                            </div>
+                                        </div>
+                                    )}
                                 </>
                             )}
                         </div>
