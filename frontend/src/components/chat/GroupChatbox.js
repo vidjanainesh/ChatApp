@@ -27,7 +27,7 @@ import {
     prependGroupMessages,
 } from "../../store/chatSlice";
 import EmojiPicker from "emoji-picker-react";
-import { HiOutlineLogout, HiUserAdd, HiOutlineUsers, HiOutlineChat } from "react-icons/hi";
+import { HiOutlineLogout, HiUserAdd, HiOutlineUsers, HiOutlineChat, HiPaperClip } from "react-icons/hi";
 import { setGroups } from "../../store/userSlice";
 
 export default function GroupChatbox() {
@@ -45,6 +45,7 @@ export default function GroupChatbox() {
     const groups = useSelector((state) => state.user.groups);
 
     const [input, setInput] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [editMode, setEditMode] = useState(null);
     const [replyTo, setReplyTo] = useState(null);
     const [isTyping, setIsTyping] = useState(false);
@@ -60,9 +61,10 @@ export default function GroupChatbox() {
     const [showFullEmojiPickerId, setShowFullEmojiPickerId] = useState(null);
     const [hasMore, setHasMore] = useState(true);
     const [loadingOlder, setLoadingOlder] = useState(false);
-    const [firstLoadDone, setFirstLoadDone] = useState(false);
-    const hasInitScrolled = useRef(false);
+    const [downloadedFiles, setDownloadedFiles] = useState({});
+    const [selectedFile, setSelectedFile] = useState(null);
 
+    const hasInitScrolled = useRef(false);
     const emojiRef = useRef(null);
     const membersDropdownRef = useRef(null);
     const chatWindowRef = useRef(null);
@@ -72,6 +74,7 @@ export default function GroupChatbox() {
     const reactionPickerRef = useRef();
     const fullReactionPickerRef = useRef();
     const inputRef = useRef(null);
+    const fileInputRef = useRef();
 
     let msgCount = -1;
 
@@ -114,7 +117,6 @@ export default function GroupChatbox() {
                 } else {
                     dispatch(setGroupMessages(newMessages));
                     dispatch(setGroupMembers(res.data.data.members.members));
-                    setFirstLoadDone(true);
                 }
             } else {
                 toast.error(
@@ -179,8 +181,13 @@ export default function GroupChatbox() {
     useEffect(() => {
         if (!messageLoading && messages.length && chatWindowRef.current) {
             if (!hasInitScrolled.current) {
-                chatWindowRef.current.scrollTop = chatWindowRef.current.scrollHeight;
-                hasInitScrolled.current = true;
+                setTimeout(() => {
+                    chatWindowRef.current.scrollTo({
+                        top: chatWindowRef.current.scrollHeight,
+                        behavior: "auto"
+                    });
+                    hasInitScrolled.current = true;
+                }, 0);
             }
         }
     }, [messageLoading, messages]);
@@ -238,7 +245,9 @@ export default function GroupChatbox() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!input.trim()) return;
+        if (!input.trim() && !selectedFile) return;
+
+        setIsSubmitting(true);
         setShowEmojiPicker(false);
 
         if (editMode) {
@@ -249,6 +258,7 @@ export default function GroupChatbox() {
                     setEditMode(null);  // exit edit mode
                     setInput("");       // clear input
                     setReplyTo(null);
+                    setIsSubmitting(false);
                 }
             } catch {
                 toast.error("Failed to edit message");
@@ -260,13 +270,18 @@ export default function GroupChatbox() {
                 isTyping: false,
             });
             try {
-                const res = await sendGroupMessage(
-                    { groupId: parseInt(id), msg: input, replyTo: replyTo?.id || null },
-                    token
-                );
+                const formData = new FormData();
+                formData.append("msg", input);
+                formData.append("groupId", parseInt(id));
+                if (replyTo?.id) formData.append("replyTo", replyTo.id);
+                if (selectedFile) formData.append("file", selectedFile);
+
+                const res = await sendGroupMessage(formData, token); // { groupId: parseInt(id), msg: input, replyTo: replyTo?.id || null },
                 if (res.data.status === "success") {
                     setInput("");
                     setReplyTo(null);
+                    setSelectedFile(null);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
                 } else {
                     toast.error("Could not send message", { autoClose: 3000 });
                 }
@@ -278,6 +293,8 @@ export default function GroupChatbox() {
                 } else {
                     toast.error(msg, { autoClose: 3000 });
                 }
+            } finally {
+                setIsSubmitting(false);
             }
         }
     };
@@ -342,6 +359,23 @@ export default function GroupChatbox() {
         }
     };
 
+    const handleDownload = (msg) => {
+        setDownloadedFiles(prev => ({
+            ...prev,
+            [msg.id]: { loading: true }
+        }));
+
+        setTimeout(() => {
+            setDownloadedFiles(prev => ({
+                ...prev,
+                [msg.id]: { loading: false, url: msg.fileUrl }
+            }));
+        }, 2000);
+    };
+
+    const handleFileChange = (e) => {
+        setSelectedFile(e.target.files[0]);
+    };
 
     const handleClickOutside = (event) => {
         if (emojiRef.current && !emojiRef.current.contains(event.target)) {
@@ -636,6 +670,8 @@ export default function GroupChatbox() {
                                     reactionPickerRef={reactionPickerRef}
                                     fullReactionPickerRef={fullReactionPickerRef}
                                     availableReactions={availableReactions}
+                                    downloadedFile={downloadedFiles[msg.id]}
+                                    onDownload={() => handleDownload(msg)}
                                 />
                             );
                         })
@@ -676,7 +712,7 @@ export default function GroupChatbox() {
                     {isTyping ? "Someone is typing..." : "\u00A0"}
                 </div>
 
-                <div className="relative" ref={emojiRef}>
+                <div className={isSubmitting ? "pointer-events-none opacity-50 relative" : "relative"} ref={emojiRef}>
                     {showEmojiPicker && (
                         <div
                             className="absolute bottom-16 left-2 z-50 origin-bottom-left"
@@ -719,6 +755,19 @@ export default function GroupChatbox() {
                             </button>
                         </div>
                     )}
+                    {selectedFile && (
+                        <div className="flex items-center justify-between bg-gray-50 border rounded p-2 mb-2">
+                            <div className="text-xs text-gray-700 truncate max-w-[200px]">
+                                📎 {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                            </div>
+                            <button
+                                onClick={() => setSelectedFile(null)}
+                                className="text-red-500 text-xs hover:underline ml-2"
+                            >
+                                Remove
+                            </button>
+                        </div>
+                    )}
 
                     <form
                         onSubmit={handleSubmit}
@@ -726,6 +775,7 @@ export default function GroupChatbox() {
                     >
                         <button
                             type="button"
+                            disabled={isSubmitting}
                             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                             className="text-gray-500 hover:text-indigo-500"
                             title="Insert Emoji"
@@ -749,6 +799,7 @@ export default function GroupChatbox() {
                         <textarea
                             ref={inputRef}
                             value={input}
+                            disabled={isSubmitting}
                             onChange={handleInputChange}
                             onKeyDown={(e) => {
                                 if (e.key === "Enter" && !e.shiftKey) {
@@ -761,8 +812,28 @@ export default function GroupChatbox() {
                             autoComplete="off"
                             rows={1}
                         />
+                        {!editMode && (
+                            <>
+                                <input
+                                    type="file"
+                                    disabled={isSubmitting}
+                                    ref={fileInputRef}
+                                    style={{ display: "none" }}
+                                    onChange={handleFileChange}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current.click()}
+                                    className="text-gray-500 hover:text-indigo-500"
+                                    title="Attach File"
+                                >
+                                    <HiPaperClip className="w-6 h-6" />
+                                </button>
+                            </>
+                        )}
                         <button
                             type="submit"
+                            disabled={isSubmitting}
                             className="bg-indigo-500 hover:bg-indigo-600 text-white p-2 rounded-full transition"
                         >
                             <svg
@@ -850,19 +921,7 @@ export default function GroupChatbox() {
                                                         const checked =
                                                             e.target.checked;
                                                         setSelectedFriends(
-                                                            (prev) =>
-                                                                checked
-                                                                    ? [
-                                                                        ...prev,
-                                                                        friend.id,
-                                                                    ]
-                                                                    : prev.filter(
-                                                                        (
-                                                                            id
-                                                                        ) =>
-                                                                            id !==
-                                                                            friend.id
-                                                                    )
+                                                            (prev) => checked ? [...prev, friend.id,] : prev.filter((id) => id !== friend.id)
                                                         );
                                                     }}
                                                 />

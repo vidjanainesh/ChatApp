@@ -17,11 +17,12 @@ const authMiddleware = require('../app/middlewares/authMiddleware');
 
 const groupValidationRules = require('../app/middlewares/validators/groupValidationRules');
 const handleValidation = require('../app/middlewares/validators/handleValidation');
+const upload = require('../app/helper/upload');
 
 router.post('/', groupValidationRules.createGroup, handleValidation, authMiddleware, createGroup);
 router.post('/join', authMiddleware, groupValidationRules.joinGroup, handleValidation, joinGroup);
 router.get('/leave/:id', authMiddleware, groupValidationRules.leaveGroup, handleValidation, leaveGroup)
-router.post('/send-message', groupValidationRules.sendGroupMessage, handleValidation, authMiddleware, sendGroupMessage);
+router.post('/send-message', upload.single("file"), groupValidationRules.sendGroupMessage, handleValidation, authMiddleware, sendGroupMessage);
 
 router.get('/data/:id', groupValidationRules.getGroupData, handleValidation, authMiddleware, getGroupData);
 // router.get('/:id', groupValidationRules.getGroupMembers, handleValidation, authMiddleware, getGroupMembers); // Not needed now

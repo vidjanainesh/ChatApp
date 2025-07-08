@@ -3,27 +3,27 @@ import axios from 'axios';
 const API_BASE = `${process.env.REACT_APP_API_BASE}/api`;
 
 export const registerUser = (data) => {
-    return axios.post(`${API_BASE}/authenticate/register`, data);
+    return axios.post(`${API_BASE}/auth/register`, data);
 }
 
 export const loginUser = (data) => {
-    return axios.post(`${API_BASE}/authenticate/login`, data);
+    return axios.post(`${API_BASE}/auth/login`, data);
 }
 
 export const googleLogin = (data) => {
-    return axios.post(`${API_BASE}/authenticate/google-login`, data);
+    return axios.post(`${API_BASE}/auth/google-login`, data);
 }
 
 export const forgetPassword = (data) => {
-    return axios.post(`${API_BASE}/authenticate/forget-password`, data);
+    return axios.post(`${API_BASE}/auth/forget-password`, data);
 }
 
 export const verifyToken = (data) => {
-    return axios.post(`${API_BASE}/authenticate/verify-token`, data);
+    return axios.post(`${API_BASE}/auth/verify-token`, data);
 }
 
 export const resetPassword = (data) => {
-    return axios.post(`${API_BASE}/authenticate/reset-password`, data);
+    return axios.post(`${API_BASE}/auth/reset-password`, data);
 }
 // ---------------------------------------------------------------------
 
@@ -39,9 +39,9 @@ export const getDashboardData = (token) => {
 
 // ---------------------------------------------------------------------
 
-export const sendMessage = (message, receiverId, token, replyTo) => {
+export const sendMessage = (formData, token) => {
     return axios.post(`${API_BASE}/chat`,
-        { message, receiverId, replyTo },
+        formData,
         {
             headers: {
                 Authorization: `Bearer ${token}`

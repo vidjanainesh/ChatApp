@@ -12,7 +12,7 @@ const GroupMessages = sequelize.define('group_messages', {
     },
     message: {
         type: DataTypes.TEXT,
-        allowNull: false,
+        allowNull: true,
     },
     type: {
         type: DataTypes.ENUM('text', 'system'),
@@ -29,6 +29,26 @@ const GroupMessages = sequelize.define('group_messages', {
     },
     reply_to: {
         type: DataTypes.INTEGER,
+        allowNull: true,
+    },
+    file_url: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+    },
+    file_type: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    file_name: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    file_size: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
+    file_blur_url: {
+        type: DataTypes.TEXT,
         allowNull: true,
     },
 });

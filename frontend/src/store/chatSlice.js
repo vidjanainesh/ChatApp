@@ -79,7 +79,6 @@ const chatSlice = createSlice({
     },
     setGroupMessages: (state, action) => {
       state.groupMessages = action.payload;
-      // console.log('Updated Group Messages (ini):', JSON.parse(JSON.stringify(state?.groupMessages)));
     },
     addGroupMessage: (state, action) => {
       state.groupMessages.push(action.payload);
@@ -94,8 +93,9 @@ const chatSlice = createSlice({
       const updatedMsg = action.payload;
       state.groupMessages = state.groupMessages.map((msg) =>
         // msg.id === updatedMsg.id ? updatedMsg : msg
-        msg.id === updatedMsg.id ? { ...msg, message: updatedMsg.message, isEdited: true } : msg
-      );
+      msg.id === updatedMsg.id ? { ...msg, message: updatedMsg.message, isEdited: true } : msg
+    );
+    console.log('Updated Group Messages (edit):', JSON.parse(JSON.stringify(state?.groupMessages)));
     },
     deleteGroupMsgAction: (state, action) => {
       const deletedMsg = action.payload;

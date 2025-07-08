@@ -7,6 +7,7 @@ const {
     errorThrowResponse,
 } = require("../../helper/response");
 const sequelize = require("../../models/database");
+const cloudinary = require('../../helper/cloudinary');
 
 const toCamelCase = (obj) => {
     const camelCaseObj = {};
@@ -22,11 +23,39 @@ const sendMessage = async (req, res) => {
         const { message, receiverId } = req.body;
         const replyTo = req.body.replyTo || null;
         const user = req.user;
+        const file = req?.file;
         // console.log(message, receiverId, user);
+        let fileUrl = null;
+        // let fileBlurUrl = null;
+        let fileType = null;
+        let fileName = null;
+        let fileSize = null;
 
-        if (!message || !receiverId) {
-            return unAuthorizedResponse(res, "Message content and Receiver ID are required");
+        if (!message && !file) {
+            return unAuthorizedResponse(res, "Message content or File is required");
         };
+
+        if (!receiverId) {
+            return unAuthorizedResponse(res, "Receiver ID is required");
+        }
+
+        if (file) {
+            fileUrl = file.path;
+            fileType = file.mimetype.startsWith("image") ? "image" : file.mimetype.startsWith("video") ? "video" : "file";
+            fileName = file.originalname;
+            fileSize = file.size;
+
+            // // generate blur url using public_id
+            // const publicId = `${file.filename}`; // 'chatapp_uploads/...'
+            // fileBlurUrl = cloudinary.url(publicId, {
+            //     transformation: [
+            //         { width: 20, quality: "auto" },
+            //         { effect: "blur:500" }
+            //     ],
+            //     format: "jpg",
+            //     secure: true,
+            // });
+        }
 
         const friendship = await Friends.findOne({
             where: {
@@ -45,8 +74,13 @@ const sendMessage = async (req, res) => {
         const sentMessage = await Message.create({
             sender_id: user.id,
             receiver_id: receiverId,
-            message,
+            message: message || null,
             reply_to: replyTo,
+            file_url: fileUrl,
+            file_type: fileType,
+            file_name: fileName,
+            file_size: fileSize,
+            // file_blur_url: fileBlurUrl
         });
 
         const repliedMessage = await Message.findOne({ where: { id: replyTo }, attributes: ['id', 'message'], raw: true });
@@ -76,7 +110,7 @@ const sendMessage = async (req, res) => {
         io.to(receiverRoom).emit("newMessage", payload);
         io.to(senderRoom).emit("newMessage", payload);
 
-        return successResponse(res, sentMessage, "Message sent");
+        return successResponse(res, payload, "Message sent");
     } catch (error) {
         return errorThrowResponse(res, error.message, error);
     }
@@ -218,6 +252,11 @@ const getMessages = async (req, res) => {
                 ['sender_id', 'senderId'],
                 ['receiver_id', 'receiverId'],
                 'message',
+                ['file_url', 'fileUrl'],
+                ['file_type', 'fileType'],
+                ['file_name', 'fileName'],
+                ['file_size', 'fileSize'],
+                ['file_blur_url', 'fileBlurUrl'],
                 ['is_read', 'isRead'],
                 ['is_deleted', 'isDeleted'],
                 ['is_edited', 'isEdited'],
@@ -288,7 +327,7 @@ const getMessages = async (req, res) => {
         //     }
         // );
 
-        return successResponse(res, {friendship: friendship?.status, messages: response.reverse()}, "All messages retrieved between the two people");
+        return successResponse(res, { friendship: friendship?.status, messages: response.reverse() }, "All messages retrieved between the two people");
 
     } catch (error) {
         return errorThrowResponse(res, error.message, error);

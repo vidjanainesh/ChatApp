@@ -5,6 +5,7 @@ const {
     notFoundResponse,
     errorResponse,
     successResponse,
+    unAuthorizedResponse,
 } = require("../../helper/response");
 const {
     Friends,
@@ -82,6 +83,17 @@ const sendGroupMessage = async (req, res) => {
         const { groupId, msg } = req.body;
         const replyTo = req.body.replyTo || null;
         const user = req.user;
+        const file = req.file;
+
+        let fileUrl = null;
+        // let fileBlurUrl = null;
+        let fileType = null;
+        let fileName = null;
+        let fileSize = null;
+
+        if (!msg && !file) {
+            return unAuthorizedResponse(res, "Message content or File is required");
+        };
 
         const group = await Groups.findOne({ where: { id: groupId } });
         if (!group) notFoundResponse(res, "Group not found");
@@ -93,11 +105,34 @@ const sendGroupMessage = async (req, res) => {
             return errorResponse(res, "User is not a part of this group");
         }
 
+        if (file) {
+            fileUrl = file.path;
+            fileType = file.mimetype.startsWith("image") ? "image" : file.mimetype.startsWith("video") ? "video" : "file";
+            fileName = file.originalname;
+            fileSize = file.size;
+
+            // // generate blur url using public_id
+            // const publicId = `${file.filename}`; // 'chatapp_uploads/...'
+            // fileBlurUrl = cloudinary.url(publicId, {
+            //     transformation: [
+            //         { width: 20, quality: "auto" },
+            //         { effect: "blur:500" }
+            //     ],
+            //     format: "jpg",
+            //     secure: true,
+            // });
+        }
+
         const groupMessage = await GroupMessages.create({
             group_id: groupId,
             sender_id: user.id,
             message: msg,
             reply_to: replyTo,
+            file_url: fileUrl,
+            file_type: fileType,
+            file_name: fileName,
+            file_size: fileSize,
+            // file_blur_url: fileBlurUrl
         });
 
         userIds = userIds.filter((curr) => {
@@ -117,7 +152,7 @@ const sendGroupMessage = async (req, res) => {
                 {
                     model: User,
                     as: 'sender',
-                    attributes: ['id','name'],
+                    attributes: ['id', 'name'],
                 }
             ]
         });
@@ -128,6 +163,11 @@ const sendGroupMessage = async (req, res) => {
             message: msg,
             createdAt: groupMessage.createdAt,
             type: 'text',
+            fileUrl: groupMessage.file_url,
+            fileType: groupMessage.file_type,
+            fileName: groupMessage.file_name,
+            fileSize: groupMessage.file_size,
+            fileBlurUrl: groupMessage.file_blur_url,
             isDeleted: false,
             isEdited: false,
             sender: {
@@ -260,6 +300,11 @@ const getGroupData = async (req, res) => {
                         "id",
                         ["sender_id", "senderId"],
                         "message",
+                        ['file_url', 'fileUrl'],
+                        ['file_type', 'fileType'],
+                        ['file_name', 'fileName'],
+                        ['file_size', 'fileSize'],
+                        ['file_blur_url', 'fileBlurUrl'],
                         ["is_deleted", "isDeleted"],
                         ["is_edited", "isEdited"],
                         "type",
@@ -281,7 +326,7 @@ const getGroupData = async (req, res) => {
                                 {
                                     model: User,
                                     as: 'sender',
-                                    attributes: ['id','name'],
+                                    attributes: ['id', 'name'],
                                 }
                             ]
                         }
