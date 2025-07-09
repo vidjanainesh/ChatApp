@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const authenticationRoutes = require('./authenticationRoutes');
+const authRoutes = require('./authRoutes');
 const chatRoutes = require('./chatRoutes');
 const friendRoutes = require('./friendRoutes');
 const userRoutes = require('./userRoutes');
@@ -11,7 +11,7 @@ const messageReactionRoutes = require('./messageReactionRoutes');
 const getDashboardData = require('../app/controllers/dashboard');
 const authMiddleware = require('../app/middlewares/authMiddleware');
 
-router.use('/auth', authenticationRoutes);
+router.use('/auth', authRoutes);
 router.use('/chat', chatRoutes);
 router.use('/friend', friendRoutes);
 router.use('/user', userRoutes);

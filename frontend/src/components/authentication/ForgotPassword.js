@@ -14,7 +14,7 @@ export default function ForgotPassword() {
       const res = await forgetPassword({ email });
       if (res.data.status === "success") {
         // toast.success("Token sent to email", { autoClose: 3000 });
-        navigate("/verify-token", { state: { email: email } });
+        navigate("/verify-token", { state: { email: email, mode: "forgetPassword" } });
       } else {
         toast.error(res.data.message || "Failed to send token", {
           autoClose: 3000,

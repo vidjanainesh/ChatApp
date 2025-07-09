@@ -9,9 +9,12 @@ const {
 
 const {
     forgetPassword,
-    verifyToken,
     resetPassword,
 } = require('../app/controllers/authentication/forgetPassword');
+
+const {
+    verifyToken
+} = require('../app/controllers/authentication/verifyToken');
 
 const { authenticationValidationRules } = require('../app/middlewares/validators/authValidationRules');
 const handleValidation = require('../app/middlewares/validators/handleValidation');

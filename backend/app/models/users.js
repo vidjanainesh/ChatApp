@@ -33,6 +33,11 @@ const User = sequelize.define('users', {
     token_expires: {
         type: DataTypes.DATE,
         allowNull: true,
+    },
+    is_verified: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
     }
 });
 

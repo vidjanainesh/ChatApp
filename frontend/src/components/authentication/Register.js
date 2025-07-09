@@ -25,8 +25,9 @@ export default function Register() {
     try {
       const res = await registerUser(form);
       if (res.data.status === "success") {
-        toast.success("Registration successful!", { autoClose: 3000 });
-        navigate("/");
+        // navigate("/");
+        toast.success(res.data.message, { autoClose: 3000 });
+        navigate("/verify-token", { state: { email: form.email, mode: "emailVerification" } });
       } else {
         toast.error(res.data.message || "Registration failed", {
           autoClose: 3000,

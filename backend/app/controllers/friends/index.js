@@ -13,11 +13,14 @@ const sendFriendReq = async (req, res) => {
         const user = req.user;
 
         if (user.id === id) {
-            return errorResponse(
-                res,
-                "You can't send a friend request to yourself."
-            );
+            return errorResponse(res, "You can't send a friend request to yourself.");
         }
+
+        const userExists = await User.findOne({
+            where: { id: id, is_verified: true },
+            raw: true
+        });
+        if (!userExists) throw new Error('User not verified!');
 
         const existing = await Friends.findOne({
             where: {
@@ -30,10 +33,7 @@ const sendFriendReq = async (req, res) => {
         });
 
         if (existing) {
-            return errorResponse(
-                res,
-                "Friend request already exists or you are already friends."
-            );
+            return errorResponse(res, "Friend request already exists or you are already friends.");
         }
 
         const obj = {

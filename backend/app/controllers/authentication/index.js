@@ -1,13 +1,14 @@
 const jwt = require('jsonwebtoken');
 const generator = require('generate-password');
 const nodemailer = require('nodemailer')
-const User = require('../../../app/models/users');
+const { User } = require('../../../app/models');
 const bcrypt = require('bcrypt');
 
 const {
     successResponse,
     successPostResponse,
-    errorThrowResponse
+    errorThrowResponse,
+    errorResponse,
 } = require("../../helper/response");
 
 const transporter = nodemailer.createTransport({
@@ -24,24 +25,86 @@ const register = async (req, res) => {
         const { name, email, password } = req.body;
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        // console.log(hashedPassword);
+        const token = Math.floor(1000 + Math.random() * 9000);
+        const tokenExpires = new Date(Date.now() + 15 * 60 * 1000);
 
         const user = await User.findOne({
-            where: { email: email.trim().toLowerCase() },
-            raw: true
+            where: { email: email },
         });
 
         if (user) {
-            throw new Error('User with the same email already exists');
+            if (user.is_verified) {
+                return errorResponse(res, 'User with the same email already exists');
+
+            } else {
+
+                user.token = token;
+                user.token_expires = tokenExpires;
+                await user.save();
+
+                const mailOptions = {
+                    from: process.env.EMAIL,
+                    to: email,
+                    subject: 'Verify Your Email - Complete Your Registration',
+                    html: `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9;">
+                            <h2 style="color: #333;">Welcome to Pavans Team!</h2>
+                            <p>Hello,</p>
+                            <p>To complete your registration and activate your account, please verify your email using the code below.</p>
+                            
+                            <div style="font-size: 24px; font-weight: bold; color: #2c3e50; text-align: center; padding: 10px 0; background-color: #ffffff; border: 1px dashed #ccc; margin: 20px 0;">
+                                ${token}
+                            </div>
+
+                            <p>This verification code is valid for <strong>15 minutes</strong>.</p>
+                            
+                            <p>If you did not create an account with us, please ignore this email.</p>
+                            
+                            <p>Thank you,<br>The Pavans Team</p>
+                        </div>
+                    `
+                };
+
+                await transporter.sendMail(mailOptions);
+
+                return successResponse(res, email, "Already registered - Pending email verification");
+            }
         }
 
         await User.create({
-            name: name.trim(),
-            email: email.trim().toLowerCase(),
+            name: name,
+            email: email,
             password: hashedPassword,
+            token: token,
+            token_expires: tokenExpires,
         });
 
-        return successPostResponse(res, {}, "User Registered");
+        const mailOptions = {
+            from: process.env.EMAIL,
+            to: email,
+            subject: 'Verify Your Email - Complete Your Registration',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9;">
+                    <h2 style="color: #333;">Welcome to Pavans Team!</h2>
+                    <p>Hello,</p>
+                    <p>Thank you for registering with us. To complete your registration and activate your account, please verify your email using the code below.</p>
+                    
+                    <div style="font-size: 24px; font-weight: bold; color: #2c3e50; text-align: center; padding: 10px 0; background-color: #ffffff; border: 1px dashed #ccc; margin: 20px 0;">
+                        ${token}
+                    </div>
+
+                    <p>This verification code is valid for <strong>15 minutes</strong>.</p>
+                    
+                    <p>If you did not create an account with us, please ignore this email.</p>
+                    
+                    <p>Thank you,<br>The Pavans Team</p>
+                </div>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        return successPostResponse(res, email, "Verify your email to complete registration");
 
     } catch (error) {
         return errorThrowResponse(res, `${error.message}`, error);
@@ -54,7 +117,7 @@ const login = async (req, res) => {
         const { email, password } = req.body;
 
         const user = await User.findOne({
-            where: { email: email },
+            where: { email: email, is_verified: true },
             raw: true
         });
 
@@ -82,8 +145,8 @@ const googleLogin = async (req, res) => {
     try {
         const { name, email } = req.body;
 
-        const existing = await User.findOne({ where: {email}, raw: true });
-        
+        const existing = await User.findOne({ where: { email, is_verified: true }, raw: true });
+
         if (existing) {
             const userToken = jwt.sign(existing, process.env.JWT_SECRET);
             return successResponse(res, userToken, "User Logged In");
@@ -131,6 +194,7 @@ const googleLogin = async (req, res) => {
                 name,
                 email,
                 password: hashedPassword,
+                is_verified: true,
             });
 
             const userToken = jwt.sign(user.toJSON(), process.env.JWT_SECRET);
