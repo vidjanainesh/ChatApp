@@ -25,15 +25,8 @@ const forgetPassword = async (req, res) => {
 
         const token = Math.floor(1000 + Math.random() * 9000);
         const tokenExpires = new Date(Date.now() + 15 * 60 * 1000); 
-    
-        // await User.update({
-        //     token: token,
-        //     token_expires: tokenExpires
-        // }, {
-        //     where: {email: email}
-        // });
 
-        const user = await User.findOne({where: {email}});
+        const user = await User.findOne({where: {email, is_verified: true}});
         
         if(!user) {
             return unAuthorizedResponse(res, "No such users found");
@@ -52,7 +45,7 @@ const forgetPassword = async (req, res) => {
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9;">
                 <h2 style="color: #333;">Password Reset Request</h2>
                 <p>Hello,</p>
-                <p>You requested to reset your password. Use the OTP below to proceed. This OTP is valid for <strong>15 minutes</strong>.</p>
+                <p>You requested to reset your password. Use the code below to proceed. This OTP is valid for <strong>15 minutes</strong>.</p>
                 
                 <div style="font-size: 24px; font-weight: bold; color: #2c3e50; text-align: center; padding: 10px 0; background-color: #ffffff; border: 1px dashed #ccc; margin: 20px 0;">
                     ${token}
@@ -67,39 +60,10 @@ const forgetPassword = async (req, res) => {
 
         await transporter.sendMail(mailOptions);
         
-        // const user = await User.findOne({email});
         return successResponse(res, {}, "Check mail for OTP");   
 
     } catch (error) {
        return errorResponse(res, error.message, 500);
-    }
-}
-
-const verifyToken = async (req, res) => {
-    try {
-        const {email, token} = req.body;
-
-        const user = await User.findOne({
-            where: {email},
-        });
-        // console.log(user);
-
-        if(user.token == token && user.token_expires > new Date()){
-            // const emailToken = jwt.sign(
-            //     {email}, 
-            //     process.env.JWT_SECRET, 
-            //     {expiresIn: '15m'},
-            // );
-            user.token = null;
-            user.token_expires = null;
-            await user.save();
-            return successResponse(res, {}, "OTP verified");
-        }
-        else{
-            return errorResponse(res, "Invalid or Expired OTP, please try again.", 400);
-        }
-    } catch (error) {
-        return errorResponse(res, error.message, 500);
     }
 }
 
@@ -113,6 +77,9 @@ const resetPassword = async (req, res) => {
         if(!token) {
             return unAuthorizedResponse(res, "Reset token missing");
         }
+
+        const user = await User.findOne({where: {email, is_verified: true}});
+        if(!user) return unAuthorizedResponse(res, "No such users found");
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -135,6 +102,5 @@ const resetPassword = async (req, res) => {
 
 module.exports = {
     forgetPassword,
-    verifyToken,
     resetPassword
 }

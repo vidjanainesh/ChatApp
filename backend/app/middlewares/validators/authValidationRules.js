@@ -5,7 +5,13 @@ const authenticationValidationRules = {
     body("name")
       .trim()
       .notEmpty().withMessage("Name is required")
-      .isLength({ min: 2 }).withMessage("Name should be at least 2 characters long"),
+      .isLength({ min: 2 }).withMessage("Name should be at least 2 characters long")
+      .customSanitizer(value => {
+        return value
+          .split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+          .join(' ');
+      }),
 
     body("email")
       .trim()

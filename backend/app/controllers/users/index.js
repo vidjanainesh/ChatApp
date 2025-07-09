@@ -14,7 +14,7 @@ const getUsers = async (req, res) => {
         const users = await sequelize.query(`
             SELECT u.id, u.name, u.email
             FROM users u
-            WHERE u.id NOT IN (:excludedIds)
+            WHERE u.id NOT IN (:excludedIds) AND u.is_verified = true
             AND NOT EXISTS (
                 SELECT 1 FROM friends f
                 WHERE (
@@ -53,7 +53,7 @@ const searchUsers = async (req, res) => {
         const users = await sequelize.query(`
             SELECT u.id, u.name, u.email
             FROM users u
-            WHERE u.id NOT IN (:excludedIds)
+            WHERE u.id NOT IN (:excludedIds) AND u.is_verified = true
             AND NOT EXISTS (
                 SELECT 1 FROM friends f
                 WHERE (
@@ -78,7 +78,6 @@ const searchUsers = async (req, res) => {
         return errorThrowResponse(res, error.message, error);
     }
 };
-
 
 module.exports = {
     getUsers,
