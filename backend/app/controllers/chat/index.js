@@ -72,8 +72,8 @@ const sendMessage = async (req, res) => {
         }
 
         const sentMessage = await Message.create({
-            sender_id: user.id,
-            receiver_id: receiverId,
+            sender_id: parseInt(user.id),
+            receiver_id: parseInt(receiverId),
             message: message || null,
             reply_to: replyTo,
             file_url: fileUrl,

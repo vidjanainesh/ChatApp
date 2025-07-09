@@ -72,7 +72,7 @@ function setupSocket(server) {
           }
         }
       );
-
+      
       // Notify the sender (chatUserId) that their messages have been seen
       io.to(`user_${chatUserId}`).emit("messages-seen", {
         by: userId,

@@ -3,6 +3,7 @@ import ChatMessage from "./ChatMessage";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { getMessages, sendMessage, deleteMessage, editMessage, reactMessage, deleteReactions, sendFriendReq } from "../../api";
 import { toast } from "react-toastify";
+import { motion } from 'framer-motion';
 import { jwtDecode } from "jwt-decode";
 import useSocket from "../../hooks/useSocket";
 import EmojiPicker from "emoji-picker-react";
@@ -29,7 +30,6 @@ export default function Chatbox() {
   const hasInitScrolled = useRef(false);
   const lastMessageId = useRef(null);
   const fileInputRef = useRef();
-  const bottomRef = useRef(null);
 
   const dispatch = useDispatch();
   const messages = useSelector((state) => state.chat.messages);
@@ -61,6 +61,8 @@ export default function Chatbox() {
   const [downloadedFiles, setDownloadedFiles] = useState({});
   const [selectedFile, setSelectedFile] = useState(null);
 
+  const [firstUnreadMessageId, setFirstUnreadMessageId] = useState(null);
+
   const availableReactions = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
   const socketRef = useSocket({
@@ -83,7 +85,7 @@ export default function Chatbox() {
         const newMessages = res.data.data.messages;
 
         if (beforeId) {
-          if (newMessages.length < 9) setHasMore(false);
+          if (newMessages?.length < 9) setHasMore(false);
           dispatch(prependMessages(newMessages));
         } else {
           dispatch(setMessages(newMessages));
@@ -172,7 +174,7 @@ export default function Chatbox() {
 
   // 1. Initial load scroll
   useEffect(() => {
-    if (!messageLoading && messages.length && chatWindowRef.current) {
+    if (!messageLoading && messages?.length && chatWindowRef.current) {
       if (!hasInitScrolled.current) {
         setTimeout(() => {
           chatWindowRef.current.scrollTo({
@@ -197,9 +199,9 @@ export default function Chatbox() {
   // 3. Scroll to bottom if new and you are near bottom
   useEffect(() => {
     const el = chatWindowRef.current;
-    if (!el || messages.length === 0) return;
+    if (!el || messages?.length === 0) return;
 
-    const newLastMessageId = messages[messages.length - 1]?.id;
+    const newLastMessageId = messages[messages?.length - 1]?.id;
 
     if (lastMessageId.current !== newLastMessageId) {
       const threshold = 400;
@@ -215,13 +217,26 @@ export default function Chatbox() {
 
   // Mark messages seen
   useEffect(() => {
-    if (socketRef) {
+    if (!messageLoading && socketRef) {
       socketRef.emit("mark-messages-seen", {
         userId: loggedInUserId,
         chatUserId: parseInt(id)
       });
     }
-  }, [messages.length, socketRef, loggedInUserId, id]);
+  }, [messageLoading, messages.length, socketRef, loggedInUserId, id]);
+
+
+  useEffect(() => {
+    if (!messageLoading && messages?.length && firstUnreadMessageId === null) {
+      const firstUnread = messages.find(
+        m => !m.isRead && m.receiverId === loggedInUserId
+      );
+      if (firstUnread) {
+        setFirstUnreadMessageId(firstUnread.id);
+      }
+    }
+  }, [messageLoading, messages, loggedInUserId, firstUnreadMessageId]);
+
 
 
   const handleInputChange = (e) => {
@@ -323,7 +338,7 @@ export default function Chatbox() {
     setTimeout(() => {
       if (inputRef.current) {
         inputRef.current.focus();
-        inputRef.current.selectionStart = inputRef.current.selectionEnd = inputRef.current.value.length;
+        inputRef.current.selectionStart = inputRef.current.selectionEnd = inputRef.current.value?.length;
       }
     }, 0);
   };
@@ -334,7 +349,7 @@ export default function Chatbox() {
     setTimeout(() => {
       if (inputRef.current) {
         inputRef.current.focus();
-        inputRef.current.selectionStart = inputRef.current.selectionEnd = inputRef.current.value.length;
+        inputRef.current.selectionStart = inputRef.current.selectionEnd = inputRef.current.value?.length;
       }
     }, 0);
   };
@@ -439,7 +454,7 @@ export default function Chatbox() {
 
           {messageLoading ? (
             <div className="text-center text-gray-400 mt-4 text-sm">Loading chat...</div>
-          ) : messages.length === 0 ? (
+          ) : messages?.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-center text-gray-500 mt-10 space-y-2">
               <HiOutlineChat className="text-3xl text-indigo-400" />
               <p className="text-sm font-medium">No messages yet</p>
@@ -454,66 +469,84 @@ export default function Chatbox() {
               const userReaction = msg.reactions?.find(r => r.userId === loggedInUserId);
 
               return (
-                <ChatMessage
-                  key={msg.id}
-                  msg={msg}
-                  prevDate={prevDate !== currentDate ? currentDate : null}
-                  isSender={isSender}
-                  userReaction={userReaction}
-                  availableReactions={availableReactions}
-                  onReact={handleReact}
-                  onReply={handleReplyClick}
-                  onEdit={handleEditClick}
-                  onDelete={handleDeleteClick}
-                  reactionPickerId={reactionPickerId}
-                  setReactionPickerId={setReactionPickerId}
-                  showFullEmojiPickerId={showFullEmojiPickerId}
-                  setShowFullEmojiPickerId={setShowFullEmojiPickerId}
-                  reactionPickerRef={reactionPickerRef}
-                  fullReactionPickerRef={fullReactionPickerRef}
-                  formatTime={formatTime}
-                  selectedMessage={selectedMessage}
-                  setSelectedMessage={setSelectedMessage}
-                  loggedInUserId={loggedInUserId}
-                  downloadedFile={downloadedFiles[msg.id]}
-                  onDownload={() => handleDownload(msg)}
-                />
+                <React.Fragment key={msg.id}>
+                  {msg.id === firstUnreadMessageId && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="flex items-center justify-center my-4"
+                    >
+                      <div className="flex items-center gap-2 w-full max-w-xs px-4">
+                        <div className="flex-1 border-t border-gray-300"></div>
+                        <span className="text-xs text-gray-500 whitespace-nowrap px-3 py-0.5 rounded-full">
+                          New Messages
+                        </span>
+                        <div className="flex-1 border-t border-gray-300"></div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  <ChatMessage
+                    key={msg.id}
+                    msg={msg}
+                    prevDate={prevDate !== currentDate ? currentDate : null}
+                    isSender={isSender}
+                    userReaction={userReaction}
+                    availableReactions={availableReactions}
+                    onReact={handleReact}
+                    onReply={handleReplyClick}
+                    onEdit={handleEditClick}
+                    onDelete={handleDeleteClick}
+                    reactionPickerId={reactionPickerId}
+                    setReactionPickerId={setReactionPickerId}
+                    showFullEmojiPickerId={showFullEmojiPickerId}
+                    setShowFullEmojiPickerId={setShowFullEmojiPickerId}
+                    reactionPickerRef={reactionPickerRef}
+                    fullReactionPickerRef={fullReactionPickerRef}
+                    formatTime={formatTime}
+                    selectedMessage={selectedMessage}
+                    setSelectedMessage={setSelectedMessage}
+                    loggedInUserId={loggedInUserId}
+                    downloadedFile={downloadedFiles[msg.id]}
+                    onDownload={() => handleDownload(msg)}
+                  />
+                </React.Fragment>
               );
             })
           )}
 
-          <div ref={bottomRef}></div>
         </div>
         {selectedMessage && selectedMessage.mode !== "edit" && (
-          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-            <div className="bg-white p-4 rounded-xl shadow-xl w-72" ref={modalRef}>
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Choose Action</h3>
-              <div className="flex justify-end gap-4">
-                <button
-                  onClick={() => {
-                    handleEditClick(selectedMessage);
-                    setSelectedMessage(null); // close modal immediately({ ...selectedMessage, mode: "edit" });
-                  }}
-                  className="text-indigo-600 text-sm"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={handleDeleteClick}
-                  className="text-red-500 text-sm"
-                >
-                  Delete
-                </button>
-                <button
-                  onClick={() => setSelectedMessage(null)}
-                  className="text-gray-500 text-sm"
-                >
-                  Cancel
-                </button>
+            <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+              <div className="bg-white p-4 rounded-xl shadow-xl w-72" ref={modalRef}>
+                <h3 className="text-sm font-medium text-gray-700 mb-3">Choose Action</h3>
+                <div className="flex justify-end gap-4">
+                  <button
+                    onClick={() => {
+                      handleEditClick(selectedMessage);
+                      setSelectedMessage(null); // close modal immediately({ ...selectedMessage, mode: "edit" });
+                    }}
+                    className="text-indigo-600 text-sm"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={handleDeleteClick}
+                    className="text-red-500 text-sm"
+                  >
+                    Delete
+                  </button>
+                  <button
+                    onClick={() => setSelectedMessage(null)}
+                    className="text-gray-500 text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
         <div className="text-sm text-gray-500 mb-2 h-5 px-1">
           {isTyping ? "Typing..." : "\u00A0"}
