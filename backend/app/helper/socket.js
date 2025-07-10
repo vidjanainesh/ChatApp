@@ -1,6 +1,6 @@
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
-const { GroupMembers, Message } = require("../models"); // adjust path as needed
+const { GroupMembers, Message, GroupMessageRead, GroupMessages } = require("../models"); // adjust path as needed
 
 const allowedOrigins = [
   "http://localhost:3001",
@@ -79,6 +79,32 @@ function setupSocket(server) {
         chatUserId
       });
     });
+
+    socket.on("mark-group-messages-seen", async ({ userId, groupId }) => {
+      // Mark all messages where GroupID is groupId
+      
+      let groupMessagesIds = await GroupMessages.findAll({where: {group_id: groupId, is_deleted: false}, attributes: ['id'], raw: true});
+      groupMessagesIds = groupMessagesIds.map(curr => curr.id);
+      
+      const updatedRows = await GroupMessageRead.update(
+        { read_at: new Date() },
+        {
+          where: {
+            user_id: userId,
+            group_message_id: groupMessagesIds,
+            read_at: null,
+          }
+        }
+      );
+      console.log(updatedRows);
+      
+      // Notify the sender (chatUserId) that their messages have been seen
+      io.to(`group_${groupId}`).emit("group-messages-seen", {
+        by: userId,
+        groupId,
+      });
+    });
+
 
     // Group typing
     socket.on("groupTyping", ({ groupId, senderId, isTyping }) => {

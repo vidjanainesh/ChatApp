@@ -79,9 +79,11 @@ const chatSlice = createSlice({
     },
     setGroupMessages: (state, action) => {
       state.groupMessages = action.payload;
+      console.log('Set messages:', JSON.parse(JSON.stringify(state.groupMessages)));
     },
     addGroupMessage: (state, action) => {
       state.groupMessages.push(action.payload);
+      console.log('Add messages:', JSON.parse(JSON.stringify(state.groupMessages)));
     },
     prependGroupMessages: (state, action) => {
       state.groupMessages = [...action.payload, ...state.groupMessages];
@@ -93,9 +95,9 @@ const chatSlice = createSlice({
       const updatedMsg = action.payload;
       state.groupMessages = state.groupMessages.map((msg) =>
         // msg.id === updatedMsg.id ? updatedMsg : msg
-      msg.id === updatedMsg.id ? { ...msg, message: updatedMsg.message, isEdited: true } : msg
-    );
-    console.log('Updated Group Messages (edit):', JSON.parse(JSON.stringify(state?.groupMessages)));
+        msg.id === updatedMsg.id ? { ...msg, message: updatedMsg.message, isEdited: true } : msg
+      );
+      console.log('Updated Group Messages (edit):', JSON.parse(JSON.stringify(state?.groupMessages)));
     },
     deleteGroupMsgAction: (state, action) => {
       const deletedMsg = action.payload;
@@ -103,6 +105,17 @@ const chatSlice = createSlice({
         // msg.id === deletedMsg.id ? deletedMsg : msg
         msg.id === deletedMsg.id ? { ...msg, isDeleted: true } : msg
       );
+    },
+    markGroupMessagesAsSeen: (state, action) => {
+      const { by } = action.payload;
+      state.groupMessages = state.groupMessages.map(msg => {
+        return {
+          ...msg,
+          reads: msg.reads?.map(curr =>
+            curr.userId === by ? { ...curr, readAt: new Date().toISOString() } : curr
+          )
+        }
+      });
     },
     setCurrentChat: (state, action) => {
       state.currentChat = action.payload.id;
@@ -165,6 +178,7 @@ export const {
   clearGroupMessages,
   editGroupMsgAction,
   deleteGroupMsgAction,
+  markGroupMessagesAsSeen,
   setCurrentChat,
   clearChatState,
   setGroupMembers,
