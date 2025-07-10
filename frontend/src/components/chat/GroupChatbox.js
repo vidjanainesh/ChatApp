@@ -702,23 +702,23 @@ export default function GroupChatbox() {
                     <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
                         <div className="bg-white p-4 rounded-xl shadow-xl w-72">
                             <h3 className="text-sm font-medium text-gray-700 mb-3">Choose Action</h3>
-                            <div className="flex justify-end gap-4">
+                            <div className="flex justify-end gap-2">
                                 <button
                                     onClick={() => {
-                                                setSeenModalData({
-                                                    msg: selectedMessage,
-                                                    message: selectedMessage.message || "📎 File",
-                                                    time: formatTime(selectedMessage.createdAt),
-                                                    senderName: selectedMessage.sender?.name,
-                                                    fileType: selectedMessage.fileType,
-                                                    isReadAll: selectedMessage,
-                                                    readers: selectedMessage.reads.filter(r => r.readAt !== null),
-                                                    notSeen: selectedMessage.reads.filter(r => r.readAt === null),
-                                                    total: selectedMessage.reads.length
-                                                });
-                                                setSelectedMessage(null);
-                                            }}
-                                    className="text-blue-600 text-sm"
+                                        setSeenModalData({
+                                            msg: selectedMessage,
+                                            message: selectedMessage.message || "📎 File",
+                                            time: formatTime(selectedMessage.createdAt),
+                                            senderName: selectedMessage.sender?.name,
+                                            fileType: selectedMessage.fileType,
+                                            isReadAll: selectedMessage,
+                                            readers: selectedMessage.reads.filter(r => r.readAt !== null),
+                                            notSeen: selectedMessage.reads.filter(r => r.readAt === null),
+                                            total: selectedMessage.reads.length
+                                        });
+                                        setSelectedMessage(null);
+                                    }}
+                                    className="w-14 text-teal-600 text-sm bg-teal-50 hover:bg-teal-100 rounded-md py-1 transition"
                                 >
                                     Info
                                 </button>
@@ -727,19 +727,19 @@ export default function GroupChatbox() {
                                         handleEditClick(selectedMessage);
                                         setSelectedMessage(null);
                                     }}
-                                    className="text-indigo-600 text-sm"
+                                    className="w-14 text-indigo-600 text-sm bg-indigo-50 hover:bg-indigo-100 rounded-md py-1 transition"
                                 >
                                     Edit
                                 </button>
                                 <button
                                     onClick={() => handleDeleteClick(selectedMessage.id)}
-                                    className="text-red-500 text-sm"
+                                    className="w-14 text-red-500 text-sm bg-red-50 hover:bg-red-100 rounded-md py-1 transition"
                                 >
                                     Delete
                                 </button>
                                 <button
                                     onClick={() => setSelectedMessage(null)}
-                                    className="text-gray-500 text-sm"
+                                    className="w-14 text-gray-600 text-sm bg-gray-100 hover:bg-gray-200 rounded-md py-1 transition"
                                 >
                                     Cancel
                                 </button>
@@ -747,6 +747,7 @@ export default function GroupChatbox() {
                         </div>
                     </div>
                 )}
+
 
                 <div className="text-sm text-gray-500 mb-2 h-5 px-1">
                     {isTyping ? "Someone is typing..." : "\u00A0"}
@@ -1119,7 +1120,7 @@ export default function GroupChatbox() {
                                     </div>
                                 </div>
                             )}
-                            
+
                             {/* Close button */}
                             <div className="flex justify-end mt-6">
                                 <button
