@@ -79,11 +79,11 @@ const chatSlice = createSlice({
     },
     setGroupMessages: (state, action) => {
       state.groupMessages = action.payload;
-      console.log('Set messages:', JSON.parse(JSON.stringify(state.groupMessages)));
+      // console.log('Set messages:', JSON.parse(JSON.stringify(state.groupMessages)));
     },
     addGroupMessage: (state, action) => {
       state.groupMessages.push(action.payload);
-      console.log('Add messages:', JSON.parse(JSON.stringify(state.groupMessages)));
+      // console.log('Add messages:', JSON.parse(JSON.stringify(state.groupMessages)));
     },
     prependGroupMessages: (state, action) => {
       state.groupMessages = [...action.payload, ...state.groupMessages];
