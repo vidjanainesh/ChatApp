@@ -143,7 +143,25 @@ const sendGroupMessage = async (req, res) => {
             group_message_id: groupMessage.id,
             user_id: id,
         }));
-        await GroupMessageRead.bulkCreate(readEntries);
+        let readIds = await GroupMessageRead.bulkCreate(readEntries);
+        readIds = readIds.map(read => read.id);
+
+        const reads = await GroupMessageRead.findAll({
+            where: { id: readIds },
+            attributes: [
+                'id',
+                ['user_id', 'userId'],
+                ['read_at', 'readAt'],
+            ],
+            include: [
+                {
+                    model: User,
+                    as: 'reader',
+                    attributes: ['name']
+                }
+            ]
+
+        })
 
         const repliedMessage = await GroupMessages.findOne({
             where: { id: replyTo },
@@ -175,6 +193,7 @@ const sendGroupMessage = async (req, res) => {
             },
             reactions: [],
             repliedMessage,
+            reads,
         };
         const io = req.app.get("io");
         io.to(`group_${groupId}`).emit("newGroupMessage", { message, groupId });
@@ -282,74 +301,87 @@ const getGroupData = async (req, res) => {
 
         const gmWhereClause = {
             is_deleted: false,
+            group_id: groupId,
         }
 
         if (beforeMessageId) {
             gmWhereClause.id = { [Op.lt]: beforeMessageId }
         }
 
-        const groupMessages = await Groups.findOne({
-            where: { id: groupId },
-            attributes: ["id", "name"],
+        const groupMessages = await GroupMessages.findAll({
+            where: gmWhereClause,
+            attributes: [
+                "id",
+                ["sender_id", "senderId"],
+                "message",
+                ['file_url', 'fileUrl'],
+                ['file_type', 'fileType'],
+                ['file_name', 'fileName'],
+                ['file_size', 'fileSize'],
+                ['file_blur_url', 'fileBlurUrl'],
+                ["is_deleted", "isDeleted"],
+                ["is_edited", "isEdited"],
+                "type",
+                "createdAt",
+            ],
+            limit: 9,
+            order: [['id', 'DESC']],
             include: [
+
+
+                {
+                    model: User,
+                    as: "sender",
+                    attributes: ["name"],
+                },
                 {
                     model: GroupMessages,
-                    as: "messages",
-                    where: gmWhereClause,
-                    attributes: [
-                        "id",
-                        ["sender_id", "senderId"],
-                        "message",
-                        ['file_url', 'fileUrl'],
-                        ['file_type', 'fileType'],
-                        ['file_name', 'fileName'],
-                        ['file_size', 'fileSize'],
-                        ['file_blur_url', 'fileBlurUrl'],
-                        ["is_deleted", "isDeleted"],
-                        ["is_edited", "isEdited"],
-                        "type",
-                        "createdAt",
-                    ],
-                    order: [['id', 'DESC']],
-                    limit: 9,
+                    as: 'repliedMessage',
+                    attributes: ['id', 'message'],
                     include: [
                         {
                             model: User,
-                            as: "sender",
-                            attributes: ["name"],
-                        },
-                        {
-                            model: GroupMessages,
-                            as: 'repliedMessage',
-                            attributes: ['id', 'message'],
-                            include: [
-                                {
-                                    model: User,
-                                    as: 'sender',
-                                    attributes: ['id', 'name'],
-                                }
-                            ]
+                            as: 'sender',
+                            attributes: ['id', 'name'],
                         }
-                    ],
+                    ]
                 },
+                {
+                    model: GroupMessageRead,
+                    as: 'reads',
+                    attributes: [
+                        'id',
+                        ['user_id', 'userId'],
+                        ['read_at', 'readAt'],
+                    ],
+                    include: [
+                        {
+                            model: User,
+                            as: 'reader',
+                            attributes: ['name']
+                        }
+                    ]
+                }
+
+
             ],
         });
 
-        const plainGroupMessages = groupMessages.toJSON();
+        const plainGroupMessages = groupMessages.map(msg => msg.toJSON());
 
         // Get group messages' ids
-        const groupMessageIds = plainGroupMessages.messages.map((curr) => curr.id);
+        const groupMessageIds = plainGroupMessages.map((curr) => curr.id);
 
-        // Update read status
-        await GroupMessageRead.update(
-            { read_at: new Date() },
-            {
-                where: {
-                    group_message_id: groupMessageIds,
-                    user_id: user.id,
-                },
-            }
-        );
+        // // Update read status
+        // await GroupMessageRead.update(
+        //     { read_at: new Date() },
+        //     {
+        //         where: {
+        //             group_message_id: groupMessageIds,
+        //             user_id: user.id,
+        //         },
+        //     }
+        // );
 
         // Get the reactions
         let messageReactions = await MessageReactions.findAll({
@@ -385,7 +417,7 @@ const getGroupData = async (req, res) => {
             }
         ));
 
-        const messagesWithReactions = plainGroupMessages.messages.map((msg) => {
+        const messagesWithReactions = plainGroupMessages.map((msg) => {
             const newMsg = ({
                 ...msg,
                 reactions: [],

@@ -2,6 +2,7 @@ import React, { memo } from "react";
 import { motion } from "framer-motion";
 import EmojiPicker from "emoji-picker-react";
 import { HiEmojiHappy, HiDotsHorizontal, HiPlusSm, HiOutlineChat, HiDownload, HiPhotograph, HiVideoCamera } from "react-icons/hi";
+import { BsCheck, BsCheckAll } from "react-icons/bs";
 
 function GroupChatMessage({
     msg,
@@ -9,12 +10,14 @@ function GroupChatMessage({
     isSender,
     prevDate,
     currentDate,
+    isReadAll,
     msgCount,
     loggedInUserId,
     reactionPickerId,
     setReactionPickerId,
     showFullEmojiPickerId,
     setShowFullEmojiPickerId,
+    setSeenModalData,
     handleReact,
     handleEditClick,
     onReply,
@@ -30,9 +33,9 @@ function GroupChatMessage({
     onDownload,
 }) {
     const existingReaction = msg.reactions?.find(r => r.userId === loggedInUserId);
-    
+
     return (
-        <>
+        <div id={`msg_${msg.id}`}>
             {/* Date Divider */}
             {prevDate !== currentDate && (
                 <div className="flex items-center justify-center my-4">
@@ -181,9 +184,21 @@ function GroupChatMessage({
                         </div>
                         {!msg.isDeleted && (
                             <div className={`flex items-center mt-1 ${isSender ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`text-[10px] pr-0 text-gray-400 ${isSender ? 'text-right' : 'text-left'}`}>
+                                <div className={`text-[10px] pr-0 text-gray-400 ${isSender ? 'text-right' : 'text-left'} flex items-center gap-1`}>
                                     {formatTime(msg.createdAt)}{" "}
                                     {!!msg.isEdited && <span className="italic">(edited)</span>}
+
+                                    {isSender && (
+                                        <span
+                                            style={{ color: isReadAll ? "#3B82F6" : "#9CA3AF" }}
+                                        >
+                                            {isReadAll ? (
+                                                <BsCheckAll className="inline-block w-4 h-4" />
+                                            ) : (
+                                                <BsCheck className="inline-block w-4 h-4" />
+                                            )}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -270,6 +285,7 @@ function GroupChatMessage({
                             </div>
                         )}
 
+
                         {/* Floating top icons */}
                         <div className={`absolute -top-2 ${isSender ? '-right-2' : '-left-2'} flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
                             {!msg.isDeleted && (
@@ -295,7 +311,7 @@ function GroupChatMessage({
                             )}
                             {!msg.isDeleted && isSender && (
                                 <button
-                                    onClick={() => setSelectedMessage(msg)}
+                                    onClick={() => setSelectedMessage({...msg, isReadAll: isReadAll})}
                                     className="text-gray-700 hover:text-indigo-600 focus:outline-none bg-gray-100 border border-gray-300 rounded-full p-1 shadow-sm"
                                     title="Options"
                                 >
@@ -306,7 +322,7 @@ function GroupChatMessage({
                     </motion.div>
                 </div>
             )}
-        </>
+        </div>
     );
 }
 

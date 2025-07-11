@@ -17,6 +17,8 @@ export default function ResetPassword() {
 
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -27,7 +29,8 @@ export default function ResetPassword() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const {password, confirmPassword } = formData;
+
+    const { password, confirmPassword } = formData;
 
     if (password.length < 6) {
       toast.error("Password must be at least 6 characters", { autoClose: 3000 });
@@ -39,17 +42,21 @@ export default function ResetPassword() {
       return;
     }
 
+    setLoading(true);
     try {
-      const res = await resetPassword({password, email});
+      const res = await resetPassword({ password, email });
       if (res.data.status === "success") {
-        toast.success("Password reset successful", { autoClose: 3000 });
-        navigate("/");
+        // toast.success("Password reset successful", { autoClose: 3000 });
+        setRedirecting(true);
+        setTimeout(() => navigate("/"), 1000);
       } else {
         toast.error(res.data.message || "Reset failed", { autoClose: 3000 });
       }
     } catch (err) {
       const msg = err.response?.data?.message || "Something went wrong";
       toast.error(msg, { autoClose: 3000 });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -62,10 +69,10 @@ export default function ResetPassword() {
         transition={{ duration: 0.4 }}
       >
         <h2 className="text-2xl font-bold text-center text-indigo-700 mb-2">
-          Reset Password
+          Update Your Password
         </h2>
         <p className="text-sm text-gray-500 text-center mb-6">
-          Set your new password below
+          Secure your account with a new password
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -121,20 +128,33 @@ export default function ResetPassword() {
 
           <button
             type="submit"
+            disabled={redirecting}
             className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition duration-300"
           >
-            Reset Password
+            {loading ? "Changing..." : redirecting ? "Password Updated" : "Change Password"}
           </button>
         </form>
 
         <p className="mt-4 text-sm text-center text-gray-500">
-          Back to{" "}
-          <span
-            onClick={() => navigate("/")}
-            className="text-indigo-600 cursor-pointer hover:underline"
-          >
-            Login
-          </span>
+
+          {redirecting ? (
+            <span
+              className="text-indigo-600 cursor-pointer hover:underline"
+            >
+              Taking you back to login...
+            </span>
+          ) : (
+            <>
+              Back to{" "}
+              <span
+                onClick={() => navigate("/")}
+                className="text-indigo-600 cursor-pointer hover:underline"
+              >
+                Login
+              </span>
+            </>
+          )}
+
         </p>
       </motion.div>
     </div>

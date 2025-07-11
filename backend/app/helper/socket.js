@@ -1,6 +1,6 @@
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
-const { GroupMembers, Message } = require("../models"); // adjust path as needed
+const { GroupMembers, Message, GroupMessageRead, GroupMessages } = require("../models"); // adjust path as needed
 
 const allowedOrigins = [
   "http://localhost:3001",
@@ -62,8 +62,18 @@ function setupSocket(server) {
 
     socket.on("mark-messages-seen", async ({ userId, chatUserId }) => {
       // Mark all messages where chatUser sent to userId as read
+      let messageIds = await Message.findAll({
+        where: {
+          sender_id: chatUserId,
+          receiver_id: userId,
+          is_read: false
+        },
+        attributes: ['id']
+      });
+      messageIds = messageIds.map(msg => msg.id);
+
       await Message.update(
-        { is_read: true },
+        { is_read: true, read_at: new Date() },
         {
           where: {
             sender_id: chatUserId,
@@ -72,13 +82,49 @@ function setupSocket(server) {
           }
         }
       );
-      
+
       // Notify the sender (chatUserId) that their messages have been seen
       io.to(`user_${chatUserId}`).emit("messages-seen", {
         by: userId,
-        chatUserId
+        chatUserId,
+        messageIds,
       });
     });
+
+    socket.on("mark-group-messages-seen", async ({ userId, groupId }) => {
+      // Mark all messages where GroupID is groupId
+
+      let groupMessagesIds = await GroupMessages.findAll({ where: { group_id: groupId, is_deleted: false }, attributes: ['id'], raw: true });
+      groupMessagesIds = groupMessagesIds.map(curr => curr.id);
+
+      let groupMsgReadIds = await GroupMessageRead.findAll({
+        where: {
+          user_id: userId,
+          group_message_id: groupMessagesIds,
+          read_at: null,
+        }
+      });
+      groupMsgReadIds = groupMsgReadIds.map(curr => curr.id);
+
+      await GroupMessageRead.update(
+        { read_at: new Date() },
+        {
+          where: {
+            user_id: userId,
+            group_message_id: groupMessagesIds,
+            read_at: null,
+          }
+        }
+      );
+
+      // Notify the sender (chatUserId) that their messages have been seen
+      io.to(`group_${groupId}`).emit("group-messages-seen", {
+        by: userId,
+        groupId,
+        groupMsgReadIds,
+      });
+    });
+
 
     // Group typing
     socket.on("groupTyping", ({ groupId, senderId, isTyping }) => {

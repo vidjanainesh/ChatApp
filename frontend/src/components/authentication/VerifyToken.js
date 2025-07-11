@@ -3,26 +3,37 @@ import { verifyToken } from "../../api";
 import { toast } from "react-toastify";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
+import { setUser } from '../../store/userSlice';
+import { jwtDecode } from 'jwt-decode';
+import { useDispatch } from "react-redux";
 
 export default function VerifyToken() {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useDispatch();
   const email = location.state?.email;
   const mode = location.state?.mode;
   const [token, setToken] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
-      const res = await verifyToken({email, token});
+      const res = await verifyToken({ email, token });
       if (res.data.status === "success") {
 
-        if(mode === "forgetPassword") {
+        if (mode === "forgetPassword") {
           navigate("/reset-password", { state: { email: email } });
         }
         else if (mode === "emailVerification") {
-          toast.success("Registration successful!", { autoClose: 3000 });
-          navigate("/");
+          // toast.success("Registration successful!", { autoClose: 3000 });
+          // navigate("/");
+          const token = res.data.data;
+          const decodedUser = jwtDecode(token);
+          localStorage.setItem("jwt", res.data.data);
+          dispatch(setUser({ user: decodedUser, token }));
+          navigate("/dashboard");
         }
       } else {
         toast.error(res.data.message || "Token verification failed", {
@@ -32,6 +43,8 @@ export default function VerifyToken() {
     } catch (error) {
       const msg = error.response?.data?.message || "Something went wrong";
       toast.error(msg, { autoClose: 3000 });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -44,8 +57,8 @@ export default function VerifyToken() {
         transition={{ duration: 0.4 }}
       >
         <h2 className="text-2xl font-bold text-center text-indigo-700 mb-2">
-            {mode === "emailVerification" && "Verify Email"}
-            {mode === "forgetPassword" && "Verify OTP"}
+          {mode === "emailVerification" && "Just One More Step!"}
+          {mode === "forgetPassword" && "Reset Your Password"}
         </h2>
         <p className="text-sm text-gray-500 text-center mb-2">
           Enter the code sent to your email
@@ -74,7 +87,7 @@ export default function VerifyToken() {
             type="submit"
             className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition duration-300"
           >
-            Verify
+            {loading ? "Verifying..." : "Verify"}
           </button>
         </form>
 

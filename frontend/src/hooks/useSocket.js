@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { initSocket } from "./socketManager";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { addMessage, addGroupMessage, markMessagesAsSeen, setMessages } from "../store/chatSlice";
+import { addMessage, addGroupMessage, markMessagesAsSeen, setMessages, markGroupMessagesAsSeen } from "../store/chatSlice";
 import { addFriend, addGroup, appendUnreadPrivate, appendUnreadGroup, incrementFriendReqCount } from "../store/userSlice";
 import { deletePrivateMessage, editPrivateMessage, deleteGroupMsgAction, editGroupMsgAction, addReactionToPrivateMessage, removeReactionFromPrivateMessage, addReactionToGroupMessage, removeReactionFromGroupMessage } from "../store/chatSlice";
 
@@ -120,8 +120,8 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
       }
     });
 
-    socket.on("messages-seen", ({ by, chatUserId }) => {
-      dispatch(markMessagesAsSeen({ userId: by, chatUserId }));
+    socket.on("messages-seen", ({ by, chatUserId, messageIds }) => {
+      dispatch(markMessagesAsSeen({ userId: by, chatUserId, messageIds }));
     });
 
     socket.on("typing", ({ senderId, receiverId, isTyping }) => {
@@ -206,6 +206,10 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
           navigate(`/groupchat/${msgGroupId}`);
         };
       }
+    });
+
+    socket.on("group-messages-seen", ({ by, groupId, groupMsgReadIds }) => {
+      dispatch(markGroupMessagesAsSeen({ by, groupId, groupMsgReadIds }));
     });
 
     socket.on('deleteGroupMessage', (data) => {

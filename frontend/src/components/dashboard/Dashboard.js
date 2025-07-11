@@ -39,11 +39,6 @@ export default function Dashboard() {
     const unreadGroupMap = useSelector((state) => state.user.unreadGroupMap);
     const friendReqCount = useSelector((state) => state.user.friendReqCount);
 
-    // const [friends, setFriends] = useState([]);
-    // const [user, setUser] = useState(null);
-    // const [unreadMap, setUnreadMap] = useState({});
-    // const [groups, setGroups] = useState([]);
-    // const [unreadGroupMap, setUnreadGroupMap] = useState({});
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [loading, setLoading] = useState(false);
     const [groupName, setGroupName] = useState("");
@@ -74,6 +69,7 @@ export default function Dashboard() {
         },
     });
 
+    // Fetch dashboard data
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -262,9 +258,8 @@ export default function Dashboard() {
                     <div>
                         <h1 className="text-3xl font-bold text-indigo-700">
                             {user
-                                ? `Welcome Back ${user?.name.trim().split(" ")[0]
-                                }!`
-                                : "Welcome Back!"}
+                                ? `Welcome ${user?.name.trim().split(" ")[0]}!`
+                                : "Welcome!"}
                         </h1>
                         <p className="text-gray-500 text-sm sm:text-base">
                             Stay connected and chat with your friends

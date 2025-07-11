@@ -9,7 +9,10 @@ import useSocket from "../../hooks/useSocket";
 import EmojiPicker from "emoji-picker-react";
 import { useDispatch, useSelector } from "react-redux";
 import { setMessages, editPrivateMessage, deletePrivateMessage, clearMessages, clearChatState, addReactionToPrivateMessage, prependMessages } from "../../store/chatSlice";
-import { HiOutlineChat, HiPaperClip } from "react-icons/hi";
+import { HiOutlineChat, HiPaperClip, HiPhotograph, HiVideoCamera } from "react-icons/hi";
+import { BsCheck, BsCheckAll } from "react-icons/bs";
+
+import { formatRelativeTime } from "../../helper/formatRelativeTime";
 
 export default function Chatbox() {
   const navigate = useNavigate();
@@ -60,7 +63,7 @@ export default function Chatbox() {
   const [requestSent, setRequestSent] = useState(false);
   const [downloadedFiles, setDownloadedFiles] = useState({});
   const [selectedFile, setSelectedFile] = useState(null);
-
+  const [seenModalData, setSeenModalData] = useState(null);
   const [firstUnreadMessageId, setFirstUnreadMessageId] = useState(null);
 
   const availableReactions = ["👍", "❤️", "😂", "😮", "😢", "😡"];
@@ -72,6 +75,7 @@ export default function Chatbox() {
     setIsTyping,
   });
 
+  // Function to fetch messages
   const fetchMessages = useCallback(async (beforeId = null) => {
     if (beforeId) {
       setLoadingOlder(true);
@@ -124,21 +128,7 @@ export default function Chatbox() {
     }
   }, [id, token, dispatch, navigate]);
 
-  const sendReq = async () => {
-    try {
-      const res = await sendFriendReq(parseInt(id), token);
-      if (res.data.status === "success") {
-        setRequestSent(true);
-        toast.success("Friend request sent!", { autoClose: 2000 });
-      } else {
-        toast.error(res.data.message || "Failed to send request");
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Error sending request");
-    }
-  }
-
-  // On chat change: clear and fetch
+  // useEffect to fetch messages / On chat change: clear and fetch
   useEffect(() => {
     dispatch(clearMessages());
     fetchMessages();
@@ -177,15 +167,24 @@ export default function Chatbox() {
     if (!messageLoading && messages?.length && chatWindowRef.current) {
       if (!hasInitScrolled.current) {
         setTimeout(() => {
-          chatWindowRef.current.scrollTo({
-            top: chatWindowRef.current.scrollHeight,
-            behavior: "smooth"
-          });
+          if (firstUnreadMessageId) {
+            // Scroll to the first unread message
+            const el = document.getElementById(`msg_${firstUnreadMessageId}`);
+            if (el) {
+              el.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+          } else {
+            // Scroll to bottom if no unread marker
+            chatWindowRef.current.scrollTo({
+              top: chatWindowRef.current.scrollHeight,
+              behavior: "smooth"
+            });
+          }
           hasInitScrolled.current = true;
         }, 50);
       }
     }
-  }, [messageLoading, messages]);
+  }, [messageLoading, messages, firstUnreadMessageId]);
 
   // 2. Maintain scroll after fetching older
   useEffect(() => {
@@ -220,12 +219,12 @@ export default function Chatbox() {
     if (!messageLoading && socketRef) {
       socketRef.emit("mark-messages-seen", {
         userId: loggedInUserId,
-        chatUserId: parseInt(id)
+        chatUserId: parseInt(id),
       });
     }
   }, [messageLoading, messages.length, socketRef, loggedInUserId, id]);
 
-
+  // First unread message for --- New Messages ---
   useEffect(() => {
     if (!messageLoading && messages?.length && firstUnreadMessageId === null) {
       const firstUnread = messages.find(
@@ -236,8 +235,6 @@ export default function Chatbox() {
       }
     }
   }, [messageLoading, messages, loggedInUserId, firstUnreadMessageId]);
-
-
 
   const handleInputChange = (e) => {
     setInput(e.target.value);
@@ -317,6 +314,20 @@ export default function Chatbox() {
     }
   };
 
+  const sendReq = async () => {
+    try {
+      const res = await sendFriendReq(parseInt(id), token);
+      if (res.data.status === "success") {
+        setRequestSent(true);
+        toast.success("Friend request sent!", { autoClose: 2000 });
+      } else {
+        toast.error(res.data.message || "Failed to send request");
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Error sending request");
+    }
+  }
+
   const handleDeleteClick = async () => {
     try {
       const res = await deleteMessage(selectedMessage.id, token);
@@ -353,7 +364,6 @@ export default function Chatbox() {
       }
     }, 0);
   };
-
 
   const handleReact = async (messageId, emoji, existingReaction) => {
     try {
@@ -401,6 +411,7 @@ export default function Chatbox() {
 
   const formatDate = (ts) => new Date(ts).toISOString().split("T")[0];
 
+  // Click outside events
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -518,35 +529,136 @@ export default function Chatbox() {
 
         </div>
         {selectedMessage && selectedMessage.mode !== "edit" && (
-            <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-              <div className="bg-white p-4 rounded-xl shadow-xl w-72" ref={modalRef}>
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Choose Action</h3>
-                <div className="flex justify-end gap-4">
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+            <div className="bg-white p-4 rounded-xl shadow-xl w-72" ref={modalRef}>
+              <h3 className="text-sm font-medium text-gray-700 mb-3">Choose Action</h3>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => {
+                    setSeenModalData({
+                      msg: selectedMessage,
+                      message: selectedMessage.message || "📎 File",
+                      time: formatTime(selectedMessage.createdAt),
+                      senderName: selectedMessage.sender?.name,
+                      fileType: selectedMessage.fileType,
+                    });
+                    setSelectedMessage(null);
+                  }}
+                  className="w-14 text-teal-600 text-sm bg-teal-50 hover:bg-teal-100 rounded-md py-1 transition"
+                >
+                  Info
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleEditClick(selectedMessage);
+                    setSelectedMessage(null); // close modal immediately({ ...selectedMessage, mode: "edit" });
+                  }}
+                  className="w-14 text-indigo-600 text-sm bg-indigo-50 hover:bg-indigo-100 rounded-md py-1 transition"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={handleDeleteClick}
+                  className="w-14 text-red-500 text-sm bg-red-50 hover:bg-red-100 rounded-md py-1 transition"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => setSelectedMessage(null)}
+                  className="w-14 text-gray-600 text-sm bg-gray-100 hover:bg-gray-200 rounded-md py-1 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Seen by modal */}
+        {
+          seenModalData && (
+            <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+              <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md relative">
+                <button
+                  onClick={() => setSeenModalData(null)}
+                  className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-2xl"
+                >
+                  &times;
+                </button>
+
+                {/* Modal Header */}
+                <h2 className="text-xl font-semibold text-indigo-700 mb-3 text-center">
+                  Message Seen Info
+                </h2>
+
+                {/* Message box display */}
+                <div className={`flex justify-end relative`}>
+                  <div className='mb-2 p-3 rounded-xl text-sm shadow-md break-words whitespace-pre-wrap relative bg-indigo-100 self-end max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-400 scrollbar-track-transparent'>
+                    <div className="text-left">
+                      {/* text message */}
+                      {!seenModalData.fileType && (
+                        <div>{seenModalData.message}</div>
+                      )}
+
+                      {/* image or video icon */}
+                      {seenModalData.fileType && (
+                        <div className="flex flex-col items-center justify-center text-gray-500">
+                          {seenModalData.fileType === "image" ? (
+                            <HiPhotograph className="w-8 h-8 mb-1" />
+                          ) : (
+                            <HiVideoCamera className="w-8 h-8 mb-1" />
+                          )}
+                          <span className="text-xs italic">File</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* time, edited, ticks */}
+                    <div className={`flex items-center mt-1 justify-end`}>
+                      <div className="text-[10px] pr-0 text-gray-400 text-right flex items-center gap-1">
+                        {seenModalData.time}{" "}
+                        {!!seenModalData.msg.isEdited && <span className="italic">(edited)</span>}
+                        <span style={{ color: seenModalData.msg.isRead ? "#3B82F6" : "#9CA3AF" }}>
+                          {seenModalData.msg.isRead ? (
+                            <BsCheckAll className="inline-block w-4 h-4" />
+                          ) : (
+                            <BsCheck className="inline-block w-4 h-4" />
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Seperator Line */}
+                <div className="border-t border-gray-300 my-4"></div>
+
+                {/* Seen / Not Seen */}
+                <div className="mb-4">
+                  <h3 className={`text-sm font-semibold ${seenModalData.msg.isRead ? 'text-green-700' : 'text-red-700'}  mb-1`}>
+                    {seenModalData.msg.isRead ? 'Seen : ' : 'Not Seen Yet'}
+                    {seenModalData.msg.isRead && (
+                      <span className="text-xs text-gray-600 font-normal italic ml-1">
+                        {formatRelativeTime(seenModalData.msg.readAt)}
+                      </span>
+                    )}
+                  </h3>
+                </div>
+
+                {/* Close button */}
+                <div className="flex justify-end mt-6">
                   <button
-                    onClick={() => {
-                      handleEditClick(selectedMessage);
-                      setSelectedMessage(null); // close modal immediately({ ...selectedMessage, mode: "edit" });
-                    }}
-                    className="text-indigo-600 text-sm"
+                    onClick={() => setSeenModalData(null)}
+                    className="px-4 py-2 text-sm font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition"
                   >
-                    Edit
-                  </button>
-                  <button
-                    onClick={handleDeleteClick}
-                    className="text-red-500 text-sm"
-                  >
-                    Delete
-                  </button>
-                  <button
-                    onClick={() => setSelectedMessage(null)}
-                    className="text-gray-500 text-sm"
-                  >
-                    Cancel
+                    Close
                   </button>
                 </div>
               </div>
             </div>
-          )}
+          )
+        }
 
         <div className="text-sm text-gray-500 mb-2 h-5 px-1">
           {isTyping ? "Typing..." : "\u00A0"}

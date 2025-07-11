@@ -7,9 +7,11 @@ import { motion } from "framer-motion";
 export default function ForgotPassword() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       const res = await forgetPassword({ email });
       if (res.data.status === "success") {
@@ -23,6 +25,8 @@ export default function ForgotPassword() {
     } catch (error) {
       const msg = error.response?.data?.message || "Something went wrong";
       toast.error(msg, { autoClose: 3000 });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -57,7 +61,7 @@ export default function ForgotPassword() {
             type="submit"
             className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition duration-300"
           >
-            Send Reset Token
+            {loading ? "Just a second..." : "Send Code"}
           </button>
         </form>
 
