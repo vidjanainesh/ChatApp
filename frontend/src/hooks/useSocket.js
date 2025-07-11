@@ -120,8 +120,8 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
       }
     });
 
-    socket.on("messages-seen", ({ by, chatUserId }) => {
-      dispatch(markMessagesAsSeen({ userId: by, chatUserId }));
+    socket.on("messages-seen", ({ by, chatUserId, messageIds }) => {
+      dispatch(markMessagesAsSeen({ userId: by, chatUserId, messageIds }));
     });
 
     socket.on("typing", ({ senderId, receiverId, isTyping }) => {
@@ -208,8 +208,8 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
       }
     });
 
-    socket.on("group-messages-seen", ({ by, groupId }) => {
-      dispatch(markGroupMessagesAsSeen({ by, groupId }));
+    socket.on("group-messages-seen", ({ by, groupId, groupMsgReadIds }) => {
+      dispatch(markGroupMessagesAsSeen({ by, groupId, groupMsgReadIds }));
     });
 
     socket.on('deleteGroupMessage', (data) => {

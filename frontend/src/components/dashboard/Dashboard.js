@@ -39,11 +39,6 @@ export default function Dashboard() {
     const unreadGroupMap = useSelector((state) => state.user.unreadGroupMap);
     const friendReqCount = useSelector((state) => state.user.friendReqCount);
 
-    // const [friends, setFriends] = useState([]);
-    // const [user, setUser] = useState(null);
-    // const [unreadMap, setUnreadMap] = useState({});
-    // const [groups, setGroups] = useState([]);
-    // const [unreadGroupMap, setUnreadGroupMap] = useState({});
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [loading, setLoading] = useState(false);
     const [groupName, setGroupName] = useState("");
@@ -74,6 +69,7 @@ export default function Dashboard() {
         },
     });
 
+    // Fetch dashboard data
     useEffect(() => {
         const fetchData = async () => {
             try {

@@ -28,7 +28,7 @@ const ChatMessage = ({
     onDownload,
 }) => {
     return (
-        <>
+        <div id={`msg_${msg.id}`}>
             {prevDate !== null && (
                 <div className="flex items-center justify-center my-4">
                     <hr className="flex-1 border-gray-300" />
@@ -277,7 +277,7 @@ const ChatMessage = ({
                     </div>
                 </motion.div>
             </div>
-        </>
+        </div>
     );
 };
 

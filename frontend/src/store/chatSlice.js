@@ -44,9 +44,9 @@ const chatSlice = createSlice({
       // console.log('Updated messages (del):', JSON.parse(JSON.stringify(state.messages)));
     },
     markMessagesAsSeen: (state, action) => {
-      const { chatUserId } = action.payload;
+      const { chatUserId, messageIds } = action.payload;
       state.messages = state.messages.map(msg =>
-        msg.senderId === chatUserId ? { ...msg, isRead: true } : msg
+        msg.senderId === chatUserId && messageIds.includes(msg.id) ? { ...msg, isRead: true, readAt: new Date().toISOString() } : msg
       );
     },
     addReactionToPrivateMessage: (state, action) => {
@@ -97,7 +97,7 @@ const chatSlice = createSlice({
         // msg.id === updatedMsg.id ? updatedMsg : msg
         msg.id === updatedMsg.id ? { ...msg, message: updatedMsg.message, isEdited: true } : msg
       );
-      console.log('Updated Group Messages (edit):', JSON.parse(JSON.stringify(state?.groupMessages)));
+      // console.log('Updated Group Messages (edit):', JSON.parse(JSON.stringify(state?.groupMessages)));
     },
     deleteGroupMsgAction: (state, action) => {
       const deletedMsg = action.payload;
@@ -107,12 +107,12 @@ const chatSlice = createSlice({
       );
     },
     markGroupMessagesAsSeen: (state, action) => {
-      const { by } = action.payload;
+      const { by, groupMsgReadIds } = action.payload;
       state.groupMessages = state.groupMessages.map(msg => {
         return {
           ...msg,
           reads: msg.reads?.map(curr =>
-            curr.userId === by ? { ...curr, readAt: new Date().toISOString() } : curr
+            curr.userId === by && groupMsgReadIds.includes(curr.id) ? { ...curr, readAt: new Date().toISOString() } : curr
           )
         }
       });

@@ -65,6 +65,10 @@ const Message = sequelize.define('messages', {
         type: DataTypes.INTEGER,
         allowNull: true,
     },
+    read_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
 });
 
 module.exports = Message;

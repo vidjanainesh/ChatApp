@@ -258,6 +258,7 @@ const getMessages = async (req, res) => {
                 ['file_size', 'fileSize'],
                 ['file_blur_url', 'fileBlurUrl'],
                 ['is_read', 'isRead'],
+                ['read_at', 'readAt'],
                 ['is_deleted', 'isDeleted'],
                 ['is_edited', 'isEdited'],
                 'createdAt',
