@@ -107,8 +107,8 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
         document.visibilityState !== "visible" &&
         senderIdStr !== loggedInUserIdStr
       ) {
-        const notif = new Notification("New Message", {
-          body: `${message.sender_name}: New Message`,
+        const notif = new Notification("ChatApp", {
+          body: `New message from ${message.senderName?.split(' ')[0]}`,
           icon: "/icon.png",
         });
 
@@ -184,7 +184,7 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
 
     // New: Handle newGroupMessage
     socket.on("newGroupMessage", (data) => {
-      const { message, groupId: msgGroupId } = data;
+      const { message, groupId: msgGroupId, groupName } = data;
       if (groupId && parseInt(groupId) === parseInt(msgGroupId)) {
         dispatch(addGroupMessage(message));
       }
@@ -195,8 +195,8 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
         Notification.permission === "granted" &&
         document.visibilityState !== "visible"
       ) {
-        const notif = new Notification("New Group Message", {
-          body: `${message.sender.name}: ${message.message}`,
+        const notif = new Notification("ChatApp", {
+          body: `New message in ${groupName}`,
           icon: "/icon.png",
         });
 

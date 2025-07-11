@@ -196,7 +196,7 @@ const sendGroupMessage = async (req, res) => {
             reads,
         };
         const io = req.app.get("io");
-        io.to(`group_${groupId}`).emit("newGroupMessage", { message, groupId });
+        io.to(`group_${groupId}`).emit("newGroupMessage", { message, groupId, groupName: group.name });
 
         return successPostResponse(res, {}, "Message sent");
     } catch (error) {
