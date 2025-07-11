@@ -12,7 +12,7 @@ import { setMessages, editPrivateMessage, deletePrivateMessage, clearMessages, c
 import { HiOutlineChat, HiPaperClip, HiPhotograph, HiVideoCamera } from "react-icons/hi";
 import { BsCheck, BsCheckAll } from "react-icons/bs";
 
-import { formatRelativeTime } from "../../helper/formatRelativeTime";
+import { formatRelativeTime, formatDate, formatTime } from "../../helper/formatDateAndTime";
 
 export default function Chatbox() {
   const navigate = useNavigate();
@@ -401,16 +401,7 @@ export default function Chatbox() {
   const handleFileChange = (e) => {
     setSelectedFile(e.target.files[0]);
   };
-
-  const formatTime = (ts) =>
-    new Date(ts).toLocaleTimeString('en-US', {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true
-    });
-
-  const formatDate = (ts) => new Date(ts).toISOString().split("T")[0];
-
+  
   // Click outside events
   useEffect(() => {
     function handleClickOutside(event) {

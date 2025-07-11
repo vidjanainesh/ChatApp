@@ -13,7 +13,7 @@ import { HiOutlineLogout, HiUserAdd, HiOutlineUsers, HiOutlineChat, HiPaperClip,
 import { BsCheck, BsCheckAll } from "react-icons/bs";
 import { setGroups } from "../../store/userSlice";
 
-import { formatRelativeTime } from "../../helper/formatRelativeTime";
+import { formatRelativeTime, formatDate, formatTime } from "../../helper/formatDateAndTime";
 
 export default function GroupChatbox() {
     const navigate = useNavigate();
@@ -475,15 +475,6 @@ export default function GroupChatbox() {
             toast.error(msg);
         }
     };
-
-    const formatTime = (ts) =>
-        new Date(ts).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true,
-        });
-
-    const formatDate = (ts) => new Date(ts).toISOString().split("T")[0];
 
     function getUserColor(userId) {
         const colors = [

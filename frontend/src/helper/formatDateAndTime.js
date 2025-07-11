@@ -23,3 +23,19 @@ export const formatRelativeTime = (date) => {
         });
     }
 };
+
+export const formatDate = (ts) => {
+    const date = new Date(ts);
+    const day = date.getDate();
+    const month = date.toLocaleString('default', { month: 'short' }); // "Jun"
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
+};
+
+export const formatTime = (ts) => {
+    return new Date(ts).toLocaleTimeString('en-US', {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+    });
+}
