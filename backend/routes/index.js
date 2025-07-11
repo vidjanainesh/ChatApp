@@ -6,7 +6,7 @@ const chatRoutes = require('./chatRoutes');
 const friendRoutes = require('./friendRoutes');
 const userRoutes = require('./userRoutes');
 const groupRoutes = require('./groupRoutes');
-const messageReactionRoutes = require('./messageReactionRoutes');
+const messageReactionRoutes = require('./msgReactionRoutes');
 
 const getDashboardData = require('../app/controllers/dashboard');
 const authMiddleware = require('../app/middlewares/authMiddleware');

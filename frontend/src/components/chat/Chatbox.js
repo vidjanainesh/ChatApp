@@ -128,6 +128,13 @@ export default function Chatbox() {
     }
   }, [id, token, dispatch, navigate]);
 
+  //useEffect to place cursor on input field on mount
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
+
   // useEffect to fetch messages / On chat change: clear and fetch
   useEffect(() => {
     dispatch(clearMessages());
@@ -293,10 +300,15 @@ export default function Chatbox() {
 
         const res = await sendMessage(formData, token);
         if (res.data.status === "success") {
+          
           setInput("");  // clear input
           setReplyTo(null);
           setSelectedFile(null);
           if (fileInputRef.current) fileInputRef.current.value = "";
+          setTimeout(() => {
+            if (inputRef.current) inputRef.current.focus();
+          }, 0);
+
         } else {
           toast.error("Could not send message", { autoClose: 3000 });
         }
@@ -401,7 +413,7 @@ export default function Chatbox() {
   const handleFileChange = (e) => {
     setSelectedFile(e.target.files[0]);
   };
-  
+
   // Click outside events
   useEffect(() => {
     function handleClickOutside(event) {
@@ -772,7 +784,7 @@ export default function Chatbox() {
                   }
                 }}
                 placeholder="Type a message..."
-                className="flex-1 px-3 py-1.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none min-h-[2.5rem] max-h-[5rem] overflow-y-auto"
+                className="flex-1 px-3 py-1.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-400 resize-none min-h-[2.5rem] max-h-[5rem] overflow-y-auto"
                 autoComplete="off"
                 rows={1}
               />

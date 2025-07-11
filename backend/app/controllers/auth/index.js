@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const generator = require('generate-password');
 const nodemailer = require('nodemailer')
-const { User } = require('../../../app/models');
+const { User } = require('../../models');
 const bcrypt = require('bcrypt');
 
 const {

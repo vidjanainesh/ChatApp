@@ -5,16 +5,16 @@ const {
     register,
     login,
     googleLogin,
-} = require('../app/controllers/authentication');
+} = require('../app/controllers/auth');
 
 const {
     forgetPassword,
     resetPassword,
-} = require('../app/controllers/authentication/forgetPassword');
+} = require('../app/controllers/auth/forgetPassword');
 
 const {
     verifyToken
-} = require('../app/controllers/authentication/verifyToken');
+} = require('../app/controllers/auth/verifyToken');
 
 const { authenticationValidationRules } = require('../app/middlewares/validators/authValidationRules');
 const handleValidation = require('../app/middlewares/validators/handleValidation');

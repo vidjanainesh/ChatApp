@@ -4,7 +4,7 @@ const router = express.Router();
 const {
     reactMessage,
     deleteReactions,
-} = require('../app/controllers/messaging/messageReactions');
+} = require('../app/controllers/messaging/msgReactions');
 
 const authMiddleware = require('../app/middlewares/authMiddleware');
 

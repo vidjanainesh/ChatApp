@@ -58,7 +58,7 @@ export default function VerifyToken() {
       >
         <h2 className="text-2xl font-bold text-center text-indigo-700 mb-2">
           {mode === "emailVerification" && "Just One More Step!"}
-          {mode === "forgetPassword" && "Reset Your Password"}
+          {mode === "forgetPassword" && "Let's Make Sure It's You!"}
         </h2>
         <p className="text-sm text-gray-500 text-center mb-2">
           Enter the code sent to your email
@@ -75,10 +75,21 @@ export default function VerifyToken() {
             <input
               type="text"
               name="token"
+              maxLength="4"
               value={token}
-              onChange={(e) => setToken(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="Enter 4-digit code"
+              onChange={(e) =>
+                setToken(e.target.value.replace(/[^0-9]/g, ""))
+              }
+              className="
+                w-full 
+                tracking-[0.8em] 
+                px-4 py-2 
+                border rounded-lg 
+                focus:outline-none focus:ring-2 focus:ring-indigo-500 
+                text-center text-2xl 
+                placeholder:tracking-normal
+              "
+              placeholder="• • • •"
               required
             />
           </div>

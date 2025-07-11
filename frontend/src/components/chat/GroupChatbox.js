@@ -137,6 +137,13 @@ export default function GroupChatbox() {
         fetchGroupMessages();
     }, [id, fetchGroupMessages, dispatch]);
 
+    //useEffect to place cursor on input field on mount
+    useEffect(() => {
+        if (inputRef.current) {
+            inputRef.current.focus();
+        }
+    }, []);
+
     // useEffect to clear chat state (runs when unmounting)
     useEffect(() => {
         return () => {
@@ -302,6 +309,9 @@ export default function GroupChatbox() {
                     setReplyTo(null);
                     setSelectedFile(null);
                     if (fileInputRef.current) fileInputRef.current.value = "";
+                    setTimeout(() => {
+                        if (inputRef.current) inputRef.current.focus();
+                    }, 0);
                 } else {
                     toast.error("Could not send message", { autoClose: 3000 });
                 }
