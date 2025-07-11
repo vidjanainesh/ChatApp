@@ -412,6 +412,8 @@ export default function GroupChatbox() {
             setShowEmojiPicker(false);
         }
 
+        if (event.key === "Escape") setShowEmojiPicker(false);
+
         if (
             membersDropdownRef.current &&
             !membersDropdownRef.current.contains(event.target)
@@ -444,8 +446,10 @@ export default function GroupChatbox() {
 
     useEffect(() => {
         document.addEventListener("mousedown", handleClickOutside);
+        document.addEventListener("keydown", handleClickOutside);
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
+            document.removeEventListener("keydown", handleClickOutside);
         };
     }, []);
 
