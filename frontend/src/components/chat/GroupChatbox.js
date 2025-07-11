@@ -1044,7 +1044,7 @@ export default function GroupChatbox() {
                 {
                     seenModalData && (
                         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                            <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md relative">
+                            <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm relative">
                                 <button
                                     onClick={() => setSeenModalData(null)}
                                     className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-2xl"
