@@ -13,6 +13,7 @@ export default function Register() {
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -22,20 +23,23 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       const res = await registerUser(form);
       if (res.data.status === "success") {
         // navigate("/");
-        toast.success(res.data.message, { autoClose: 3000 });
+        // toast.success(res.data.message, { autoClose: 3000 });
         navigate("/verify-token", { state: { email: form.email, mode: "emailVerification" } });
       } else {
-        toast.error(res.data.message || "Registration failed", {
+        toast.error(res.data.message || "Oops, we couldn’t complete your registration. Please try again", {
           autoClose: 3000,
         });
       }
     } catch (error) {
       const msg = error.response?.data?.message || "Something went wrong";
       toast.error(msg, { autoClose: 3000 });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -106,7 +110,7 @@ export default function Register() {
             type="submit"
             className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition duration-300"
           >
-            Register
+            {loading ? "Creating your account..." : "Register"}
           </button>
         </form>
         <p className="mt-4 text-sm text-center text-gray-500">

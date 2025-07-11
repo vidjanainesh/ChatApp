@@ -1,3 +1,4 @@
+const jwt = require('jsonwebtoken');
 const { successResponse, errorResponse, errorThrowResponse } = require("../../helper/response");
 const { User } = require("../../models");
 
@@ -21,7 +22,14 @@ const verifyToken = async (req, res) => {
                 user.is_verified = true;
             }
             await user.save();
-            return successResponse(res, {}, "OTP verified");
+
+            const userObject = {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+            }
+            const userToken = jwt.sign(userObject, process.env.JWT_SECRET);
+            return successResponse(res, userToken, "OTP verified");
         }
         else {
             return errorResponse(res, "Invalid or Expired OTP, please try again.");

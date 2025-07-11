@@ -15,6 +15,7 @@ export default function Login() {
 
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('jwt');
@@ -31,6 +32,7 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       const response = await loginUser(loginForm);
       if (response.data.status === "success") {
@@ -48,10 +50,13 @@ export default function Login() {
     } catch (error) {
       const message = error.response?.data?.message || "Login failed";
       toast.error(message, { autoClose: 3000 });
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleGoogleLogin = async (googleToken) => {
+    setLoading(true);
     try {
       const decodedUser = jwtDecode(googleToken);
       // console.log(decodedUser);
@@ -74,6 +79,8 @@ export default function Login() {
     } catch (error) {
       const message = error.response?.data?.message || "Google login failed";
       toast.error(message, { autoClose: 3000 });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -144,7 +151,7 @@ export default function Login() {
             type="submit"
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-xl transition duration-300"
           >
-            Log In
+            {loading ? "Just a moment..." : "Log In"}
           </button>
         </form>
 

@@ -60,7 +60,7 @@ const register = async (req, res) => {
                             
                             <p>If you did not create an account with us, please ignore this email.</p>
                             
-                            <p>Thank you,<br>The Pavans Team</p>
+                            <p>Thank you,<br>The ChatApp Team</p>
                         </div>
                     `
                 };
@@ -97,7 +97,7 @@ const register = async (req, res) => {
                     
                     <p>If you did not create an account with us, please ignore this email.</p>
                     
-                    <p>Thank you,<br>The Pavans Team</p>
+                    <p>Thank you,<br>The ChatApp Team</p>
                 </div>
             `
         };
@@ -128,7 +128,13 @@ const login = async (req, res) => {
 
         const match = await bcrypt.compare(password, user.password);
 
-        const userToken = jwt.sign(user, process.env.JWT_SECRET);
+        const userObject = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+        }
+
+        const userToken = jwt.sign(userObject, process.env.JWT_SECRET);
 
         if (match) {
             return successResponse(res, userToken, "User Logged In");

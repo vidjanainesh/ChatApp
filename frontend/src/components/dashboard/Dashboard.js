@@ -258,9 +258,8 @@ export default function Dashboard() {
                     <div>
                         <h1 className="text-3xl font-bold text-indigo-700">
                             {user
-                                ? `Welcome Back ${user?.name.trim().split(" ")[0]
-                                }!`
-                                : "Welcome Back!"}
+                                ? `Welcome ${user?.name.trim().split(" ")[0]}!`
+                                : "Welcome!"}
                         </h1>
                         <p className="text-gray-500 text-sm sm:text-base">
                             Stay connected and chat with your friends
