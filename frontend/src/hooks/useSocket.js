@@ -107,8 +107,8 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
         document.visibilityState !== "visible" &&
         senderIdStr !== loggedInUserIdStr
       ) {
-        const notif = new Notification("ChatApp", {
-          body: `New message from ${message.senderName?.split(' ')[0]}`,
+        const notif = new Notification(`ChatApp - ${message.senderName?.split(' ')[0]}`, {
+          body: `New message`,
           icon: "/icon.png",
         });
 
@@ -195,8 +195,8 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
         Notification.permission === "granted" &&
         document.visibilityState !== "visible"
       ) {
-        const notif = new Notification("ChatApp", {
-          body: `New message in ${groupName}`,
+        const notif = new Notification(`ChatApp - ${groupName}`, {
+          body: `New message`,
           icon: "/icon.png",
         });
 
