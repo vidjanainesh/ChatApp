@@ -25,6 +25,7 @@ import {
 } from "../../store/userSlice";
 
 import { setCurrentChat, clearChatState } from "../../store/chatSlice";
+import { jwtDecode } from 'jwt-decode';
 
 export default function Dashboard() {
     const navigate = useNavigate();
@@ -69,6 +70,17 @@ export default function Dashboard() {
         },
     });
 
+    useEffect(() => {
+        try {
+            if (!token) return;
+            
+            const decodedUser = jwtDecode(token);
+            dispatch(setUser({ user: decodedUser, token}));
+        } catch (error) {
+            toast.error("Error setting current user");
+        }
+    }, [dispatch, token]);
+
     // Fetch dashboard data
     useEffect(() => {
         const fetchData = async () => {
@@ -79,14 +91,14 @@ export default function Dashboard() {
                 const response = await getDashboardData(token);
 
                 if (response.data.status === "success") {
-                    dispatch(setFriends(response.data.data.friends.data));
+                    dispatch(setFriends(response.data.data.friends));
                     dispatch(setFriendReqCount(response.data.data.friendReqCount));
-                    dispatch(
-                        setUser({
-                            user: response.data.data.friends.user,
-                            token,
-                        })
-                    );
+                    // dispatch(
+                    //     setUser({
+                    //         user: response.data.data.friends.user,
+                    //         token,
+                    //     })
+                    // );
                     dispatch(setGroups(response.data.data.groups || []));
                     dispatch(setUnreadPrivateMap(response.data.data.unreadPrivateMsgs || {}));
                     dispatch(setUnreadGroupMap(response.data.data.unreadGroupMsgs || {}));
@@ -120,7 +132,7 @@ export default function Dashboard() {
 
     const handleLogout = () => {
         localStorage.removeItem("jwt");
-        toast.success("Logged out", { autoClose: 3000 });
+        // toast.success("Logged out", { autoClose: 1000 });
         dispatch(clearUser());
         dispatch(clearChatState());
         navigate("/");

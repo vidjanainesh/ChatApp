@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { GoogleLogin, useGoogleLogin } from '@react-oauth/google';
+import { GoogleLogin } from '@react-oauth/google';
 import { loginUser, googleLogin } from "../../api";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
@@ -24,7 +24,6 @@ export default function Login() {
     }
   });
 
-
   const handleChange = (e) =>
     setLoginForm({ ...loginForm, [e.target.name]: e.target.value });
 
@@ -38,9 +37,7 @@ export default function Login() {
       if (response.data.status === "success") {
 
         const token = response.data.data;
-        const decodedUser = jwtDecode(token);
-        localStorage.setItem("jwt", response.data.data);
-        dispatch(setUser({ user: decodedUser, token }));
+        localStorage.setItem("jwt", token);
         navigate("/dashboard");
       } else {
         toast.error(response.data.message || "Login failed", {

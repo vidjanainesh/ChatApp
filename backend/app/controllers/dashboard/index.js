@@ -6,6 +6,13 @@ const getDashboardData = async (req, res) => {
     try {
         const user = req.user;
 
+        // User object
+        const userObj = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+        }
+
         // Get Friends ---------------------------------------------------------
         const friends = await Friends.findAll({
             where: {
@@ -36,15 +43,6 @@ const getDashboardData = async (req, res) => {
                 email: otherUser.email,
             };
         });
-
-        const friendsObj = {
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-            },
-            data: friendList,
-        };
 
         // Get friend req count ----------------------------------------------------------------
         const friendReqs = await Friends.findAll({
@@ -122,7 +120,8 @@ const getDashboardData = async (req, res) => {
 
         // Final response object
         const dashboardData = {
-            friends: friendsObj,
+            user: userObj,
+            friends: friendList,
             friendReqCount,
             unreadPrivateMsgs: unreadMap,
             groups,

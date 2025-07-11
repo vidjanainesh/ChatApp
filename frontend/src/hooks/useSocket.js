@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { initSocket } from "./socketManager";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { addMessage, addGroupMessage, markMessagesAsSeen, setMessages, markGroupMessagesAsSeen } from "../store/chatSlice";
+import { addMessage, addGroupMessage, markMessagesAsSeen, markGroupMessagesAsSeen } from "../store/chatSlice";
 import { addFriend, addGroup, appendUnreadPrivate, appendUnreadGroup, incrementFriendReqCount } from "../store/userSlice";
 import { deletePrivateMessage, editPrivateMessage, deleteGroupMsgAction, editGroupMsgAction, addReactionToPrivateMessage, removeReactionFromPrivateMessage, addReactionToGroupMessage, removeReactionFromGroupMessage } from "../store/chatSlice";
 
@@ -12,7 +12,6 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
   const [socketInstance, setSocketInstance] = useState(null);
   const groups = useSelector(state => state.user.groups);
   const chatType = useSelector(state => state.chat.chatType);
-  const messages = useSelector(state => state.chat.messages)
 
   useEffect(() => {
     if (!token) return;
