@@ -8,6 +8,7 @@ const ChatMessage = ({
     msg,
     prevDate,
     isSender,
+    msgCount,
     userReaction,
     availableReactions,
     onReact,
@@ -42,7 +43,7 @@ const ChatMessage = ({
                     initial={{ opacity: 0, x: isSender ? 50 : -50 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.2 }}
-                    className={`group mb-2 p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap relative ${isSender ? "bg-indigo-100 self-end" : "bg-white self-start"}`}
+                    className={`group mb-2 p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap relative ${isSender ? "bg-indigo-100 self-end" : "bg-white self-start"} ${msgCount === 0 && "mt-2"}`}
                 >
                     <div className="text-left">
                         {msg.isDeleted ? (
@@ -229,10 +230,15 @@ const ChatMessage = ({
                     )}
 
                     {showFullEmojiPickerId === msg.id && (
-                        <div className={`absolute ${isSender ? 'right-0' : 'left-0'} bottom-full mb-2 z-30`}>
+                        <div className={`absolute ${isSender ? 'right-0' : 'left-0'} ${msgCount < 3 ? 'top-full mt-3' : 'bottom-full mb-2'} z-30`}>
                             <div
                                 ref={fullReactionPickerRef}
-                                style={{ transform: "scale(0.6)", transformOrigin: isSender ? 'bottom right' : 'bottom left' }}
+                                style={{
+                                    transform: "scale(0.6)",
+                                    transformOrigin: isSender
+                                        ? (msgCount < 3 ? 'top right' : 'bottom right')
+                                        : (msgCount < 3 ? 'top left' : 'bottom left')
+                                }}
                             >
                                 <EmojiPicker
                                     onEmojiClick={(emojiData) => onReact(msg.id, emojiData.emoji, userReaction)}

@@ -63,7 +63,7 @@ function GroupChatMessage({
                         initial={{ opacity: 0, x: isSender ? 50 : -50 }}
                         animate={{ opacity: 1, x: 0, minWidth: getMinWidth(msg), maxWidth: getMaxWidth(msg) }}
                         transition={{ duration: 0.3 }}
-                        className={`group mb-2 p-3 rounded-xl text-sm shadow-md w-fit break-words whitespace-pre-wrap relative ${isSender ? "bg-indigo-100 self-end" : "bg-white self-start"}`}
+                        className={`group mb-2 p-3 rounded-xl text-sm shadow-md w-fit break-words whitespace-pre-wrap relative ${isSender ? "bg-indigo-100 self-end" : "bg-white self-start"} ${msgCount === 0 && "mt-2"}`}
                         style={{ minWidth: getMinWidth(msg), maxWidth: getMaxWidth(msg) }}
                     >
                         {!isSender && (

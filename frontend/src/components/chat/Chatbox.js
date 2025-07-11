@@ -33,11 +33,14 @@ export default function Chatbox() {
   const hasInitScrolled = useRef(false);
   const lastMessageId = useRef(null);
   const fileInputRef = useRef();
+  const messageRef = useRef(null);
 
   const dispatch = useDispatch();
   const messages = useSelector((state) => state.chat.messages);
 
+  let msgCount = -1;
   let loggedInUserId = null;
+  
   try {
     const decoded = jwtDecode(token);
     loggedInUserId = decoded.id;
@@ -65,6 +68,8 @@ export default function Chatbox() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [seenModalData, setSeenModalData] = useState(null);
   const [firstUnreadMessageId, setFirstUnreadMessageId] = useState(null);
+  const [placeAbove, setPlaceAbove] = useState(false);
+
 
   const availableReactions = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
@@ -300,7 +305,7 @@ export default function Chatbox() {
 
         const res = await sendMessage(formData, token);
         if (res.data.status === "success") {
-          
+
           setInput("");  // clear input
           setReplyTo(null);
           setSelectedFile(null);
@@ -421,6 +426,8 @@ export default function Chatbox() {
         setShowEmojiPicker(false);
       }
 
+      if (event.key === "Escape") setShowEmojiPicker(false);
+
       if (modalRef.current && !modalRef.current.contains(event.target)) {
         setSelectedMessage(null);
       }
@@ -435,10 +442,21 @@ export default function Chatbox() {
     }
 
     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleClickOutside);
     };
   }, []);
+
+  // useEffect(() => {
+  //   const handleKey = (e) => {
+  //     if (e.key === "Escape") setShowEmojiPicker(false);
+  //   };
+  //   document.addEventListener("keydown", handleKey);
+  //   return () => document.removeEventListener("keydown", handleKey);
+  // }, []);
+
 
   return (
     <div className="min-h-screen bg-gradient-to-tr from-white to-indigo-50 p-4">
@@ -481,7 +499,7 @@ export default function Chatbox() {
               const currentDate = formatDate(msg.createdAt);
               const prevDate = i > 0 ? formatDate(messages[i - 1].createdAt) : null;
               const userReaction = msg.reactions?.find(r => r.userId === loggedInUserId);
-
+              msgCount += 1;
               return (
                 <React.Fragment key={msg.id}>
                   {msg.id === firstUnreadMessageId && (
@@ -506,6 +524,7 @@ export default function Chatbox() {
                     msg={msg}
                     prevDate={prevDate !== currentDate ? currentDate : null}
                     isSender={isSender}
+                    msgCount={msgCount}
                     userReaction={userReaction}
                     availableReactions={availableReactions}
                     onReact={handleReact}
