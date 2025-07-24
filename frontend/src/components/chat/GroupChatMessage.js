@@ -216,9 +216,9 @@ function GroupChatMessage({
                                     ) : (
                                         isSender && (
                                             <span
-                                                style={{ color: msg?.isRead ? "#3B82F6" : "#9CA3AF" }}
+                                                style={{ color: isReadAll ? "#3B82F6" : "#9CA3AF" }}
                                             >
-                                                {msg?.isRead ? (
+                                                {isReadAll ? (
                                                     <BsCheckAll className="inline-block w-4 h-4" />
                                                 ) : (
                                                     <BsCheck className="inline-block w-4 h-4" />

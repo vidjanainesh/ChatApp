@@ -704,7 +704,7 @@ export default function GroupChatbox() {
                         </div>
                     ) : (
                         messages.map((msg, i) => {
-                            if (!msg || typeof msg !== "object" || !msg.senderId) return null;
+                            if (!msg || typeof msg !== "object") return null;
 
                             const isSender = msg.senderId === loggedInUserId;
                             const currentDate = formatDate(msg?.createdAt);
