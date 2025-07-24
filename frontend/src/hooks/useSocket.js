@@ -188,7 +188,7 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
     // New: Handle newGroupMessage
     socket.on("newGroupMessage", (data) => {
       const { message, groupId: msgGroupId, groupName } = data;
-      // console.log(message);
+
       // Ignore messages from self - because temp msg already being displayed 
       if (message.senderId === loggedInUserId) return;
 
