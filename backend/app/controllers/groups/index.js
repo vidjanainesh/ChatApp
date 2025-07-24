@@ -194,11 +194,12 @@ const sendGroupMessage = async (req, res) => {
             reactions: [],
             repliedMessage,
             reads,
+            temp: false,
         };
         const io = req.app.get("io");
         io.to(`group_${groupId}`).emit("newGroupMessage", { message, groupId, groupName: group.name });
 
-        return successPostResponse(res, {}, "Message sent");
+        return successPostResponse(res, { message, groupId, groupName: group.name }, "Message sent");
     } catch (error) {
         return errorThrowResponse(res, `${error.message}`, error);
     }
@@ -420,6 +421,9 @@ const getGroupData = async (req, res) => {
         const messagesWithReactions = plainGroupMessages.map((msg) => {
             const newMsg = ({
                 ...msg,
+                temp: false,
+                isDeleted: Boolean(msg.isDeleted),
+                isEdited: Boolean(msg.isEdited),
                 reactions: [],
             })
             messageReactions.map((reaction) => {

@@ -10,6 +10,7 @@ export default function FindPeople() {
   const token = localStorage.getItem("jwt");
   const [users, setUsers] = useState([]);
   const [requestedIds, setRequestedIds] = useState([]);
+  const [processingIds, setProcessingIds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -76,16 +77,20 @@ export default function FindPeople() {
   }, [autoSearch])
 
   const handleSendRequest = async (id) => {
+    setProcessingIds((prev) => [...prev, id]);
     try {
       const response = await sendFriendReq(id, token);
       if (response.data.status === "success") {
         // toast.success("Friend request sent!", { autoClose: 2000 });
+        setProcessingIds((prev) => prev.filter((reqId) => reqId !== id));
         setRequestedIds((prev) => [...prev, id]);
       } else {
         toast.error(response.data.message || "Failed to send request");
       }
     } catch (error) {
       toast.error(error.response?.data?.message || "Error sending request");
+    } finally {
+
     }
   };
 
@@ -186,16 +191,27 @@ export default function FindPeople() {
                     <p className="text-sm text-gray-500">{user.email}</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleSendRequest(user.id)}
-                  disabled={requestedIds.includes(user.id)}
-                  className={`w-full ${requestedIds.includes(user.id)
-                    ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                    : "bg-indigo-500 hover:bg-indigo-600 text-white"
-                    } py-2 px-4 rounded-lg transition duration-300`}
-                >
-                  {requestedIds.includes(user.id) ? "Request Sent" : "Send Friend Request"}
-                </button>
+                {processingIds.includes(user.id) ? (
+                  <div className="flex flex-col items-center mt-2 pt-4">
+                    <div className="flex space-x-1">
+                      <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                      <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                      <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce"></span>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleSendRequest(user.id)}
+                    disabled={requestedIds.includes(user.id)}
+                    className={`w-full ${requestedIds.includes(user.id)
+                      ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                      : "bg-indigo-500 hover:bg-indigo-600 text-white"
+                      } py-2 px-4 rounded-lg transition duration-300`}
+                  >
+                    {requestedIds.includes(user.id) ? "Request Sent" : "Send Friend Request"}
+                  </button>
+                )}
+
               </motion.div>
             ))}
           </div>
