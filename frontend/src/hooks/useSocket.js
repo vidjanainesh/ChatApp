@@ -143,7 +143,10 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
 
     // New Group Created
     socket.on("groupCreated", (data) => {
-      const { group } = data;
+      const { group, userId } = data;
+      console.log(userId, loggedInUserId);
+      if (userId === loggedInUserId) return;
+
       if (group) {
         dispatch(addGroup(group));
         socket.emit('joinGroupRoom', `group_${group.id}`)

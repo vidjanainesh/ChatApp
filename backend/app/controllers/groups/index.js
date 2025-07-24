@@ -67,12 +67,12 @@ const createGroup = async (req, res) => {
         memberIds.push(user.id);
         const io = req.app.get('io');
         // Emit new group created event to all the members (including self)
-        memberIds.map((id) => io.to(`user_${id}`).emit("groupCreated", { group: { id: group.id, name: group.name } }));
+        memberIds.map((id) => io.to(`user_${id}`).emit("groupCreated", { userId: user.id, group: { id: group.id, name: group.name } }));
         io.to(`group_${group.id}`).emit("newGroupMessage", { message, groupId: group.id });
 
         await group.addMembers(memberIds); //Magic method
 
-        return successPostResponse(res, {}, "Group generated");
+        return successPostResponse(res, { group: { id: group.id, name: group.name } }, "Group generated");
     } catch (error) {
         return errorThrowResponse(res, error.message);
     }

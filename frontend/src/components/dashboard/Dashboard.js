@@ -16,6 +16,7 @@ import {
     setUser,
     setHasFetchedDashboardData,
     setGroups,
+    addGroup,
     setUnreadPrivateMap,
     setUnreadGroupMap,
     clearUnreadPrivateMapEntry,
@@ -49,6 +50,7 @@ export default function Dashboard() {
     const [activeFriendMenuId, setActiveFriendMenuId] = useState(null);
     const [confirmUnfriendId, setConfirmUnfriendId] = useState(null);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [creatingGroup, setCreatingGroup] = useState(false);
 
     const groupRefs = useRef({});
     const friendRefs = useRef({});
@@ -58,7 +60,7 @@ export default function Dashboard() {
         token,
         chatUserId: null,
         groupId: null,
-        loggedInUserId: null,
+        loggedInUserId: user?.id,
         setMessages: null,
         setIsTyping: null,
         onNewMessageAlert: (fromUserId, type, roomId) => {
@@ -73,9 +75,9 @@ export default function Dashboard() {
     useEffect(() => {
         try {
             if (!token) return;
-            
+
             const decodedUser = jwtDecode(token);
-            dispatch(setUser({ user: decodedUser, token}));
+            dispatch(setUser({ user: decodedUser, token }));
         } catch (error) {
             toast.error("Error setting current user");
         }
@@ -189,6 +191,8 @@ export default function Dashboard() {
             return toast.error("Select at least one friend");
         }
 
+        setCreatingGroup(true);
+
         try {
             const res = await createGroup(
                 { name: groupName.trim(), memberIds: selectedFriendIds },
@@ -197,20 +201,20 @@ export default function Dashboard() {
 
             if (res.data.status === "success") {
                 // toast.success("Group created!");
+                console.log(res.data);
+                setCreatingGroup(false);
                 setShowCreateModal(false);
                 setGroupName("");
                 setSelectedFriendIds([]);
+                dispatch(addGroup(res.data.data.group));
 
-                // Refresh groups
-                const refreshed = await getGroups(token);
-                if (refreshed.data.status === "success") {
-                    dispatch(setGroups(refreshed.data.data || []));
-                }
             } else {
                 toast.error(res.data.message || "Could not create group");
             }
         } catch (err) {
             toast.error("Error creating group");
+        } finally {
+            setCreatingGroup(false);
         }
     };
 
@@ -577,77 +581,94 @@ export default function Dashboard() {
                         </div>
 
                         <div className="flex justify-end space-x-3">
-                            <button
-                                onClick={() => setShowCreateModal(false)}
-                                className="px-4 py-2 text-sm rounded-md bg-gray-300 hover:bg-gray-400"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleCreateGroup}
-                                className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
-                            >
-                                Create
-                            </button>
+
+                            {creatingGroup ? (
+                                <div className="flex flex-col items-center px-4 py-2">
+                                    <div className="flex space-x-1">
+                                        <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                        <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                        <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce"></span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={() => setShowCreateModal(false)}
+                                        className="px-4 py-2 text-sm rounded-md bg-gray-300 hover:bg-gray-400"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleCreateGroup}
+                                        className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+                                    >
+                                        Create
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
             )}
-            {confirmingDeleteId && (
-                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-md p-5 shadow-lg max-w-sm w-full text-center">
-                        <p className="text-gray-800 font-medium mb-4">
-                            Are you sure you want to leave this group?
-                        </p>
-                        <div className="flex justify-center gap-4">
-                            <button
-                                onClick={() => {
-                                    setConfirmingDeleteId(false);
-                                    setActiveMenuGroupId(false);
-                                }}
-                                className="px-4 py-2 text-sm bg-gray-300 hover:bg-gray-400 rounded-md"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={() => {
-                                    handleLeaveGroup(confirmingDeleteId);
-                                    setConfirmingDeleteId(false);
-                                }}
-                                className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md"
-                            >
-                                Yes
-                            </button>
+            {
+                confirmingDeleteId && (
+                    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-md p-5 shadow-lg max-w-sm w-full text-center">
+                            <p className="text-gray-800 font-medium mb-4">
+                                Are you sure you want to leave this group?
+                            </p>
+                            <div className="flex justify-center gap-4">
+                                <button
+                                    onClick={() => {
+                                        setConfirmingDeleteId(false);
+                                        setActiveMenuGroupId(false);
+                                    }}
+                                    className="px-4 py-2 text-sm bg-gray-300 hover:bg-gray-400 rounded-md"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        handleLeaveGroup(confirmingDeleteId);
+                                        setConfirmingDeleteId(false);
+                                    }}
+                                    className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md"
+                                >
+                                    Yes
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-            {confirmUnfriendId && (
-                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-md p-5 shadow-lg max-w-sm w-full text-center">
-                        <p className="text-gray-800 font-medium mb-4">
-                            Are you sure you want to unfriend this person?
-                        </p>
-                        <div className="flex justify-center gap-4">
-                            <button
-                                onClick={() => setConfirmUnfriendId(null)}
-                                className="px-4 py-2 text-sm bg-gray-300 hover:bg-gray-400 rounded-md"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={() => {
-                                    handleUnfriend(confirmUnfriendId);
-                                    setConfirmUnfriendId(null);
-                                }}
-                                className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md"
-                            >
-                                Unfriend
-                            </button>
+                )
+            }
+            {
+                confirmUnfriendId && (
+                    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-md p-5 shadow-lg max-w-sm w-full text-center">
+                            <p className="text-gray-800 font-medium mb-4">
+                                Are you sure you want to unfriend this person?
+                            </p>
+                            <div className="flex justify-center gap-4">
+                                <button
+                                    onClick={() => setConfirmUnfriendId(null)}
+                                    className="px-4 py-2 text-sm bg-gray-300 hover:bg-gray-400 rounded-md"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        handleUnfriend(confirmUnfriendId);
+                                        setConfirmUnfriendId(null);
+                                    }}
+                                    className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md"
+                                >
+                                    Unfriend
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }
