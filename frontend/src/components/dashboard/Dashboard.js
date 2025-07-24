@@ -51,6 +51,8 @@ export default function Dashboard() {
     const [confirmUnfriendId, setConfirmUnfriendId] = useState(null);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [creatingGroup, setCreatingGroup] = useState(false);
+    const [leavingGroup, setLeavingGroup] = useState(false);
+    const [removingFriend, setRemovingFriend] = useState(false);
 
     const groupRefs = useRef({});
     const friendRefs = useRef({});
@@ -163,17 +165,21 @@ export default function Dashboard() {
     };
 
     const handleUnfriend = async (friendId) => {
+        setRemovingFriend(true);
         try {
             const res = await unFriend(friendId, token);
 
             if (res.data.status === "success") {
                 toast.success("Friend removed!");
+                setConfirmUnfriendId(null);
                 dispatch(setFriends(friends.filter((f) => f.id !== friendId)));
             } else {
                 toast.error(res.data.message || "Failed to unfriend");
             }
         } catch (err) {
             toast.error("Error unfriending user");
+        } finally {
+            setRemovingFriend(false);
         }
     };
 
@@ -220,10 +226,12 @@ export default function Dashboard() {
 
     // Handle leave group
     const handleLeaveGroup = async (groupId) => {
+        setLeavingGroup(true);
         try {
             const res = await leaveGroup(groupId, token);
             if (res.data.status === "success") {
                 toast.success("You left the group");
+                setConfirmingDeleteId(false);
                 dispatch(setGroups(groups.filter((g) => g.id !== groupId)));
             } else {
                 toast.error(res.data.message || "Failed to leave group");
@@ -231,6 +239,8 @@ export default function Dashboard() {
         } catch (err) {
             const msg = err.response?.data?.message || "Error leaving group";
             toast.error(msg);
+        } finally {
+            setLeavingGroup(false);
         }
     };
 
@@ -610,65 +620,86 @@ export default function Dashboard() {
                     </div>
                 </div>
             )}
-            {
-                confirmingDeleteId && (
-                    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-md p-5 shadow-lg max-w-sm w-full text-center">
-                            <p className="text-gray-800 font-medium mb-4">
-                                Are you sure you want to leave this group?
-                            </p>
-                            <div className="flex justify-center gap-4">
-                                <button
-                                    onClick={() => {
-                                        setConfirmingDeleteId(false);
-                                        setActiveMenuGroupId(false);
-                                    }}
-                                    className="px-4 py-2 text-sm bg-gray-300 hover:bg-gray-400 rounded-md"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        handleLeaveGroup(confirmingDeleteId);
-                                        setConfirmingDeleteId(false);
-                                    }}
-                                    className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md"
-                                >
-                                    Yes
-                                </button>
-                            </div>
+
+            {confirmingDeleteId && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-md p-5 shadow-lg max-w-sm w-full text-center">
+                        <p className="text-gray-800 font-medium mb-4">
+                            {leavingGroup ? "One moment... leaving the group" : "Are you sure you want to leave this group?"}
+                        </p>
+                        <div className="flex justify-center gap-4">
+                            {leavingGroup ? (
+                                <div className="flex flex-col items-center px-4 py-2">
+                                    <div className="flex space-x-1">
+                                        <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                        <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                        <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce"></span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={() => {
+                                            setConfirmingDeleteId(false);
+                                            setActiveMenuGroupId(false);
+                                        }}
+                                        className="px-4 py-2 text-sm bg-gray-300 hover:bg-gray-400 rounded-md"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            handleLeaveGroup(confirmingDeleteId);
+                                        }}
+                                        className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md"
+                                    >
+                                        Yes
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
-                )
-            }
-            {
-                confirmUnfriendId && (
-                    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-md p-5 shadow-lg max-w-sm w-full text-center">
-                            <p className="text-gray-800 font-medium mb-4">
-                                Are you sure you want to unfriend this person?
-                            </p>
-                            <div className="flex justify-center gap-4">
-                                <button
-                                    onClick={() => setConfirmUnfriendId(null)}
-                                    className="px-4 py-2 text-sm bg-gray-300 hover:bg-gray-400 rounded-md"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        handleUnfriend(confirmUnfriendId);
-                                        setConfirmUnfriendId(null);
-                                    }}
-                                    className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md"
-                                >
-                                    Unfriend
-                                </button>
-                            </div>
+                </div>
+            )}
+
+            {confirmUnfriendId && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-md p-5 shadow-lg max-w-sm w-full text-center">
+                        <p className="text-gray-800 font-medium mb-4">
+                            {removingFriend ? "One moment... Removing friend" : "Are you sure you want to unfriend this person?"}
+                        </p>
+                        <div className="flex justify-center gap-4">
+                            {removingFriend ? (
+                                <div className="flex flex-col items-center px-4 py-2">
+                                    <div className="flex space-x-1">
+                                        <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                        <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                        <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce"></span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={() => setConfirmUnfriendId(null)}
+                                        className="px-4 py-2 text-sm bg-gray-300 hover:bg-gray-400 rounded-md"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            handleUnfriend(confirmUnfriendId);
+                                        }}
+                                        className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md"
+                                    >
+                                        Unfriend
+                                    </button>
+                                </>
+                            )}
+
                         </div>
                     </div>
-                )
-            }
+                </div>
+            )}
         </div >
     );
 }
