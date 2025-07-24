@@ -8,11 +8,12 @@ import { jwtDecode } from "jwt-decode";
 import useSocket from "../../hooks/useSocket";
 import EmojiPicker from "emoji-picker-react";
 import { useDispatch, useSelector } from "react-redux";
-import { setMessages, editPrivateMessage, deletePrivateMessage, clearMessages, clearChatState, addReactionToPrivateMessage, prependMessages } from "../../store/chatSlice";
+import { setMessages, updateMessageId, editPrivateMessage, deletePrivateMessage, clearMessages, clearChatState, addReactionToPrivateMessage, prependMessages, addMessage } from "../../store/chatSlice";
 import { HiOutlineChat, HiPaperClip, HiPhotograph, HiVideoCamera } from "react-icons/hi";
 import { BsCheck, BsCheckAll } from "react-icons/bs";
+import { v4 as uuidv4 } from 'uuid';
 
-import { formatRelativeTime, formatDate, formatTime } from "../../helper/formatDateAndTime";
+import { formatRelativeTime, formatDate, formatTime, formatFullTimestamp } from "../../helper/formatDateAndTime";
 
 export default function Chatbox() {
   const navigate = useNavigate();
@@ -26,7 +27,7 @@ export default function Chatbox() {
   const chatWindowRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const dropdownRef = useRef(null);
-  const modalRef = useRef();
+  const actionModalRef = useRef();
   const reactionPickerRef = useRef();
   const fullReactionPickerRef = useRef();
   const inputRef = useRef(null);
@@ -40,7 +41,7 @@ export default function Chatbox() {
 
   let msgCount = -1;
   let loggedInUserId = null;
-  
+
   try {
     const decoded = jwtDecode(token);
     loggedInUserId = decoded.id;
@@ -68,7 +69,6 @@ export default function Chatbox() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [seenModalData, setSeenModalData] = useState(null);
   const [firstUnreadMessageId, setFirstUnreadMessageId] = useState(null);
-  const [placeAbove, setPlaceAbove] = useState(false);
 
 
   const availableReactions = ["👍", "❤️", "😂", "😮", "😢", "😡"];
@@ -270,24 +270,33 @@ export default function Chatbox() {
   };
 
   const handleSubmit = async (e) => {
+
     e.preventDefault();
     if (!input.trim() && !selectedFile) return;
+
     setIsSubmitting(true);
     setShowEmojiPicker(false);
+    setInput("");       // clear input
+    setReplyTo(null);
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    setTimeout(() => {
+      if (inputRef.current) inputRef.current.focus();
+    }, 100);
 
+    // Editing a message
     if (editMode) {
+      setEditMode(null); // exit edit mode
       try {
         const res = await editMessage(editMode.id, input, token);
         if (res.data.status === "success") {
           dispatch(editPrivateMessage(res.data.data));
-          setEditMode(null);  // exit edit mode
-          setInput("");       // clear input
-          setReplyTo(null);
-          setIsSubmitting(false);
         }
       } catch {
         toast.error("Failed to edit message");
       }
+
+      // Send new message
     } else {
 
       socketRef.emit("typing", {
@@ -297,26 +306,35 @@ export default function Chatbox() {
       });
 
       try {
+        const tempId = uuidv4();
+
+        // Socket(Temporary) Message for showing the message instantly
+        const message = {
+          id: tempId,
+          message: input,
+          senderId: loggedInUserId,
+          receiverId: parseInt(id),
+          temp: true,
+        };
+
+        dispatch(addMessage(message));
+
+        // For calling API and receiving the actual message object
         const formData = new FormData();
         formData.append("message", input);
         formData.append("receiverId", id);
         if (replyTo?.id) formData.append("replyTo", replyTo.id);
         if (selectedFile) formData.append("file", selectedFile);
 
-        const res = await sendMessage(formData, token);
+        const res = await sendMessage(formData, token); // API Call
+
         if (res.data.status === "success") {
-
-          setInput("");  // clear input
-          setReplyTo(null);
-          setSelectedFile(null);
-          if (fileInputRef.current) fileInputRef.current.value = "";
-          setTimeout(() => {
-            if (inputRef.current) inputRef.current.focus();
-          }, 0);
-
+          const realMessage = res.data.data.message;
+          dispatch(updateMessageId({ tempId, newMessage: realMessage }));
         } else {
           toast.error("Could not send message", { autoClose: 3000 });
         }
+
       } catch (err) {
         const msg = err.response?.data?.message || "Failed to send message";
         if (msg === "Invalid or expired token") {
@@ -325,7 +343,8 @@ export default function Chatbox() {
         } else {
           toast.error(msg, { autoClose: 3000 });
         }
-      } finally {
+      }
+      finally {
         setIsSubmitting(false);
       }
     }
@@ -428,7 +447,7 @@ export default function Chatbox() {
 
       if (event.key === "Escape") setShowEmojiPicker(false);
 
-      if (modalRef.current && !modalRef.current.contains(event.target)) {
+      if (actionModalRef.current && !actionModalRef.current.contains(event.target)) {
         setSelectedMessage(null);
       }
 
@@ -469,7 +488,7 @@ export default function Chatbox() {
             ← Back
           </button>
           <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
-            Chat with {name?.split(' ')[0]}
+            {name?.split(' ')[0]}
           </h2>
           <div className="w-12" />
         </div>
@@ -496,9 +515,9 @@ export default function Chatbox() {
 
             messages.map((msg, i) => {
               const isSender = msg.senderId === loggedInUserId;
-              const currentDate = formatDate(msg.createdAt);
-              const prevDate = i > 0 ? formatDate(messages[i - 1].createdAt) : null;
-              const userReaction = msg.reactions?.find(r => r.userId === loggedInUserId);
+              const currentDate = formatDate(msg?.createdAt);
+              const prevDate = i > 0 ? formatDate(messages[i - 1]?.createdAt) : null;
+              const userReaction = msg?.reactions?.find(r => r.userId === loggedInUserId);
               msgCount += 1;
               return (
                 <React.Fragment key={msg.id}>
@@ -538,6 +557,7 @@ export default function Chatbox() {
                     reactionPickerRef={reactionPickerRef}
                     fullReactionPickerRef={fullReactionPickerRef}
                     formatTime={formatTime}
+                    formatFullTimestamp={formatFullTimestamp}
                     selectedMessage={selectedMessage}
                     setSelectedMessage={setSelectedMessage}
                     loggedInUserId={loggedInUserId}
@@ -552,8 +572,28 @@ export default function Chatbox() {
         </div>
         {selectedMessage && selectedMessage.mode !== "edit" && (
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-            <div className="bg-white p-4 rounded-xl shadow-xl w-72" ref={modalRef}>
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Choose Action</h3>
+            <div className="bg-white p-4 rounded-xl shadow-xl w-72 relative" ref={actionModalRef}>
+              {/* Close Icon */}
+              <button
+                onClick={() => setSelectedMessage(null)}
+                className="absolute top-3 right-3 rounded-md text-gray-500 hover:bg-gray-50 transition"
+                title="Close"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="w-4 h-4"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              <h3 className="text-sm font-medium text-gray-700 mb-4">Choose Action</h3>
+
+              {/* Action Buttons */}
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => {
@@ -574,7 +614,7 @@ export default function Chatbox() {
                 <button
                   onClick={() => {
                     handleEditClick(selectedMessage);
-                    setSelectedMessage(null); // close modal immediately({ ...selectedMessage, mode: "edit" });
+                    setSelectedMessage(null);
                   }}
                   className="w-14 text-indigo-600 text-sm bg-indigo-50 hover:bg-indigo-100 rounded-md py-1 transition"
                 >
@@ -585,12 +625,6 @@ export default function Chatbox() {
                   className="w-14 text-red-500 text-sm bg-red-50 hover:bg-red-100 rounded-md py-1 transition"
                 >
                   Delete
-                </button>
-                <button
-                  onClick={() => setSelectedMessage(null)}
-                  className="w-14 text-gray-600 text-sm bg-gray-100 hover:bg-gray-200 rounded-md py-1 transition"
-                >
-                  Cancel
                 </button>
               </div>
             </div>
@@ -659,10 +693,10 @@ export default function Chatbox() {
                 {/* Seen / Not Seen */}
                 <div className="mb-4">
                   <h3 className={`text-sm font-semibold ${seenModalData.msg.isRead ? 'text-green-700' : 'text-red-700'}  mb-1`}>
-                    {seenModalData.msg.isRead ? 'Seen : ' : 'Not Seen Yet'}
-                    {seenModalData.msg.isRead && (
+                    {seenModalData.msg?.isRead ? 'Seen : ' : 'Not Seen Yet'}
+                    {seenModalData.msg?.isRead && seenModalData.msg?.readAt && (
                       <span className="text-xs text-gray-600 font-normal italic ml-1">
-                        {formatRelativeTime(seenModalData.msg.readAt)}
+                        {formatRelativeTime(seenModalData.msg?.readAt)}
                       </span>
                     )}
                   </h3>
@@ -682,8 +716,16 @@ export default function Chatbox() {
           )
         }
 
-        <div className="text-sm text-gray-500 mb-2 h-5 px-1">
-          {isTyping ? "Typing..." : "\u00A0"}
+        <div className="mb-1 h-5 px-1">
+          {isTyping ? (
+            <div className="flex flex-col items-left px-3">
+              <div className="flex space-x-1">
+                <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce"></span>
+              </div>
+            </div>
+          ) : "\u00A0"}
         </div>
 
         <div className="relative" ref={dropdownRef}>
@@ -747,7 +789,7 @@ export default function Chatbox() {
             </div>
           )}
 
-          <div className={notFriend || isSubmitting ? "pointer-events-none opacity-50" : ""}>
+          <div className={notFriend ? "pointer-events-none opacity-50" : ""}>
             {selectedFile && (
               <div className="flex items-center justify-between bg-gray-50 border rounded p-2 mb-2">
                 <div className="text-xs text-gray-700 truncate max-w-[200px]">
@@ -766,9 +808,10 @@ export default function Chatbox() {
               className="relative flex items-center gap-2 bg-white p-2 mb-2.5 rounded-lg shadow-sm"
             >
 
-              {/* Emoji Button on Left Inside Input */}
+              {/* Emoji Button */}
               <button
-                disabled={notFriend || isSubmitting}
+                // disabled={notFriend || isSubmitting}
+                disabled={notFriend}
                 type="button"
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className="text-gray-500 hover:text-indigo-500"
@@ -790,9 +833,10 @@ export default function Chatbox() {
                   />
                 </svg>
               </button>
-              {/* Textarea - Compact Height */}
+              {/* Textarea */}
               <textarea
-                disabled={notFriend || isSubmitting}
+                // disabled={notFriend || isSubmitting}
+                disabled={notFriend}
                 ref={inputRef}
                 value={input}
                 onChange={handleInputChange}
@@ -817,7 +861,8 @@ export default function Chatbox() {
                   />
                   <button
                     type="button"
-                    disabled={notFriend || isSubmitting}
+                    // disabled={notFriend || isSubmitting}
+                    disabled={notFriend}
                     onClick={() => fileInputRef.current.click()}
                     className="text-gray-500 hover:text-indigo-500"
                     title="Attach File"
@@ -830,7 +875,8 @@ export default function Chatbox() {
               {/* Send Button */}
               <button
                 type="submit"
-                disabled={notFriend || isSubmitting}
+                // disabled={notFriend || isSubmitting}
+                disabled={notFriend}
                 className="bg-indigo-500 hover:bg-indigo-600 text-white p-2 rounded-full transition"
               >
                 <svg

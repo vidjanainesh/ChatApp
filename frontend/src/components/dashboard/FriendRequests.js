@@ -14,6 +14,8 @@ export default function FriendRequests() {
   const friendReqCount = useSelector((state => state.user.friendReqCount));
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
+  const [processingIds, setProcessingIds] = useState([]);
 
   useEffect(() => {
     setLoading(true);
@@ -41,6 +43,8 @@ export default function FriendRequests() {
   }, [token, navigate]);
 
   const handleAction = async (id, status) => {
+    // setProcessing(true);
+    setProcessingIds((prev) => [...prev, id]);
     try {
       dispatch(decrementFriendReqCount());
       const response = await manageFriendReq(id, status, token);
@@ -114,20 +118,31 @@ export default function FriendRequests() {
                     <p className="text-sm text-gray-500">{req.sender.email}</p>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleAction(req.senderId, "accepted")}
-                    className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition duration-300"
-                  >
-                    Accept
-                  </button>
-                  <button
-                    onClick={() => handleAction(req.senderId, "rejected")}
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg transition duration-300"
-                  >
-                    Reject
-                  </button>
-                </div>
+                {processingIds.includes(req.senderId) ? (
+                  <div className="flex flex-col items-center mt-2 pt-4">
+                    <div className="flex space-x-1">
+                      <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                      <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                      <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce"></span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleAction(req.senderId, "accepted")}
+                      className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition duration-300"
+                    >
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => handleAction(req.senderId, "rejected")}
+                      className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg transition duration-300"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                )}
+
               </motion.div>
             ))}
           </div>

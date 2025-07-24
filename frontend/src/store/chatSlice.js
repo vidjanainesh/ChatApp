@@ -20,6 +20,12 @@ const chatSlice = createSlice({
       state.messages.push(action.payload);
       // console.log('Messages (Send):', JSON.parse(JSON.stringify(state.messages)));
     },
+    updateMessageId: (state, action) => {
+      const { tempId, newMessage } = action.payload;
+      state.messages = state.messages.map((msg) =>
+        msg.id === tempId ? newMessage : msg
+      );
+    },
     prependMessages: (state, action) => {
       state.messages = [...action.payload, ...state.messages];
     },
@@ -85,6 +91,12 @@ const chatSlice = createSlice({
       state.groupMessages.push(action.payload);
       // console.log('Add messages:', JSON.parse(JSON.stringify(state.groupMessages)));
     },
+    updateGroupMessageId: (state, action) => {
+      const { tempId, newMessage } = action.payload;
+      state.groupMessages = state.groupMessages.map((msg) =>
+        msg.id === tempId ? newMessage : msg
+      );
+    },
     prependGroupMessages: (state, action) => {
       state.groupMessages = [...action.payload, ...state.groupMessages];
     },
@@ -111,7 +123,7 @@ const chatSlice = createSlice({
       state.groupMessages = state.groupMessages.map(msg => {
         return {
           ...msg,
-          reads: msg.reads?.map(curr =>
+          reads: msg?.reads?.map(curr =>
             curr.userId === by && groupMsgReadIds.includes(curr.id) ? { ...curr, readAt: new Date().toISOString() } : curr
           )
         }
@@ -165,6 +177,7 @@ const chatSlice = createSlice({
 export const {
   setMessages,
   addMessage,
+  updateMessageId,
   prependMessages,
   clearMessages,
   editPrivateMessage,
@@ -174,6 +187,7 @@ export const {
   removeReactionFromPrivateMessage,
   setGroupMessages,
   addGroupMessage,
+  updateGroupMessageId,
   prependGroupMessages,
   clearGroupMessages,
   editGroupMsgAction,

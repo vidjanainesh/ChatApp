@@ -7,13 +7,14 @@ import { jwtDecode } from "jwt-decode";
 import useSocket from "../../hooks/useSocket";
 import { useDispatch, useSelector } from "react-redux";
 import GroupChatMessage from "./GroupChatMessage";
-import { setGroupMessages, setGroupMembers, deleteGroupMsgAction, editGroupMsgAction, clearGroupMessages, clearChatState, addReactionToGroupMessage, setCurrentChat, prependGroupMessages } from "../../store/chatSlice";
+import { setGroupMessages, addGroupMessage, updateGroupMessageId, setGroupMembers, deleteGroupMsgAction, editGroupMsgAction, clearGroupMessages, clearChatState, addReactionToGroupMessage, setCurrentChat, prependGroupMessages } from "../../store/chatSlice";
 import EmojiPicker from "emoji-picker-react";
 import { HiOutlineLogout, HiUserAdd, HiOutlineUsers, HiOutlineChat, HiPaperClip, HiPhotograph, HiVideoCamera } from "react-icons/hi";
 import { BsCheck, BsCheckAll } from "react-icons/bs";
 import { setGroups } from "../../store/userSlice";
+import { v4 as uuidv4 } from 'uuid';
 
-import { formatRelativeTime, formatDate, formatTime } from "../../helper/formatDateAndTime";
+import { formatRelativeTime, formatDate, formatTime, formatFullTimestamp } from "../../helper/formatDateAndTime";
 
 export default function GroupChatbox() {
     const navigate = useNavigate();
@@ -59,6 +60,7 @@ export default function GroupChatbox() {
     const leaveModalRef = useRef(null);
     const inviteModalRef = useRef(null);
     const reactionPickerRef = useRef();
+    const actionModalRef = useRef();
     const fullReactionPickerRef = useRef();
     const inputRef = useRef(null);
     const fileInputRef = useRef();
@@ -84,6 +86,10 @@ export default function GroupChatbox() {
         loggedInUserId,
         setIsTyping,
     });
+
+    useEffect(() => {
+        console.log(messages);
+    }, [messages]);
 
     // Callback function to fetch group messages
     const fetchGroupMessages = useCallback(async (beforeId = null) => {
@@ -241,7 +247,7 @@ export default function GroupChatbox() {
     useEffect(() => {
         if (!messageLoading && messages?.length && firstUnreadMessageId === null) {
             const firstUnread = messages.find(
-                msg => msg.reads?.find(read => read.userId === loggedInUserId && !read.readAt)
+                msg => msg?.reads?.find(read => read.userId === loggedInUserId && !read.readAt)
             );
             if (firstUnread) {
                 setFirstUnreadMessageId(firstUnread.id);
@@ -271,50 +277,75 @@ export default function GroupChatbox() {
     };
 
     const handleSubmit = async (e) => {
+
         e.preventDefault();
         if (!input.trim() && !selectedFile) return;
 
         setIsSubmitting(true);
         setShowEmojiPicker(false);
+        setInput("");
+        setReplyTo(null);
+        setSelectedFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        setTimeout(() => {
+            if (inputRef.current) inputRef.current.focus();
+        }, 0);
 
+        // Editing a message
         if (editMode) {
+            setEditMode(null);  // exit edit mode
             try {
-                const res = await editGroupMessage(editMode.id, input, token);
+                const res = await editGroupMessage(editMode.id, input, token); // API Call
+
                 if (res.data.status === "success") {
                     dispatch(editGroupMsgAction(res.data.data));
-                    setEditMode(null);  // exit edit mode
-                    setInput("");       // clear input
-                    setReplyTo(null);
                     setIsSubmitting(false);
+                } else {
+                    toast.error("Could not send message", { autoClose: 3000 });
                 }
             } catch {
                 toast.error("Failed to edit message");
             }
+
+            // Sending a message
         } else {
             socketRef.emit("groupTyping", {
                 senderId: loggedInUserId,
                 groupId: parseInt(id),
                 isTyping: false,
             });
+
             try {
+                const tempId = uuidv4();
+
+                // Socket(Temporary) Message for showing the message instantly
+                const message = {
+                    id: tempId,
+                    message: input,
+                    senderId: loggedInUserId,
+                    groupId: parseInt(id),
+                    temp: true,
+                };
+
+                dispatch(addGroupMessage(message));
+
+                // For calling API and receiving the actual message object
                 const formData = new FormData();
                 formData.append("msg", input);
                 formData.append("groupId", parseInt(id));
                 if (replyTo?.id) formData.append("replyTo", replyTo.id);
                 if (selectedFile) formData.append("file", selectedFile);
 
-                const res = await sendGroupMessage(formData, token); // { groupId: parseInt(id), msg: input, replyTo: replyTo?.id || null },
+                const res = await sendGroupMessage(formData, token); // API Call
+
                 if (res.data.status === "success") {
-                    setInput("");
-                    setReplyTo(null);
-                    setSelectedFile(null);
-                    if (fileInputRef.current) fileInputRef.current.value = "";
-                    setTimeout(() => {
-                        if (inputRef.current) inputRef.current.focus();
-                    }, 0);
+                    // console.log(res.data);
+                    const realMessage = res.data.data.message;
+                    dispatch(updateGroupMessageId({ tempId, newMessage: realMessage }));
                 } else {
                     toast.error("Could not send message", { autoClose: 3000 });
                 }
+
             } catch (err) {
                 const msg = err.response?.data?.message || "Failed to send message";
                 if (msg === "Invalid or expired token") {
@@ -435,6 +466,10 @@ export default function GroupChatbox() {
             setShowInviteModal(false);
         }
 
+        if (actionModalRef.current && !actionModalRef.current.contains(event.target)) {
+            setSelectedMessage(null);
+        }
+
         if (reactionPickerRef.current && !reactionPickerRef.current.contains(event.target)) {
             setReactionPickerId(null);
         }
@@ -506,28 +541,31 @@ export default function GroupChatbox() {
         return colors[index];
     }
 
+
     // Minimum width for each message box
     const getMinWidth = (msg) => {
-        if (!msg.reactions || msg.reactions?.length === 0) return "0px";
+        const baseMin = 100;
+        // if (!msg.reactions || msg.reactions?.length === 0) return "0px";
 
+        let totalReactionsWidth = 0;
         // Unique emojis (reaction groups)
-        const uniqueEmojis = Object.keys(
-            msg.reactions.reduce((acc, reaction) => {
-                acc[reaction.reaction] = true;
-                return acc;
-            }, {})
-        );
+        if (msg.reactions && msg.reactions.length > 0) {
+            const uniqueEmojis = Object.keys(
+                msg.reactions.reduce((acc, reaction) => {
+                    acc[reaction.reaction] = true;
+                    return acc;
+                }, {})
+            );
 
-        const numReactions = uniqueEmojis.length;
+            // Each reaction button roughly takes ~28px + 4px gap
+            const buttonWidthWithGap = 32;
 
-        // Each reaction button roughly takes ~28px + 4px gap
-        const buttonWidthWithGap = 32;
-
-        // Total width required by reactions
-        const totalReactionsWidth = numReactions * buttonWidthWithGap;
+            // Total width required by reactions
+            totalReactionsWidth = uniqueEmojis.length * buttonWidthWithGap;
+        }
 
         // Ensure minimum width (e.g. for text bubbles like "Hi")
-        return `${Math.max(60, totalReactionsWidth)}px`;
+        return `${Math.max(baseMin, totalReactionsWidth)}px`;
     };
 
     // Maximum width for each message box
@@ -563,7 +601,7 @@ export default function GroupChatbox() {
                     </button>
 
                     <h2 className="text-lg sm:text-xl font-semibold text-gray-800 truncate max-w-[12rem] text-center mx-auto">
-                        Group: {name}
+                        {name}
                     </h2>
 
                     <div className="flex items-center gap">
@@ -669,17 +707,17 @@ export default function GroupChatbox() {
                             if (!msg || typeof msg !== "object" || !msg.senderId) return null;
 
                             const isSender = msg.senderId === loggedInUserId;
-                            const currentDate = formatDate(msg.createdAt);
-                            const prevDate = i > 0 ? formatDate(messages[i - 1].createdAt) : null;
+                            const currentDate = formatDate(msg?.createdAt);
+                            const prevDate = i > 0 ? formatDate(messages[i - 1]?.createdAt) : null;
                             let isReadAll = true;
-                            msg.reads.forEach(read => {
-                                if (read.readAt === null) isReadAll = false;
+                            msg?.reads?.forEach(read => {
+                                if (read?.readAt === null) isReadAll = false;
                             });
-                            if (msg.type !== "system") msgCount += 1;
+                            if (msg?.type !== "system") msgCount += 1;
 
                             return (
-                                <React.Fragment key={msg.id}>
-                                    {msg.id === firstUnreadMessageId && (
+                                <React.Fragment key={msg?.id}>
+                                    {msg?.id === firstUnreadMessageId && (
                                         <motion.div
                                             initial={{ opacity: 0, y: -5 }}
                                             animate={{ opacity: 1, y: 0 }}
@@ -696,7 +734,7 @@ export default function GroupChatbox() {
                                         </motion.div>
                                     )}
                                     <GroupChatMessage
-                                        key={msg.id}
+                                        key={msg?.id}
                                         msg={msg}
                                         i={i}
                                         isSender={isSender}
@@ -719,10 +757,11 @@ export default function GroupChatbox() {
                                         getMinWidth={getMinWidth}
                                         getMaxWidth={getMaxWidth}
                                         formatTime={formatTime}
+                                        formatFullTimestamp={formatFullTimestamp}
                                         reactionPickerRef={reactionPickerRef}
                                         fullReactionPickerRef={fullReactionPickerRef}
                                         availableReactions={availableReactions}
-                                        downloadedFile={downloadedFiles[msg.id]}
+                                        downloadedFile={downloadedFiles[msg?.id]}
                                         onDownload={() => handleDownload(msg)}
                                     />
                                 </React.Fragment>
@@ -730,64 +769,83 @@ export default function GroupChatbox() {
                         })
                     )}
                 </div>
-                {
-                    selectedMessage && selectedMessage.mode !== "edit" && (
-                        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-                            <div className="bg-white p-4 rounded-xl shadow-xl w-72">
-                                <h3 className="text-sm font-medium text-gray-700 mb-3">Choose Action</h3>
-                                <div className="flex justify-end gap-2">
-                                    <button
-                                        onClick={() => {
-                                            setSeenModalData({
-                                                msg: selectedMessage,
-                                                message: selectedMessage.message || "📎 File",
-                                                time: formatTime(selectedMessage.createdAt),
-                                                senderName: selectedMessage.sender?.name,
-                                                fileType: selectedMessage.fileType,
-                                                isReadAll: selectedMessage.isReadAll,
-                                                readers: selectedMessage.reads.filter(r => r.readAt !== null),
-                                                notSeen: selectedMessage.reads.filter(r => r.readAt === null),
-                                                total: selectedMessage.reads.length
-                                            });
-                                            setSelectedMessage(null);
-                                        }}
-                                        className="w-14 text-teal-600 text-sm bg-teal-50 hover:bg-teal-100 rounded-md py-1 transition"
-                                    >
-                                        Info
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            handleEditClick(selectedMessage);
-                                            setSelectedMessage(null);
-                                        }}
-                                        className="w-14 text-indigo-600 text-sm bg-indigo-50 hover:bg-indigo-100 rounded-md py-1 transition"
-                                    >
-                                        Edit
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteClick(selectedMessage.id)}
-                                        className="w-14 text-red-500 text-sm bg-red-50 hover:bg-red-100 rounded-md py-1 transition"
-                                    >
-                                        Delete
-                                    </button>
-                                    <button
-                                        onClick={() => setSelectedMessage(null)}
-                                        className="w-14 text-gray-600 text-sm bg-gray-100 hover:bg-gray-200 rounded-md py-1 transition"
-                                    >
-                                        Cancel
-                                    </button>
-                                </div>
+                {selectedMessage && selectedMessage.mode !== "edit" && (
+                    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+                        <div className="bg-white p-4 rounded-xl shadow-xl w-72 relative" ref={actionModalRef}>
+                            {/* Close Icon */}
+                            <button
+                                onClick={() => setSelectedMessage(null)}
+                                className="absolute top-3 right-3 rounded-md text-gray-500 hover:bg-gray-50 transition"
+                                title="Close"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    strokeWidth={1.5}
+                                    stroke="currentColor"
+                                    className="w-4 h-4"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+
+                            <h3 className="text-sm font-medium text-gray-700 mb-3">Choose Action</h3>
+
+                            {/* Action Buttons */}
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    onClick={() => {
+                                        setSeenModalData({
+                                            msg: selectedMessage,
+                                            message: selectedMessage.message || "📎 File",
+                                            time: formatTime(selectedMessage.createdAt),
+                                            senderName: selectedMessage.sender?.name,
+                                            fileType: selectedMessage.fileType,
+                                            isReadAll: selectedMessage.isReadAll,
+                                            readers: selectedMessage.reads.filter(r => r.readAt !== null),
+                                            notSeen: selectedMessage.reads.filter(r => r.readAt === null),
+                                            total: selectedMessage.reads.length
+                                        });
+                                        setSelectedMessage(null);
+                                    }}
+                                    className="w-14 text-teal-600 text-sm bg-teal-50 hover:bg-teal-100 rounded-md py-1 transition"
+                                >
+                                    Info
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        handleEditClick(selectedMessage);
+                                        setSelectedMessage(null);
+                                    }}
+                                    className="w-14 text-indigo-600 text-sm bg-indigo-50 hover:bg-indigo-100 rounded-md py-1 transition"
+                                >
+                                    Edit
+                                </button>
+                                <button
+                                    onClick={() => handleDeleteClick(selectedMessage.id)}
+                                    className="w-14 text-red-500 text-sm bg-red-50 hover:bg-red-100 rounded-md py-1 transition"
+                                >
+                                    Delete
+                                </button>
                             </div>
                         </div>
-                    )
-                }
+                    </div>
+                )}
 
-
-                <div className="text-sm text-gray-500 mb-2 h-5 px-1">
-                    {isTyping ? "Someone is typing..." : "\u00A0"}
+                <div className="mb-1 h-5 px-1">
+                    {isTyping ? (
+                        <div className="flex flex-col items-left px-3">
+                            <div className="flex space-x-1">
+                                <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce"></span>
+                            </div>
+                        </div>
+                    ) : "\u00A0"}
                 </div>
 
-                <div className={isSubmitting ? "pointer-events-none opacity-50 relative" : "relative"} ref={emojiRef}>
+                <div ref={emojiRef}>
                     {showEmojiPicker && (
                         <div
                             className="absolute bottom-16 left-2 z-50 origin-bottom-left"
@@ -850,7 +908,7 @@ export default function GroupChatbox() {
                     >
                         <button
                             type="button"
-                            disabled={isSubmitting}
+                            // disabled={isSubmitting}
                             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                             className="text-gray-500 hover:text-indigo-500"
                             title="Insert Emoji"
@@ -874,7 +932,7 @@ export default function GroupChatbox() {
                         <textarea
                             ref={inputRef}
                             value={input}
-                            disabled={isSubmitting}
+                            // disabled={isSubmitting}
                             onChange={handleInputChange}
                             onKeyDown={(e) => {
                                 if (e.key === "Enter" && !e.shiftKey) {
@@ -891,7 +949,7 @@ export default function GroupChatbox() {
                             <>
                                 <input
                                     type="file"
-                                    disabled={isSubmitting}
+                                    // disabled={isSubmitting}
                                     ref={fileInputRef}
                                     style={{ display: "none" }}
                                     onChange={handleFileChange}
@@ -908,7 +966,7 @@ export default function GroupChatbox() {
                         )}
                         <button
                             type="submit"
-                            disabled={isSubmitting}
+                            // disabled={isSubmitting}
                             className="bg-indigo-500 hover:bg-indigo-600 text-white p-2 rounded-full transition"
                         >
                             <svg
@@ -925,252 +983,247 @@ export default function GroupChatbox() {
                         </button>
                     </form>
                 </div>
-                {
-                    showLeaveModal && (
-                        <div className="fixed inset-0 z-50 bg-black bg-opacity-30 flex items-center justify-center">
-                            <div
-                                ref={leaveModalRef}
-                                className="bg-white p-6 rounded-lg shadow-lg w-80"
-                            >
-                                <h2 className="text-lg font-semibold mb-3 text-gray-800">
-                                    Leave Group?
-                                </h2>
-                                <p className="text-sm text-gray-600 mb-4">
-                                    Are you sure you want to leave{" "}
-                                    <strong>{name}</strong>?
-                                </p>
-                                <div className="flex justify-end gap-3">
-                                    <button
-                                        onClick={() => setShowLeaveModal(false)}
-                                        className="px-3 py-1 rounded text-gray-700 hover:bg-gray-100"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={async () => {
-                                            await handleLeaveGroup();
-                                            setShowLeaveModal(false);
-                                        }}
-                                        className="px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600"
-                                    >
-                                        Leave
-                                    </button>
-                                </div>
+                {showLeaveModal && (
+                    <div className="fixed inset-0 z-50 bg-black bg-opacity-30 flex items-center justify-center">
+                        <div
+                            ref={leaveModalRef}
+                            className="bg-white p-6 rounded-lg shadow-lg w-80"
+                        >
+                            <h2 className="text-lg font-semibold mb-3 text-gray-800">
+                                Leave Group?
+                            </h2>
+                            <p className="text-sm text-gray-600 mb-4">
+                                Are you sure you want to leave{" "}
+                                <strong>{name}</strong>?
+                            </p>
+                            <div className="flex justify-end gap-3">
+                                <button
+                                    onClick={() => setShowLeaveModal(false)}
+                                    className="px-3 py-1 rounded text-gray-700 hover:bg-gray-100"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        await handleLeaveGroup();
+                                        setShowLeaveModal(false);
+                                    }}
+                                    className="px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600"
+                                >
+                                    Leave
+                                </button>
                             </div>
                         </div>
-                    )
-                }
-                {
-                    showInviteModal && (
-                        <div className="fixed inset-0 z-50 bg-black bg-opacity-30 flex items-center justify-center">
-                            <div
-                                ref={inviteModalRef}
-                                className="bg-white p-6 rounded-lg shadow-lg w-[20rem] max-h-[80vh] overflow-y-auto"
-                            >
-                                <h2 className="text-lg font-semibold mb-3 text-gray-800">
-                                    Invite Friends
-                                </h2>
-                                <p className="text-sm text-gray-600 mb-4">
-                                    Select friends to add to the group:
-                                </p>
+                    </div>
+                )}
+                {showInviteModal && (
+                    <div className="fixed inset-0 z-50 bg-black bg-opacity-30 flex items-center justify-center">
+                        <div
+                            ref={inviteModalRef}
+                            className="bg-white p-6 rounded-lg shadow-lg w-[20rem] max-h-[80vh] overflow-y-auto"
+                        >
+                            <h2 className="text-lg font-semibold mb-3 text-gray-800">
+                                Invite Friends
+                            </h2>
+                            <p className="text-sm text-gray-600 mb-4">
+                                Select friends to add to the group:
+                            </p>
 
-                                {friends.filter(
-                                    (f) => !members.some((m) => m.id === f.id)
-                                ).length > 0 ? (
-                                    <ul className="divide-y">
-                                        {friends
-                                            .filter(
-                                                (f) =>
-                                                    !members.some(
-                                                        (m) => m.id === f.id
-                                                    )
-                                            )
-                                            .map((friend) => (
-                                                <li
-                                                    key={friend.id}
-                                                    className="py-2 flex items-center gap-2"
-                                                >
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedFriends.includes(
-                                                            friend.id
-                                                        )}
-                                                        onChange={(e) => {
-                                                            const checked =
-                                                                e.target.checked;
-                                                            setSelectedFriends(
-                                                                (prev) => checked ? [...prev, friend.id,] : prev.filter((id) => id !== friend.id)
-                                                            );
-                                                        }}
-                                                    />
-                                                    <div>
-                                                        <div className="text-sm text-gray-800 font-medium">
-                                                            {friend.name}
-                                                        </div>
-                                                        <div className="text-xs text-gray-500">
-                                                            {friend.email}
-                                                        </div>
+                            {friends.filter(
+                                (f) => !members.some((m) => m.id === f.id)
+                            ).length > 0 ? (
+                                <ul className="divide-y">
+                                    {friends
+                                        .filter(
+                                            (f) =>
+                                                !members.some(
+                                                    (m) => m.id === f.id
+                                                )
+                                        )
+                                        .map((friend) => (
+                                            <li
+                                                key={friend.id}
+                                                className="py-2 flex items-center gap-2"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedFriends.includes(
+                                                        friend.id
+                                                    )}
+                                                    onChange={(e) => {
+                                                        const checked =
+                                                            e.target.checked;
+                                                        setSelectedFriends(
+                                                            (prev) => checked ? [...prev, friend.id,] : prev.filter((id) => id !== friend.id)
+                                                        );
+                                                    }}
+                                                />
+                                                <div>
+                                                    <div className="text-sm text-gray-800 font-medium">
+                                                        {friend.name}
                                                     </div>
-                                                </li>
-                                            ))}
-                                    </ul>
-                                ) : (
-                                    <div className="text-sm text-gray-500 text-center py-6">
-                                        🎉 All your friends are already in the
-                                        group!
-                                    </div>
-                                )}
+                                                    <div className="text-xs text-gray-500">
+                                                        {friend.email}
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        ))}
+                                </ul>
+                            ) : (
+                                <div className="text-sm text-gray-500 text-center py-6">
+                                    🎉 All your friends are already in the
+                                    group!
+                                </div>
+                            )}
 
-                                <div className="flex justify-end gap-3 mt-4">
-                                    <button
-                                        onClick={() => {
+                            <div className="flex justify-end gap-3 mt-4">
+                                <button
+                                    onClick={() => {
+                                        setSelectedFriends([]);
+                                        setShowInviteModal(false);
+                                    }}
+                                    className="px-3 py-1 rounded text-gray-700 hover:bg-gray-100"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        if (selectedFriends.length > 0) {
+                                            await handleInviteMultiple(
+                                                selectedFriends
+                                            );
                                             setSelectedFriends([]);
                                             setShowInviteModal(false);
-                                        }}
-                                        className="px-3 py-1 rounded text-gray-700 hover:bg-gray-100"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={async () => {
-                                            if (selectedFriends.length > 0) {
-                                                await handleInviteMultiple(
-                                                    selectedFriends
-                                                );
-                                                setSelectedFriends([]);
-                                                setShowInviteModal(false);
-                                            }
-                                        }}
-                                        disabled={selectedFriends.length === 0}
-                                        className={`px-3 py-1 rounded text-white ${selectedFriends.length > 0
-                                            ? "bg-indigo-500 hover:bg-indigo-600"
-                                            : "bg-indigo-300 cursor-not-allowed"
-                                            }`}
-                                    >
-                                        Add
-                                    </button>
-                                </div>
+                                        }
+                                    }}
+                                    disabled={selectedFriends.length === 0}
+                                    className={`px-3 py-1 rounded text-white ${selectedFriends.length > 0
+                                        ? "bg-indigo-500 hover:bg-indigo-600"
+                                        : "bg-indigo-300 cursor-not-allowed"
+                                        }`}
+                                >
+                                    Add
+                                </button>
                             </div>
                         </div>
-                    )
-                }
+                    </div>
+                )}
+
                 {/* Seen by modal */}
-                {
-                    seenModalData && (
-                        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                            <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm relative">
-                                <button
-                                    onClick={() => setSeenModalData(null)}
-                                    className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-2xl"
+                {seenModalData && (
+                    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm relative">
+                            <button
+                                onClick={() => setSeenModalData(null)}
+                                className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-2xl"
+                            >
+                                &times;
+                            </button>
+
+                            {/* Modal Header */}
+                            <h2 className="text-xl font-semibold text-indigo-700 mb-3 text-center">
+                                Message Seen Info
+                            </h2>
+
+                            {/* Message box display */}
+                            <div className={`flex justify-end relative`}>
+                                <div
+                                    className='mb-2 p-3 rounded-xl text-sm shadow-md break-words whitespace-pre-wrap relative bg-indigo-100 self-end max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-400 scrollbar-track-transparent'
+                                    style={{ minWidth: getMinWidth(seenModalData.msg), maxWidth: getMaxWidth(seenModalData.msg) }}
                                 >
-                                    &times;
-                                </button>
+                                    <div className="text-left">
+                                        {/* text message */}
+                                        {!seenModalData.fileType && (
+                                            <div>{seenModalData.message}</div>
+                                        )}
 
-                                {/* Modal Header */}
-                                <h2 className="text-xl font-semibold text-indigo-700 mb-3 text-center">
-                                    Message Seen Info
-                                </h2>
-
-                                {/* Message box display */}
-                                <div className={`flex justify-end relative`}>
-                                    <div
-                                        className='mb-2 p-3 rounded-xl text-sm shadow-md break-words whitespace-pre-wrap relative bg-indigo-100 self-end max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-400 scrollbar-track-transparent'
-                                        style={{ minWidth: getMinWidth(seenModalData.msg), maxWidth: getMaxWidth(seenModalData.msg) }}
-                                    >
-                                        <div className="text-left">
-                                            {/* text message */}
-                                            {!seenModalData.fileType && (
-                                                <div>{seenModalData.message}</div>
-                                            )}
-
-                                            {/* image or video icon */}
-                                            {seenModalData.fileType && (
-                                                <div className="flex flex-col items-center justify-center text-gray-500">
-                                                    {seenModalData.fileType === "image" ? (
-                                                        <HiPhotograph className="w-8 h-8 mb-1" />
-                                                    ) : (
-                                                        <HiVideoCamera className="w-8 h-8 mb-1" />
-                                                    )}
-                                                    <span className="text-xs italic">File</span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* time, edited, ticks */}
-                                        <div className={`flex items-center mt-1 justify-end`}>
-                                            <div className="text-[10px] pr-0 text-gray-400 text-right flex items-center gap-1">
-                                                {seenModalData.time}{" "}
-                                                {!!seenModalData.msg.isEdited && <span className="italic">(edited)</span>}
-                                                <span style={{ color: seenModalData.isReadAll ? "#3B82F6" : "#9CA3AF" }}>
-                                                    {seenModalData.isReadAll ? (
-                                                        <BsCheckAll className="inline-block w-4 h-4" />
-                                                    ) : (
-                                                        <BsCheck className="inline-block w-4 h-4" />
-                                                    )}
-                                                </span>
+                                        {/* image or video icon */}
+                                        {seenModalData.fileType && (
+                                            <div className="flex flex-col items-center justify-center text-gray-500">
+                                                {seenModalData.fileType === "image" ? (
+                                                    <HiPhotograph className="w-8 h-8 mb-1" />
+                                                ) : (
+                                                    <HiVideoCamera className="w-8 h-8 mb-1" />
+                                                )}
+                                                <span className="text-xs italic">File</span>
                                             </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Seperator Line */}
-                                <div className="border-t border-gray-300 my-4"></div>
-
-                                {/* Seen by list */}
-                                <div className="mb-4">
-                                    <h3 className={`text-sm font-semibold ${seenModalData.readers.length > 0 ? 'text-green-700' : 'text-gray-600'} mb-1`}>
-                                        Seen by ({seenModalData.readers.length}/{seenModalData.total})
-                                    </h3>
-                                    <div className="border border-gray-200 rounded-md bg-gray-50 px-3 py-2 max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-grey-400 scrollbar-track-transparent">
-                                        {seenModalData.readers.length > 0 ? (
-                                            <ul className="space-y-1 text-sm text-gray-800">
-                                                {seenModalData.readers.map((r, i) => (
-                                                    <li key={i} className="py-0.5">
-                                                        <span>{r.reader.name} : </span>
-                                                        <span className="text-xs text-gray-500 font-normal italic ml-1">
-                                                            {formatRelativeTime(r.readAt)}
-                                                        </span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        ) : (
-                                            <p className="text-sm text-gray-400">No one has seen it yet.</p>
                                         )}
                                     </div>
-                                </div>
 
-
-                                {/* Not seen by list */}
-                                {seenModalData.notSeen.length > 0 && seenModalData.notSeen.length !== seenModalData.total && (
-                                    <div >
-                                        <h3 className="text-sm font-semibold text-red-700 mb-1">
-                                            Not seen by ({seenModalData.notSeen.length}/{seenModalData.total})
-                                        </h3>
-                                        <div className="border border-gray-200 rounded-md bg-gray-50 px-3 py-2 max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-grey-400 scrollbar-track-transparent">
-                                            <ul className="space-y-1 text-sm text-gray-800">
-                                                {seenModalData.notSeen.map((r, i) => (
-                                                    <li key={i} className="py-0.5">
-                                                        {r.reader.name}
-                                                    </li>
-                                                ))}
-                                            </ul>
+                                    {/* time, edited, ticks */}
+                                    <div className={`flex items-center mt-1 justify-end`}>
+                                        <div className="text-[10px] pr-0 text-gray-400 text-right flex items-center gap-1">
+                                            {seenModalData.time}{" "}
+                                            {!!seenModalData.msg.isEdited && <span className="italic">(edited)</span>}
+                                            <span style={{ color: seenModalData.isReadAll ? "#3B82F6" : "#9CA3AF" }}>
+                                                {seenModalData.isReadAll ? (
+                                                    <BsCheckAll className="inline-block w-4 h-4" />
+                                                ) : (
+                                                    <BsCheck className="inline-block w-4 h-4" />
+                                                )}
+                                            </span>
                                         </div>
                                     </div>
-                                )}
-
-                                {/* Close button */}
-                                <div className="flex justify-end mt-6">
-                                    <button
-                                        onClick={() => setSeenModalData(null)}
-                                        className="px-4 py-2 text-sm font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition"
-                                    >
-                                        Close
-                                    </button>
                                 </div>
                             </div>
+
+                            {/* Seperator Line */}
+                            <div className="border-t border-gray-300 my-4"></div>
+
+                            {/* Seen by list */}
+                            <div className="mb-4">
+                                <h3 className={`text-sm font-semibold ${seenModalData.readers.length > 0 ? 'text-green-700' : 'text-gray-600'} mb-1`}>
+                                    Seen by ({seenModalData.readers.length}/{seenModalData.total})
+                                </h3>
+                                <div className="border border-gray-200 rounded-md bg-gray-50 px-3 py-2 max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-grey-400 scrollbar-track-transparent">
+                                    {seenModalData.readers.length > 0 ? (
+                                        <ul className="space-y-1 text-sm text-gray-800">
+                                            {seenModalData.readers.map((r, i) => (
+                                                <li key={i} className="py-0.5">
+                                                    <span>{r.reader.name} : </span>
+                                                    <span className="text-xs text-gray-500 font-normal italic ml-1">
+                                                        {formatRelativeTime(r.readAt)}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="text-sm text-gray-400">No one has seen it yet.</p>
+                                    )}
+                                </div>
+                            </div>
+
+
+                            {/* Not seen by list */}
+                            {seenModalData.notSeen.length > 0 && seenModalData.notSeen.length !== seenModalData.total && (
+                                <div >
+                                    <h3 className="text-sm font-semibold text-red-700 mb-1">
+                                        Not seen by ({seenModalData.notSeen.length}/{seenModalData.total})
+                                    </h3>
+                                    <div className="border border-gray-200 rounded-md bg-gray-50 px-3 py-2 max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-grey-400 scrollbar-track-transparent">
+                                        <ul className="space-y-1 text-sm text-gray-800">
+                                            {seenModalData.notSeen.map((r, i) => (
+                                                <li key={i} className="py-0.5">
+                                                    {r.reader.name}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Close button */}
+                            <div className="flex justify-end mt-6">
+                                <button
+                                    onClick={() => setSeenModalData(null)}
+                                    className="px-4 py-2 text-sm font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition"
+                                >
+                                    Close
+                                </button>
+                            </div>
                         </div>
-                    )
-                }
+                    </div>
+                )}
 
             </div>
         </div >

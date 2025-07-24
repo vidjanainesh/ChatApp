@@ -92,12 +92,14 @@ const sendMessage = async (req, res) => {
         const rawMessage = sentMessage.toJSON(); // Convert Sequelize model to plain object
         const camelCasedMessage = toCamelCase(rawMessage); // Convert keys to camelCase
 
-        // Add sender_name to the emitted message
+        // Final object
         const messageWithSender = {
             ...camelCasedMessage,
+            temp: false,
             isDeleted: false,
             isEdited: false,
             isRead: false,
+            readAt: null,
             reactions: [],
             repliedMessage,
             senderName: user.name || user.email || "Unknown",
@@ -108,7 +110,7 @@ const sendMessage = async (req, res) => {
         };
 
         io.to(receiverRoom).emit("newMessage", payload);
-        io.to(senderRoom).emit("newMessage", payload);
+        // io.to(senderRoom).emit("newMessage", payload);
 
         return successResponse(res, payload, "Message sent");
     } catch (error) {
@@ -308,6 +310,10 @@ const getMessages = async (req, res) => {
         let response = allMessages.map((msg) => {
             const newMsg = ({
                 ...msg,
+                isRead: Boolean(msg.isRead),
+                isEdited: Boolean(msg.isEdited),
+                isDeleted: Boolean(msg.isDeleted),
+                temp: false,
                 reactions: [],
             })
             messageReactions.map((reaction) => {

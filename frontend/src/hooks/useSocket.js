@@ -86,6 +86,9 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
       const receiverIdStr = String(message.receiverId);
       const loggedInUserIdStr = String(loggedInUserId);
 
+      // Ignore messages from self - because temp msg already being displayed 
+      if (senderIdStr === loggedInUserIdStr) return;
+
       // 1. Push to chat messages if it's the active conversation
       if (chatUserId) {
         if (
@@ -185,6 +188,10 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
     // New: Handle newGroupMessage
     socket.on("newGroupMessage", (data) => {
       const { message, groupId: msgGroupId, groupName } = data;
+      // console.log(message);
+      // Ignore messages from self - because temp msg already being displayed 
+      if (message.senderId === loggedInUserId) return;
+
       if (groupId && parseInt(groupId) === parseInt(msgGroupId)) {
         dispatch(addGroupMessage(message));
       }
