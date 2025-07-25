@@ -55,6 +55,7 @@ export default function Dashboard() {
     const [leavingGroup, setLeavingGroup] = useState(false);
     const [removingFriend, setRemovingFriend] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [isUserInitialized, setIsUserInitialized] = useState(false);
 
     const groupRefs = useRef({});
     const friendRefs = useRef({});
@@ -78,15 +79,16 @@ export default function Dashboard() {
     });
 
     useEffect(() => {
-        try {
-            if (!token) return;
+        if (!token || isUserInitialized || user) return;
 
+        try {
             const decodedUser = jwtDecode(token);
             dispatch(setUser({ user: decodedUser, token }));
+            setIsUserInitialized(true);
         } catch (error) {
             toast.error("Error setting current user");
         }
-    }, [dispatch, token]);
+    }, [dispatch, token, isUserInitialized, user]);
 
     // Fetch dashboard data
     useEffect(() => {
