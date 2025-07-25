@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { HiOutlineUserCircle, HiOutlineLogout } from "react-icons/hi";
+import { FaUserCircle } from "react-icons/fa";
 import {
     getDashboardData,
-    getGroups,
     createGroup,
     unFriend,
     leaveGroup,
@@ -30,9 +31,9 @@ import { jwtDecode } from 'jwt-decode';
 
 export default function Dashboard() {
     const navigate = useNavigate();
+    const dispatch = useDispatch();
     const token = localStorage.getItem("jwt");
 
-    const dispatch = useDispatch();
     const user = useSelector((state) => state.user.user);
     const friends = useSelector((state) => state.user.friends);
     const hasFetched = useSelector((state) => state.user.hasFetchedDashboardData);
@@ -53,9 +54,11 @@ export default function Dashboard() {
     const [creatingGroup, setCreatingGroup] = useState(false);
     const [leavingGroup, setLeavingGroup] = useState(false);
     const [removingFriend, setRemovingFriend] = useState(false);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
 
     const groupRefs = useRef({});
     const friendRefs = useRef({});
+    const dropdownRef = useRef(null);
 
     // Use socket globally just for notifications
     useSocket({
@@ -247,21 +250,18 @@ export default function Dashboard() {
     useEffect(() => {
         function handleClickOutside(event) {
             // Close group menu if click is outside
-            if (
-                activeMenuGroupId &&
-                groupRefs.current[activeMenuGroupId] &&
-                !groupRefs.current[activeMenuGroupId].contains(event.target)
-            ) {
+            if (activeMenuGroupId && groupRefs.current[activeMenuGroupId] && !groupRefs.current[activeMenuGroupId].contains(event.target)) {
                 setActiveMenuGroupId(null);
             }
 
             // Close friend menu if click is outside
-            if (
-                activeFriendMenuId &&
-                friendRefs.current[activeFriendMenuId] &&
-                !friendRefs.current[activeFriendMenuId].contains(event.target)
-            ) {
+            if (activeFriendMenuId && friendRefs.current[activeFriendMenuId] && !friendRefs.current[activeFriendMenuId].contains(event.target)) {
                 setActiveFriendMenuId(null);
+            }
+
+            // Close dropdown for profile and logout
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setDropdownOpen(false);
             }
         }
 
@@ -314,12 +314,53 @@ export default function Dashboard() {
                             )}
                         </motion.div>
 
-                        <button
-                            onClick={() => setShowLogoutModal(true)}
-                            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition duration-300 text-sm sm:text-base"
-                        >
-                            Logout
-                        </button>
+                        <div className="relative" ref={dropdownRef}>
+                            <button
+                                onClick={() => setDropdownOpen((prev) => !prev)}
+                                className="flex items-end gap-0 focus:outline-none pt-1"
+                            >
+                                {user?.profileImageUrl ? (
+                                    <img
+                                        src={user.profileImageUrl}
+                                        alt="Avatar"
+                                        className="w-8 h-8 rounded-full object-cover border"
+                                    />
+                                ) : (
+                                    <FaUserCircle className="w-8 h-8 text-gray-500 border rounded-full bg-white" />
+                                )}
+                                <svg
+                                    className="w-3.5 h-3.5 text-gray-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+
+                            {dropdownOpen && (
+                                <div className="absolute right-0 mt-2 w-40 bg-white border rounded-md shadow-lg z-50">
+                                    <button
+                                        onClick={() => {
+                                            navigate("/profile");
+                                            setDropdownOpen(false);
+                                        }}
+                                        className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    >
+                                        <HiOutlineUserCircle className="w-5 h-5 text-gray-500" />
+                                        Profile
+                                    </button>
+
+                                    <button
+                                        onClick={handleLogout}
+                                        className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100"
+                                    >
+                                        <HiOutlineLogout className="w-5 h-5 text-red-500" />
+                                        Logout
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 

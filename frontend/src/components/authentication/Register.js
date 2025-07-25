@@ -10,6 +10,7 @@ export default function Register() {
   const [form, setForm] = useState({
     name: "",
     email: "",
+    phoneNo: "",
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -81,6 +82,28 @@ export default function Register() {
               placeholder="you@example.com"
               required
             />
+          </div>
+          <div>
+            <label htmlFor="phoneNo" className="text-sm text-gray-600 block mb-1">
+              Phone Number
+            </label>
+            <div className="flex">
+              <span className="flex items-center px-4 rounded-l-lg border border-r-0 text-gray-600 bg-gray-100 text-sm">
+                +91
+              </span>
+              <input
+                type="tel"
+                name="phoneNo"
+                id="phoneNo"
+                value={form.phoneNo}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-l-0 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="9876543210"
+                maxLength={10}
+                pattern="\d{10}"
+                required
+              />
+            </div>
           </div>
           <div>
             <label htmlFor="password" className="text-sm text-gray-600 block mb-1">

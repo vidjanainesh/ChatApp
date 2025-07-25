@@ -22,7 +22,7 @@ const transporter = nodemailer.createTransport({
 const register = async (req, res) => {
     try {
         // console.log(req.body);
-        const { name, email, password } = req.body;
+        const { name, email, password, phoneNo } = req.body;
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const token = Math.floor(1000 + Math.random() * 9000);
@@ -75,6 +75,7 @@ const register = async (req, res) => {
             name: name,
             email: email,
             password: hashedPassword,
+            phone_no: phoneNo,
             token: token,
             token_expires: tokenExpires,
         });
@@ -132,6 +133,8 @@ const login = async (req, res) => {
             id: user.id,
             name: user.name,
             email: user.email,
+            profileImageUrl: user.profile_image_url,
+            phoneNo: user.phone_no,
         }
 
         const userToken = jwt.sign(userObject, process.env.JWT_SECRET);
@@ -151,7 +154,11 @@ const googleLogin = async (req, res) => {
     try {
         const { name, email } = req.body;
 
-        const existing = await User.findOne({ where: { email, is_verified: true }, raw: true });
+        const existing = await User.findOne({
+            where: { email, is_verified: true },
+            attributes: ['id', 'name', 'email', ['profile_image_url', 'profileImageUrl'], ['phone_no', 'phoneNo']],
+            raw: true
+        });
 
         if (existing) {
             const userToken = jwt.sign(existing, process.env.JWT_SECRET);
@@ -203,8 +210,16 @@ const googleLogin = async (req, res) => {
                 is_verified: true,
             });
 
-            const userToken = jwt.sign(user.toJSON(), process.env.JWT_SECRET);
-            return successResponse(res, userToken, "User Registerd and Logged In");
+            const userObject = {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                profileImageUrl: user.profile_image_url,
+                phoneNo: user.phone_no,
+            }
+
+            const userToken = jwt.sign(userObject, process.env.JWT_SECRET);
+            return successResponse(res, userToken, "User Registered and Logged In");
         }
     } catch (error) {
         return errorThrowResponse(res, error.message, error);

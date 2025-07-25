@@ -14,7 +14,7 @@ const chatValidationRules = require('../app/middlewares/validators/chatValidatio
 const handleValidation = require('../app/middlewares/validators/handleValidation');
 const upload = require('../app/helper/upload');
 
-router.post('/', authMiddleware, upload.single("file"), chatValidationRules.sendMessage, handleValidation, sendMessage);
+router.post('/', authMiddleware, (req, res, next) => { req.uploadType = 'message'; next(); }, upload.single("file"), chatValidationRules.sendMessage, handleValidation, sendMessage);
 router.get('/:id', authMiddleware, chatValidationRules.getMessages, handleValidation, getMessages);
 router.delete('/:id', authMiddleware, chatValidationRules.deleteMessage, handleValidation, deleteMessage);
 router.patch('/:id', authMiddleware, chatValidationRules.editMessage, handleValidation, editMessage);

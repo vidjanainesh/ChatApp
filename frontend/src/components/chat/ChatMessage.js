@@ -28,6 +28,7 @@ const ChatMessage = ({
     loggedInUserId,
     downloadedFile,
     onDownload,
+    notFriend,
 }) => {
     const tempMotionProps = msg.temp
         ? {
@@ -277,7 +278,7 @@ const ChatMessage = ({
                     )}
 
                     {/* Floating top icons on hover */}
-                    {!msg.temp && (
+                    {!msg.temp && !notFriend && (
                         <div className={`absolute -top-3 -right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity`}>
                             {!msg?.isDeleted && (
                                 <>

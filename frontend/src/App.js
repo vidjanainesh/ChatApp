@@ -12,6 +12,7 @@ import FindPeople from './components/dashboard/FindPeople';
 import FriendRequests from './components/dashboard/FriendRequests';
 import Chatbox from './components/chat/Chatbox';
 import GroupChatbox from './components/chat/GroupChatbox';
+import Profile from './components/dashboard/Profile';
 
 function App() {
 
@@ -34,9 +35,10 @@ function App() {
         <Route path='/groupchatbox/:id' element={<GroupChatbox />} />
         <Route path='/find-people' element={<FindPeople />} />
         <Route path='/friend-requests' element={<FriendRequests />} />
+        <Route path='/profile' element={<Profile />} />
       </Routes>
 
-      <ToastContainer 
+      <ToastContainer
         position="top-right"
         autoClose={3000}
         hideProgressBar={false}
@@ -47,7 +49,7 @@ function App() {
       />
     </div>
 
-    
+
   );
 }
 

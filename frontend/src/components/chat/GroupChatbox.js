@@ -52,6 +52,7 @@ export default function GroupChatbox() {
     const [selectedFile, setSelectedFile] = useState(null);
     const [seenModalData, setSeenModalData] = useState(null);
     const [firstUnreadMessageId, setFirstUnreadMessageId] = useState(null);
+    const [addingMember, setAddingMember] = useState(false);
 
     const hasInitScrolled = useRef(false);
     const emojiRef = useRef(null);
@@ -513,6 +514,7 @@ export default function GroupChatbox() {
     };
 
     const handleInviteMultiple = async (friendIds) => {
+        setAddingMember(true);
         try {
             const res = await joinGroup(
                 { groupId: parseInt(id), friendIds },
@@ -527,6 +529,8 @@ export default function GroupChatbox() {
         } catch (err) {
             const msg = err.response?.data?.message || "Error adding friends";
             toast.error(msg);
+        } finally {
+            setAddingMember(false);
         }
     };
 
@@ -1035,220 +1039,231 @@ export default function GroupChatbox() {
                             </div>
                         </div>
                     </div>
-                )
-                }
-                {
-                    showInviteModal && (
-                        <div className="fixed inset-0 z-50 bg-black bg-opacity-30 flex items-center justify-center">
-                            <div
-                                ref={inviteModalRef}
-                                className="bg-white p-6 rounded-lg shadow-lg w-[20rem] max-h-[80vh] overflow-y-auto"
-                            >
-                                <h2 className="text-lg font-semibold mb-3 text-gray-800">
-                                    Invite Friends
-                                </h2>
-                                <p className="text-sm text-gray-600 mb-4">
-                                    Select friends to add to the group:
-                                </p>
+                )}
 
-                                {friends.filter(
-                                    (f) => !members.some((m) => m.id === f.id)
-                                ).length > 0 ? (
-                                    <ul className="divide-y">
-                                        {friends
-                                            .filter(
-                                                (f) =>
-                                                    !members.some(
-                                                        (m) => m.id === f.id
-                                                    )
-                                            )
-                                            .map((friend) => (
-                                                <li
-                                                    key={friend.id}
-                                                    className="py-2 flex items-center gap-2"
-                                                >
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedFriends.includes(
-                                                            friend.id
-                                                        )}
-                                                        onChange={(e) => {
-                                                            const checked =
-                                                                e.target.checked;
-                                                            setSelectedFriends(
-                                                                (prev) => checked ? [...prev, friend.id,] : prev.filter((id) => id !== friend.id)
-                                                            );
-                                                        }}
-                                                    />
-                                                    <div>
-                                                        <div className="text-sm text-gray-800 font-medium">
-                                                            {friend.name}
-                                                        </div>
-                                                        <div className="text-xs text-gray-500">
-                                                            {friend.email}
-                                                        </div>
+                {showInviteModal && (
+                    <div className="fixed inset-0 z-50 bg-black bg-opacity-30 flex items-center justify-center">
+                        <div
+                            ref={inviteModalRef}
+                            className="bg-white p-6 rounded-lg shadow-lg w-[20rem] max-h-[80vh] overflow-y-auto"
+                        >
+                            <h2 className="text-lg font-semibold mb-3 text-gray-800">
+                                Invite Friends
+                            </h2>
+                            <p className="text-sm text-gray-600 mb-4">
+                                Select friends to add to the group:
+                            </p>
+
+                            {friends.filter(
+                                (f) => !members.some((m) => m.id === f.id)
+                            ).length > 0 ? (
+                                <ul className="divide-y">
+                                    {friends
+                                        .filter(
+                                            (f) =>
+                                                !members.some(
+                                                    (m) => m.id === f.id
+                                                )
+                                        )
+                                        .map((friend) => (
+                                            <li
+                                                key={friend.id}
+                                                className="py-2 flex items-center gap-2"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedFriends.includes(
+                                                        friend.id
+                                                    )}
+                                                    onChange={(e) => {
+                                                        const checked =
+                                                            e.target.checked;
+                                                        setSelectedFriends(
+                                                            (prev) => checked ? [...prev, friend.id,] : prev.filter((id) => id !== friend.id)
+                                                        );
+                                                    }}
+                                                />
+                                                <div>
+                                                    <div className="text-sm text-gray-800 font-medium">
+                                                        {friend.name}
                                                     </div>
-                                                </li>
-                                            ))}
-                                    </ul>
-                                ) : (
-                                    <div className="text-sm text-gray-500 text-center py-6">
-                                        🎉 All your friends are already in the
-                                        group!
-                                    </div>
-                                )}
-
-                                <div className="flex justify-end gap-3 mt-4">
-                                    <button
-                                        onClick={() => {
-                                            setSelectedFriends([]);
-                                            setShowInviteModal(false);
-                                        }}
-                                        className="px-3 py-1 rounded text-gray-700 hover:bg-gray-100"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={async () => {
-                                            if (selectedFriends.length > 0) {
-                                                await handleInviteMultiple(
-                                                    selectedFriends
-                                                );
-                                                setSelectedFriends([]);
-                                                setShowInviteModal(false);
-                                            }
-                                        }}
-                                        disabled={selectedFriends.length === 0}
-                                        className={`px-3 py-1 rounded text-white ${selectedFriends.length > 0
-                                            ? "bg-indigo-500 hover:bg-indigo-600"
-                                            : "bg-indigo-300 cursor-not-allowed"
-                                            }`}
-                                    >
-                                        Add
-                                    </button>
+                                                    <div className="text-xs text-gray-500">
+                                                        {friend.email}
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        ))}
+                                </ul>
+                            ) : (
+                                <div className="text-sm text-gray-500 text-center py-6">
+                                    🎉 All your friends are already in the
+                                    group!
                                 </div>
+                            )}
+
+                            <div className="flex justify-end gap-3 mt-4">
+                                {addingMember ? (
+                                    <div className="flex flex-col items-center px-4 py-2">
+                                        <div className="flex space-x-1">
+                                            <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                            <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                            <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce"></span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={
+                                                () => {
+                                                    setSelectedFriends([]);
+                                                    setShowInviteModal(false);
+                                                }
+                                            }
+                                            className="px-3 py-1 rounded text-gray-700 hover:bg-gray-100"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                if (selectedFriends.length > 0) {
+                                                    await handleInviteMultiple(
+                                                        selectedFriends
+                                                    );
+                                                    setSelectedFriends([]);
+                                                    setShowInviteModal(false);
+                                                }
+                                            }}
+                                            disabled={selectedFriends.length === 0}
+                                            className={`px-3 py-1 rounded text-white ${selectedFriends.length > 0
+                                                ? "bg-indigo-500 hover:bg-indigo-600"
+                                                : "bg-indigo-300 cursor-not-allowed"
+                                                }`}
+                                        >
+                                            Add
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </div>
-                    )
+                    </div>
+                )
                 }
 
                 {/* Seen by modal */}
-                {
-                    seenModalData && (
-                        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                            <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm relative">
-                                <button
-                                    onClick={() => setSeenModalData(null)}
-                                    className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-2xl"
+                {seenModalData && (
+                    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm relative">
+                            <button
+                                onClick={() => setSeenModalData(null)}
+                                className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-2xl"
+                            >
+                                &times;
+                            </button>
+
+                            {/* Modal Header */}
+                            <h2 className="text-xl font-semibold text-indigo-700 mb-3 text-center">
+                                Message Seen Info
+                            </h2>
+
+                            {/* Message box display */}
+                            <div className={`flex justify-end relative`}>
+                                <div
+                                    className='mb-2 p-3 rounded-xl text-sm shadow-md break-words whitespace-pre-wrap relative bg-indigo-100 self-end max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-400 scrollbar-track-transparent'
+                                    style={{ minWidth: getMinWidth(seenModalData.msg), maxWidth: getMaxWidth(seenModalData.msg) }}
                                 >
-                                    &times;
-                                </button>
+                                    <div className="text-left">
+                                        {/* text message */}
+                                        {!seenModalData.fileType && (
+                                            <div>{seenModalData.message}</div>
+                                        )}
 
-                                {/* Modal Header */}
-                                <h2 className="text-xl font-semibold text-indigo-700 mb-3 text-center">
-                                    Message Seen Info
-                                </h2>
-
-                                {/* Message box display */}
-                                <div className={`flex justify-end relative`}>
-                                    <div
-                                        className='mb-2 p-3 rounded-xl text-sm shadow-md break-words whitespace-pre-wrap relative bg-indigo-100 self-end max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-400 scrollbar-track-transparent'
-                                        style={{ minWidth: getMinWidth(seenModalData.msg), maxWidth: getMaxWidth(seenModalData.msg) }}
-                                    >
-                                        <div className="text-left">
-                                            {/* text message */}
-                                            {!seenModalData.fileType && (
-                                                <div>{seenModalData.message}</div>
-                                            )}
-
-                                            {/* image or video icon */}
-                                            {seenModalData.fileType && (
-                                                <div className="flex flex-col items-center justify-center text-gray-500">
-                                                    {seenModalData.fileType === "image" ? (
-                                                        <HiPhotograph className="w-8 h-8 mb-1" />
-                                                    ) : (
-                                                        <HiVideoCamera className="w-8 h-8 mb-1" />
-                                                    )}
-                                                    <span className="text-xs italic">File</span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* time, edited, ticks */}
-                                        <div className={`flex items-center mt-1 justify-end`}>
-                                            <div className="text-[10px] pr-0 text-gray-400 text-right flex items-center gap-1">
-                                                {seenModalData.time}{" "}
-                                                {!!seenModalData.msg.isEdited && <span className="italic">(edited)</span>}
-                                                <span style={{ color: seenModalData.isReadAll ? "#3B82F6" : "#9CA3AF" }}>
-                                                    {seenModalData.isReadAll ? (
-                                                        <BsCheckAll className="inline-block w-4 h-4" />
-                                                    ) : (
-                                                        <BsCheck className="inline-block w-4 h-4" />
-                                                    )}
-                                                </span>
+                                        {/* image or video icon */}
+                                        {seenModalData.fileType && (
+                                            <div className="flex flex-col items-center justify-center text-gray-500">
+                                                {seenModalData.fileType === "image" ? (
+                                                    <HiPhotograph className="w-8 h-8 mb-1" />
+                                                ) : (
+                                                    <HiVideoCamera className="w-8 h-8 mb-1" />
+                                                )}
+                                                <span className="text-xs italic">File</span>
                                             </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Seperator Line */}
-                                <div className="border-t border-gray-300 my-4"></div>
-
-                                {/* Seen by list */}
-                                <div className="mb-4">
-                                    <h3 className={`text-sm font-semibold ${seenModalData.readers.length > 0 ? 'text-green-700' : 'text-gray-600'} mb-1`}>
-                                        Seen by ({seenModalData.readers.length}/{seenModalData.total})
-                                    </h3>
-                                    <div className="border border-gray-200 rounded-md bg-gray-50 px-3 py-2 max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-grey-400 scrollbar-track-transparent">
-                                        {seenModalData.readers.length > 0 ? (
-                                            <ul className="space-y-1 text-sm text-gray-800">
-                                                {seenModalData.readers.map((r, i) => (
-                                                    <li key={i} className="py-0.5">
-                                                        <span>{r.reader.name} : </span>
-                                                        <span className="text-xs text-gray-500 font-normal italic ml-1">
-                                                            {formatRelativeTime(r.readAt)}
-                                                        </span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        ) : (
-                                            <p className="text-sm text-gray-400">No one has seen it yet.</p>
                                         )}
                                     </div>
-                                </div>
 
-
-                                {/* Not seen by list */}
-                                {seenModalData.notSeen.length > 0 && seenModalData.notSeen.length !== seenModalData.total && (
-                                    <div >
-                                        <h3 className="text-sm font-semibold text-red-700 mb-1">
-                                            Not seen by ({seenModalData.notSeen.length}/{seenModalData.total})
-                                        </h3>
-                                        <div className="border border-gray-200 rounded-md bg-gray-50 px-3 py-2 max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-grey-400 scrollbar-track-transparent">
-                                            <ul className="space-y-1 text-sm text-gray-800">
-                                                {seenModalData.notSeen.map((r, i) => (
-                                                    <li key={i} className="py-0.5">
-                                                        {r.reader.name}
-                                                    </li>
-                                                ))}
-                                            </ul>
+                                    {/* time, edited, ticks */}
+                                    <div className={`flex items-center mt-1 justify-end`}>
+                                        <div className="text-[10px] pr-0 text-gray-400 text-right flex items-center gap-1">
+                                            {seenModalData.time}{" "}
+                                            {!!seenModalData.msg.isEdited && <span className="italic">(edited)</span>}
+                                            <span style={{ color: seenModalData.isReadAll ? "#3B82F6" : "#9CA3AF" }}>
+                                                {seenModalData.isReadAll ? (
+                                                    <BsCheckAll className="inline-block w-4 h-4" />
+                                                ) : (
+                                                    <BsCheck className="inline-block w-4 h-4" />
+                                                )}
+                                            </span>
                                         </div>
                                     </div>
-                                )}
-
-                                {/* Close button */}
-                                <div className="flex justify-end mt-6">
-                                    <button
-                                        onClick={() => setSeenModalData(null)}
-                                        className="px-4 py-2 text-sm font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition"
-                                    >
-                                        Close
-                                    </button>
                                 </div>
                             </div>
+
+                            {/* Seperator Line */}
+                            <div className="border-t border-gray-300 my-4"></div>
+
+                            {/* Seen by list */}
+                            <div className="mb-4">
+                                <h3 className={`text-sm font-semibold ${seenModalData.readers.length > 0 ? 'text-green-700' : 'text-gray-600'} mb-1`}>
+                                    Seen by ({seenModalData.readers.length}/{seenModalData.total})
+                                </h3>
+                                <div className="border border-gray-200 rounded-md bg-gray-50 px-3 py-2 max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-grey-400 scrollbar-track-transparent">
+                                    {seenModalData.readers.length > 0 ? (
+                                        <ul className="space-y-1 text-sm text-gray-800">
+                                            {seenModalData.readers.map((r, i) => (
+                                                <li key={i} className="py-0.5">
+                                                    <span>{r.reader.name} : </span>
+                                                    <span className="text-xs text-gray-500 font-normal italic ml-1">
+                                                        {formatRelativeTime(r.readAt)}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="text-sm text-gray-400">No one has seen it yet.</p>
+                                    )}
+                                </div>
+                            </div>
+
+
+                            {/* Not seen by list */}
+                            {seenModalData.notSeen.length > 0 && seenModalData.notSeen.length !== seenModalData.total && (
+                                <div >
+                                    <h3 className="text-sm font-semibold text-red-700 mb-1">
+                                        Not seen by ({seenModalData.notSeen.length}/{seenModalData.total})
+                                    </h3>
+                                    <div className="border border-gray-200 rounded-md bg-gray-50 px-3 py-2 max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-grey-400 scrollbar-track-transparent">
+                                        <ul className="space-y-1 text-sm text-gray-800">
+                                            {seenModalData.notSeen.map((r, i) => (
+                                                <li key={i} className="py-0.5">
+                                                    {r.reader.name}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Close button */}
+                            <div className="flex justify-end mt-6">
+                                <button
+                                    onClick={() => setSeenModalData(null)}
+                                    className="px-4 py-2 text-sm font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition"
+                                >
+                                    Close
+                                </button>
+                            </div>
                         </div>
-                    )
-                }
+                    </div>
+                )}
 
             </div >
         </div >

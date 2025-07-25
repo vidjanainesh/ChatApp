@@ -37,6 +37,26 @@ export const getDashboardData = (token) => {
     )
 }
 
+export const viewProfile = (token) => {
+    return axios.get(`${API_BASE}/dashboard/profile`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    )
+}
+
+export const editProfile = (data, token) => {
+    return axios.patch(`${API_BASE}/dashboard/profile`,
+        data, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    }
+    )
+}
+
 // ---------------------------------------------------------------------
 
 export const sendMessage = (formData, token) => {
@@ -94,7 +114,7 @@ export const getUsers = (token) => {
 
 export const searchUsers = (input, token) => {
     return axios.post(`${API_BASE}/user/search`,
-        { input }, 
+        { input },
         {
             headers: {
                 Authorization: `Bearer ${token}`

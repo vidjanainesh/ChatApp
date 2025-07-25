@@ -8,7 +8,6 @@ const storage = new CloudinaryStorage({
         let folder = "chatapp_uploads";
         return {
             folder,
-            resourse_type: "auto",
             public_id: `${Date.now()}-${file.originalname}`,
             resource_type: "auto",
             transformation: [
@@ -18,6 +17,34 @@ const storage = new CloudinaryStorage({
     }
 });
 
-const upload = multer({ storage });
+// File filter to accept only specific file types
+const fileFilter = (req, file, cb) => {
+    const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const messageTypes = [...imageTypes, 'video/mp4', 'video/quicktime', 'application/pdf'];
+
+    const context = req.uploadType;
+
+    let allowedTypes;
+
+    if (context === 'profile') {
+        allowedTypes = imageTypes;
+    } else if (context === 'message') {
+        allowedTypes = messageTypes;
+    } else {
+        return cb(new Error('Unknown upload context.'), false);
+    }
+
+    if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Only images, videos, and PDFs are allowed.'), false);
+    }
+};
+
+const upload = multer({
+    storage,
+    fileFilter,
+    // limits: { fileSize: 15 * 1024 * 1024 }
+});
 
 module.exports = upload;
