@@ -69,6 +69,7 @@ export default function Chatbox() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [seenModalData, setSeenModalData] = useState(null);
   const [firstUnreadMessageId, setFirstUnreadMessageId] = useState(null);
+  const [sendingRequest, setSendingRequest] = useState(false);
 
 
   const availableReactions = ["👍", "❤️", "😂", "😮", "😢", "😡"];
@@ -351,16 +352,19 @@ export default function Chatbox() {
   };
 
   const sendReq = async () => {
+    setSendingRequest(true);
     try {
       const res = await sendFriendReq(parseInt(id), token);
       if (res.data.status === "success") {
         setRequestSent(true);
-        toast.success("Friend request sent!", { autoClose: 2000 });
+        // toast.success("Friend request sent!", { autoClose: 2000 });
       } else {
         toast.error(res.data.message || "Failed to send request");
       }
     } catch (err) {
       toast.error(err.response?.data?.message || "Error sending request");
+    } finally {
+      setSendingRequest(false);
     }
   }
 
@@ -563,6 +567,7 @@ export default function Chatbox() {
                     loggedInUserId={loggedInUserId}
                     downloadedFile={downloadedFiles[msg.id]}
                     onDownload={() => handleDownload(msg)}
+                    notFriend={notFriend}
                   />
                 </React.Fragment>
               );
@@ -632,89 +637,87 @@ export default function Chatbox() {
         )}
 
         {/* Seen by modal */}
-        {
-          seenModalData && (
-            <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-              <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm relative">
-                <button
-                  onClick={() => setSeenModalData(null)}
-                  className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-2xl"
-                >
-                  &times;
-                </button>
+        {seenModalData && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm relative">
+              <button
+                onClick={() => setSeenModalData(null)}
+                className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-2xl"
+              >
+                &times;
+              </button>
 
-                {/* Modal Header */}
-                <h2 className="text-xl font-semibold text-indigo-700 mb-3 text-center">
-                  Message Seen Info
-                </h2>
+              {/* Modal Header */}
+              <h2 className="text-xl font-semibold text-indigo-700 mb-3 text-center">
+                Message Seen Info
+              </h2>
 
-                {/* Message box display */}
-                <div className={`flex justify-end relative`}>
-                  <div className='mb-2 p-3 rounded-xl text-sm shadow-md break-words whitespace-pre-wrap relative bg-indigo-100 self-end max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-400 scrollbar-track-transparent'>
-                    <div className="text-left">
-                      {/* text message */}
-                      {!seenModalData.fileType && (
-                        <div>{seenModalData.message}</div>
-                      )}
+              {/* Message box display */}
+              <div className={`flex justify-end relative`}>
+                <div className='mb-2 p-3 rounded-xl text-sm shadow-md break-words whitespace-pre-wrap relative bg-indigo-100 self-end max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-400 scrollbar-track-transparent'>
+                  <div className="text-left">
+                    {/* text message */}
+                    {!seenModalData.fileType && (
+                      <div>{seenModalData.message}</div>
+                    )}
 
-                      {/* image or video icon */}
-                      {seenModalData.fileType && (
-                        <div className="flex flex-col items-center justify-center text-gray-500">
-                          {seenModalData.fileType === "image" ? (
-                            <HiPhotograph className="w-8 h-8 mb-1" />
-                          ) : (
-                            <HiVideoCamera className="w-8 h-8 mb-1" />
-                          )}
-                          <span className="text-xs italic">File</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* time, edited, ticks */}
-                    <div className={`flex items-center mt-1 justify-end`}>
-                      <div className="text-[10px] pr-0 text-gray-400 text-right flex items-center gap-1">
-                        {seenModalData.time}{" "}
-                        {!!seenModalData.msg.isEdited && <span className="italic">(edited)</span>}
-                        <span style={{ color: seenModalData.msg.isRead ? "#3B82F6" : "#9CA3AF" }}>
-                          {seenModalData.msg.isRead ? (
-                            <BsCheckAll className="inline-block w-4 h-4" />
-                          ) : (
-                            <BsCheck className="inline-block w-4 h-4" />
-                          )}
-                        </span>
+                    {/* image or video icon */}
+                    {seenModalData.fileType && (
+                      <div className="flex flex-col items-center justify-center text-gray-500">
+                        {seenModalData.fileType === "image" ? (
+                          <HiPhotograph className="w-8 h-8 mb-1" />
+                        ) : (
+                          <HiVideoCamera className="w-8 h-8 mb-1" />
+                        )}
+                        <span className="text-xs italic">File</span>
                       </div>
+                    )}
+                  </div>
+
+                  {/* time, edited, ticks */}
+                  <div className={`flex items-center mt-1 justify-end`}>
+                    <div className="text-[10px] pr-0 text-gray-400 text-right flex items-center gap-1">
+                      {seenModalData.time}{" "}
+                      {!!seenModalData.msg.isEdited && <span className="italic">(edited)</span>}
+                      <span style={{ color: seenModalData.msg.isRead ? "#3B82F6" : "#9CA3AF" }}>
+                        {seenModalData.msg.isRead ? (
+                          <BsCheckAll className="inline-block w-4 h-4" />
+                        ) : (
+                          <BsCheck className="inline-block w-4 h-4" />
+                        )}
+                      </span>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Seperator Line */}
-                <div className="border-t border-gray-300 my-4"></div>
+              {/* Seperator Line */}
+              <div className="border-t border-gray-300 my-4"></div>
 
-                {/* Seen / Not Seen */}
-                <div className="mb-4">
-                  <h3 className={`text-sm font-semibold ${seenModalData.msg.isRead ? 'text-green-700' : 'text-red-700'}  mb-1`}>
-                    {seenModalData.msg?.isRead ? 'Seen : ' : 'Not Seen Yet'}
-                    {seenModalData.msg?.isRead && seenModalData.msg?.readAt && (
-                      <span className="text-xs text-gray-600 font-normal italic ml-1">
-                        {formatRelativeTime(seenModalData.msg?.readAt)}
-                      </span>
-                    )}
-                  </h3>
-                </div>
+              {/* Seen / Not Seen */}
+              <div className="mb-4">
+                <h3 className={`text-sm font-semibold ${seenModalData.msg.isRead ? 'text-green-700' : 'text-red-700'}  mb-1`}>
+                  {seenModalData.msg?.isRead ? 'Seen : ' : 'Not Seen Yet'}
+                  {seenModalData.msg?.isRead && seenModalData.msg?.readAt && (
+                    <span className="text-xs text-gray-600 font-normal italic ml-1">
+                      {formatRelativeTime(seenModalData.msg?.readAt)}
+                    </span>
+                  )}
+                </h3>
+              </div>
 
-                {/* Close button */}
-                <div className="flex justify-end mt-6">
-                  <button
-                    onClick={() => setSeenModalData(null)}
-                    className="px-4 py-2 text-sm font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition"
-                  >
-                    Close
-                  </button>
-                </div>
+              {/* Close button */}
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={() => setSeenModalData(null)}
+                  className="px-4 py-2 text-sm font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition"
+                >
+                  Close
+                </button>
               </div>
             </div>
-          )
-        }
+          </div>
+        )}
 
         <div className="mb-1 h-5 px-1">
           {isTyping ? (
@@ -776,16 +779,26 @@ export default function Chatbox() {
               <p className="text-sm text-center">
                 You're not friends currently — send a request to connect
               </p>
-              <button
-                onClick={sendReq}
-                disabled={requestSent}
-                className={`px-3 py-1 rounded-md text-sm transition duration-300 ${requestSent
-                  ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                  : "bg-indigo-500 hover:bg-indigo-600 text-white"
-                  }`}
-              >
-                {requestSent ? "Request Sent" : "Send Request"}
-              </button>
+              {sendingRequest ? (
+                <div className="flex flex-col items-center mt-2 pt-4">
+                  <div className="flex space-x-1">
+                    <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                    <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                    <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce"></span>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={sendReq}
+                  disabled={requestSent}
+                  className={`px-3 py-1 rounded-md text-sm transition duration-300 ${requestSent
+                    ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                    : "bg-indigo-500 hover:bg-indigo-600 text-white"
+                    }`}
+                >
+                  {requestSent ? "Request Sent" : "Send Request"}
+                </button>
+              )}
             </div>
           )}
 
@@ -895,6 +908,6 @@ export default function Chatbox() {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 }
