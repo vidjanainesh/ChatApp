@@ -57,7 +57,7 @@ export default function VerifyToken() {
         transition={{ duration: 0.4 }}
       >
         <h2 className="text-2xl font-bold text-center text-indigo-700 mb-2">
-          {mode === "emailVerification" && "Just One More Step!"}
+          {(mode === "emailVerification" || mode === "profileChangePassword") && "Just One More Step!"}
           {mode === "forgetPassword" && "Let's Make Sure It's You!"}
         </h2>
         <p className="text-sm text-gray-500 text-center mb-2">
@@ -108,7 +108,7 @@ export default function VerifyToken() {
             onClick={() => navigate("/")}
             className="text-indigo-600 cursor-pointer hover:underline"
           >
-            Login
+            {mode === "profileChangePassword" ? "Dashboard" : "Login"}
           </span>
         </p>
       </motion.div>

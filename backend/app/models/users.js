@@ -22,6 +22,11 @@ const User = sequelize.define('users', {
             isEmail: true
         }
     },
+    phone_no: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        unique: false,
+    },
     password: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -38,7 +43,48 @@ const User = sequelize.define('users', {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false,
-    }
+    },
+    profile_image_url: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+    },
+    profile_image_type: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    profile_image_name: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    profile_image_size: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
+    profile_image_blur_url: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+    },
+    profile_image_blur_width: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
+    profile_image_blur_height: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
+    gender: {
+        type: DataTypes.ENUM('male', 'female', 'other'),
+        allowNull: true,
+    },
+    dob: {
+        type: DataTypes.DATEONLY,
+        allowNull: true,
+    },
+    address: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+
 });
 
 module.exports = User;

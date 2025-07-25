@@ -34,7 +34,6 @@ export default function Chatbox() {
   const hasInitScrolled = useRef(false);
   const lastMessageId = useRef(null);
   const fileInputRef = useRef();
-  const messageRef = useRef(null);
 
   const dispatch = useDispatch();
   const messages = useSelector((state) => state.chat.messages);
@@ -53,7 +52,7 @@ export default function Chatbox() {
 
   const [input, setInput] = useState("");
   const [editMode, setEditMode] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [messageLoading, setMessageLoading] = useState(true);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -275,7 +274,7 @@ export default function Chatbox() {
     e.preventDefault();
     if (!input.trim() && !selectedFile) return;
 
-    setIsSubmitting(true);
+    // setIsSubmitting(true);
     setShowEmojiPicker(false);
     setInput("");       // clear input
     setReplyTo(null);
@@ -346,7 +345,7 @@ export default function Chatbox() {
         }
       }
       finally {
-        setIsSubmitting(false);
+        // setIsSubmitting(false);
       }
     }
   };
@@ -864,6 +863,8 @@ export default function Chatbox() {
                 autoComplete="off"
                 rows={1}
               />
+
+              {/* File attachment */}
               {!editMode && (
                 <>
                   <input
