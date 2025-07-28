@@ -216,6 +216,11 @@ const getMessages = async (req, res) => {
             attributes: ['status']
         });
 
+        const friend = await User.findOne({
+            where: { id },
+            attributes: ['id', 'name', 'email', ['profile_image_url', 'profileImageUrl']]
+        });
+
         const whereClause = {
             is_deleted: false,
             [Op.or]: [
@@ -334,7 +339,7 @@ const getMessages = async (req, res) => {
         //     }
         // );
 
-        return successResponse(res, { friendship: friendship?.status, messages: response.reverse() }, "All messages retrieved between the two people");
+        return successResponse(res, { friend, friendship: friendship?.status, messages: response.reverse() }, "All messages retrieved between the two people");
 
     } catch (error) {
         return errorThrowResponse(res, error.message, error);

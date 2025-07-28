@@ -5,7 +5,6 @@ import { setUser } from "../../store/userSlice";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaUserCircle } from "react-icons/fa";
 
 export default function Profile() {
     const dispatch = useDispatch();
@@ -163,7 +162,10 @@ export default function Profile() {
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
-                                <FaUserCircle className="w-full h-full text-gray-400 bg-gray-100 rounded-full p-4" />
+                                // <FaUserCircle className="w-full h-full text-gray-400 bg-gray-100 rounded-full p-4" />
+                                <div className="w-full h-full flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-bold text-3xl">
+                                    {user.name?.charAt(0).toUpperCase()}
+                                </div>
                             )}
 
                             {editMode && (

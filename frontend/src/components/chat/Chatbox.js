@@ -9,7 +9,7 @@ import useSocket from "../../hooks/useSocket";
 import EmojiPicker from "emoji-picker-react";
 import { useDispatch, useSelector } from "react-redux";
 import { setMessages, updateMessageId, editPrivateMessage, deletePrivateMessage, clearMessages, clearChatState, addReactionToPrivateMessage, prependMessages, addMessage } from "../../store/chatSlice";
-import { HiOutlineChat, HiPaperClip, HiPhotograph, HiVideoCamera } from "react-icons/hi";
+import { HiOutlineChat, HiPaperClip, HiPhotograph, HiVideoCamera, HiChevronDown } from "react-icons/hi";
 import { BsCheck, BsCheckAll } from "react-icons/bs";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -34,6 +34,7 @@ export default function Chatbox() {
   const hasInitScrolled = useRef(false);
   const lastMessageId = useRef(null);
   const fileInputRef = useRef();
+  const isInitialLoad = useRef(true);
 
   const dispatch = useDispatch();
   const messages = useSelector((state) => state.chat.messages);
@@ -50,6 +51,7 @@ export default function Chatbox() {
     navigate("/");
   }
 
+  const [friend, setFriend] = useState({});
   const [input, setInput] = useState("");
   const [editMode, setEditMode] = useState(null);
   // const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,7 +71,7 @@ export default function Chatbox() {
   const [seenModalData, setSeenModalData] = useState(null);
   const [firstUnreadMessageId, setFirstUnreadMessageId] = useState(null);
   const [sendingRequest, setSendingRequest] = useState(false);
-
+  const [notifyNewMessage, setNotifyNewMessage] = useState(false);
 
   const availableReactions = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
@@ -79,6 +81,10 @@ export default function Chatbox() {
     loggedInUserId,
     setIsTyping,
   });
+
+  useEffect(() => {
+    console.log(loggedInUserId);
+  }, [loggedInUserId]);
 
   // Function to fetch messages
   const fetchMessages = useCallback(async (beforeId = null) => {
@@ -90,6 +96,7 @@ export default function Chatbox() {
     try {
       const res = await getMessages(id, beforeId, token);
       if (res.data.status === "success") {
+        setFriend(res.data.data.friend);
         const friendshipStatus = res.data.data.friendship;
         const newMessages = res.data.data.messages;
 
@@ -187,10 +194,7 @@ export default function Chatbox() {
             }
           } else {
             // Scroll to bottom if no unread marker
-            chatWindowRef.current.scrollTo({
-              top: chatWindowRef.current.scrollHeight,
-              behavior: "smooth"
-            });
+            scrollToBottom();
           }
           hasInitScrolled.current = true;
         }, 50);
@@ -212,19 +216,59 @@ export default function Chatbox() {
     const el = chatWindowRef.current;
     if (!el || messages?.length === 0) return;
 
-    const newLastMessageId = messages[messages?.length - 1]?.id;
+    const newLastMessage = messages[messages.length - 1];
+    const newLastMessageId = newLastMessage?.id;
+    const isOwnMessage = newLastMessage?.senderId === loggedInUserId;
 
-    if (lastMessageId.current !== newLastMessageId) {
-      const threshold = 400;
-      const isNearBottom = el.scrollHeight - (el.scrollTop + el.clientHeight) < threshold;
-
-      if (isNearBottom) {
-        el.scrollTop = el.scrollHeight;
-      }
-
+    if (isInitialLoad.current) {
       lastMessageId.current = newLastMessageId;
+      isInitialLoad.current = false;
+
+      // Already handled by initial scroll logic above
+      return;
     }
-  }, [messages]);
+
+    if (newLastMessageId === lastMessageId.current) return;
+
+    lastMessageId.current = newLastMessageId;
+
+    const threshold = 200;
+    const isNearBottom = el.scrollHeight - (el.scrollTop + el.clientHeight) < threshold;
+
+    if (isOwnMessage || isNearBottom) {
+      scrollToBottom();
+    } else {
+      setNotifyNewMessage(true);
+    }
+  }, [messages, loggedInUserId]);
+
+  // 4. Hide notify button if user scrolls to bottom manually
+  useEffect(() => {
+    const el = chatWindowRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      const threshold = 50;
+      const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+      if (isAtBottom) {
+        setNotifyNewMessage(false);
+      }
+    };
+
+    el.addEventListener("scroll", handleScroll);
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Scroll to bottom function
+  const scrollToBottom = () => {
+    if (chatWindowRef.current) {
+      chatWindowRef.current.scrollTo({
+        top: chatWindowRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+      setNotifyNewMessage(false);
+    }
+  };
 
   // Mark messages seen
   useEffect(() => {
@@ -345,6 +389,7 @@ export default function Chatbox() {
         }
       }
       finally {
+        scrollToBottom();
         // setIsSubmitting(false);
       }
     }
@@ -482,7 +527,7 @@ export default function Chatbox() {
 
   return (
     <div className="min-h-screen bg-gradient-to-tr from-white to-indigo-50 p-4">
-      <div className="w-full max-w-md mx-auto flex flex-col h-[86vh] sm:h-[95vh] px-2 sm:px-4 rounded-lg shadow-md">
+      <div className="relative w-full max-w-md mx-auto flex flex-col h-[86vh] sm:h-[95vh] px-2 sm:px-4 rounded-lg shadow-md">
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => navigate("/dashboard")}
@@ -573,7 +618,27 @@ export default function Chatbox() {
             })
           )}
 
+          {notifyNewMessage && (
+            <button
+              onClick={scrollToBottom}
+              className="absolute bottom-24 left-4 text-white bg-white rounded-full shadow-md transition-all z-50 flex animate-bounce"
+            >
+              {friend?.profileImageUrl ? (
+                <img
+                  src={friend?.profileImageUrl}
+                  alt="Avatar"
+                  className="w-7 h-7 rounded-full object-cover border"
+                />
+              ) : (
+                <div className="w-7 h-7 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-bold text-lg">
+                  {friend?.name?.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <HiChevronDown className="text-indigo-400 rounded-full text-lg mt-1 drop-shadow-sm" />
+            </button>
+          )}
         </div>
+
         {selectedMessage && selectedMessage.mode !== "edit" && (
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
             <div className="bg-white p-4 rounded-xl shadow-xl w-72 relative" ref={actionModalRef}>
@@ -718,7 +783,7 @@ export default function Chatbox() {
           </div>
         )}
 
-        <div className="mb-1 h-5 px-1">
+        <div className="mb-0 h-4">
           {isTyping ? (
             <div className="flex flex-col items-left px-3">
               <div className="flex space-x-1">
@@ -800,6 +865,8 @@ export default function Chatbox() {
               )}
             </div>
           )}
+
+
 
           <div className={notFriend ? "pointer-events-none opacity-50" : ""}>
             {selectedFile && (
