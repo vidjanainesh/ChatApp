@@ -7,11 +7,25 @@ const getDashboardData = async (req, res) => {
         const user = req.user;
 
         // User object
-        const userObj = {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-        }
+        const userObj = await User.findOne({
+            where: { email: user.email },
+            attributes: [
+                'id',
+                'name',
+                'email',
+                'dob',
+                'gender',
+                'address',
+                ['phone_no', 'phoneNo'],
+                ['profile_image_url', 'profileImageUrl'],
+                ['profile_image_type', 'profileImageType'],
+                ['profile_image_name', 'profileImageName'],
+                ['profile_image_size', 'profileImageSize'],
+                ['profile_image_blur_url', 'profileImageBlurUrl'],
+            ]
+        });
+
+        if (!userObj) return errorResponse(res, "User not found");
 
         // Get Friends ---------------------------------------------------------
         const friends = await Friends.findAll({

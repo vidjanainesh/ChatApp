@@ -23,7 +23,6 @@ const friendValidationRules = {
       .isIn(["accepted", "rejected"]).withMessage("Status must be 'accepted' or 'rejected'"),
   ]
 
-
 };
 
 module.exports = friendValidationRules;

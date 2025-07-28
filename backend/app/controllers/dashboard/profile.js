@@ -1,12 +1,13 @@
-const { errorResponse, successResponse, errorThrowResponse } = require("../../helper/response");
 const { User } = require("../../models");
+const { errorResponse, successResponse, errorThrowResponse } = require("../../helper/response");
+const jwt = require('jsonwebtoken');
 
 const viewProfile = async (req, res) => {
     try {
-        const email = req.user.email;
+        const id = req.user.id;
 
         const userDetails = await User.findOne({
-            where: { email },
+            where: { id },
             attributes: [
                 'id',
                 'name',
@@ -33,7 +34,7 @@ const viewProfile = async (req, res) => {
 
 const editProfile = async (req, res) => {
     try {
-        console.log(req.body);
+        // console.log(req.body);
         const userEmail = req.user.email;
 
         const name = req.body?.name;
@@ -73,6 +74,15 @@ const editProfile = async (req, res) => {
 
         await user.save();
 
+        const userToken = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phoneNo: user.phone_no,
+            profileImageUrl: user.profile_image_url,
+        }
+        const token = jwt.sign(userToken, process.env.JWT_SECRET);
+
         const userDetails = {
             id: user.id,
             name: user.name,
@@ -88,7 +98,7 @@ const editProfile = async (req, res) => {
             profileImageBlurUrl: user.profile_image_blur_url
         }
 
-        return successResponse(res, userDetails, 'Successfully updated the profile');
+        return successResponse(res, { user: userDetails, token }, 'Successfully updated the profile');
 
     } catch (error) {
         return errorThrowResponse(res, error.message, error);

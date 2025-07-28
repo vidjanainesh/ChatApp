@@ -59,7 +59,8 @@ export default function Profile() {
         };
 
         getProfileData();
-    }, [dispatch, token]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dispatch]);
 
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });
@@ -99,8 +100,10 @@ export default function Profile() {
 
             const res = await editProfile(formData, token);
             if (res.data.status === "success") {
-                dispatch(setUser({ user: res.data.data, token }));
+                const newToken = res.data.data.token;
+                dispatch(setUser({ user: res.data.data.user, token: newToken }));
                 // toast.success("Profile updated successfully", { autoClose: 3000 });
+                localStorage.setItem('jwt', newToken);
                 setEditMode(false);
             } else {
                 toast.error(res.data.message || "Update failed", { autoClose: 3000 });
@@ -164,7 +167,7 @@ export default function Profile() {
                             ) : (
                                 // <FaUserCircle className="w-full h-full text-gray-400 bg-gray-100 rounded-full p-4" />
                                 <div className="w-full h-full flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-bold text-3xl">
-                                    {user.name?.charAt(0).toUpperCase()}
+                                    {user?.name?.charAt(0).toUpperCase()}
                                 </div>
                             )}
 
@@ -304,7 +307,7 @@ export default function Profile() {
                                         disabled={!editMode || loading}
                                         className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                     >
-                                        <option value="">Select gender</option>
+                                        <option value="" disabled>Select gender</option>
                                         <option value="male">Male</option>
                                         <option value="female">Female</option>
                                         <option value="other">Other</option>

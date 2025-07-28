@@ -20,9 +20,14 @@ const groupValidationRules = {
       .notEmpty().withMessage("Group ID is required")
       .isInt({ min: 1 }).withMessage("Group ID must be a valid positive integer"),
 
-    // body("msg")
-    //   .notEmpty().withMessage("Message is required")
-    //   .isLength({ min: 1, max: 1000 }).withMessage("Message must be between 1 and 1000 characters"),
+    body().custom((value, { req }) => {
+      return req.body.msg || req.file;
+    }).withMessage("Either msg or file must be provided."),
+
+    body("msg")
+      .optional()
+      .isString().withMessage("Message must be a string")
+      .isLength({ min: 1, max: 1000 }).withMessage("Message must be between 1 and 1000 characters"),
   ],
 
   // For fetching messages from a group by ID
