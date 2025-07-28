@@ -78,6 +78,10 @@ export default function Dashboard() {
     });
 
     useEffect(() => {
+        console.log(user);
+    }, [user])
+
+    useEffect(() => {
         if (!token || isUserInitialized || user) return;
 
         try {
@@ -87,7 +91,8 @@ export default function Dashboard() {
         } catch (error) {
             toast.error("Error setting current user");
         }
-    }, [dispatch, token, isUserInitialized, user]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [token]);
 
     // Fetch dashboard data
     useEffect(() => {
@@ -101,12 +106,7 @@ export default function Dashboard() {
                 if (response.data.status === "success") {
                     dispatch(setFriends(response.data.data.friends));
                     dispatch(setFriendReqCount(response.data.data.friendReqCount));
-                    // dispatch(
-                    //     setUser({
-                    //         user: response.data.data.friends.user,
-                    //         token,
-                    //     })
-                    // );
+                    dispatch(setUser({ user: response.data.data.user, token }));
                     dispatch(setGroups(response.data.data.groups || []));
                     dispatch(setUnreadPrivateMap(response.data.data.unreadPrivateMsgs || {}));
                     dispatch(setUnreadGroupMap(response.data.data.unreadGroupMsgs || {}));

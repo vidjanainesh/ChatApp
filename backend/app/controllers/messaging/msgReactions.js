@@ -37,7 +37,7 @@ const reactMessage = async (req, res) => {
                 }
             });
 
-            if (!message) return errorResponse(res, "Invalid Message");
+            if (!message) return errorResponse(res, "Message not found or cannot be reacted to");
 
             let existing = await MessageReactions.findOne({
                 where: {
@@ -64,7 +64,7 @@ const reactMessage = async (req, res) => {
             if (message.sender_id === user.id) friendId = message.receiver_id;
             else friendId = message.sender_id;
 
-            const userName = await existing.getUser({attributes: ['name']});
+            const userName = await existing.getUser({ attributes: ['name'] });
 
             const receiverRoom = `user_${friendId}`;
             const senderRoom = `user_${user.id}`;
@@ -75,12 +75,12 @@ const reactMessage = async (req, res) => {
                 userId: existing.user_id,
                 userName: userName.name,
                 reaction: existing.reaction,
-                createdAt: existing.createdAt,     
-                targetType: existing.target_type           
+                createdAt: existing.createdAt,
+                targetType: existing.target_type
             }
 
-            io.to(senderRoom).emit('messageReaction', {reactionObj});
-            io.to(receiverRoom).emit('messageReaction', {reactionObj});
+            io.to(senderRoom).emit('messageReaction', { reactionObj });
+            io.to(receiverRoom).emit('messageReaction', { reactionObj });
 
             return successResponse(res, reactionObj, "Successfully reacted to the private message");
         }
@@ -112,7 +112,7 @@ const reactMessage = async (req, res) => {
                 existing.reaction = reaction;
                 await existing.save();
             }
-            else{
+            else {
                 existing = await MessageReactions.create({
                     user_id: user.id,
                     target_id: id,
@@ -121,7 +121,7 @@ const reactMessage = async (req, res) => {
                 });
             }
 
-            const userName = await existing.getUser({attributes: ['name']});
+            const userName = await existing.getUser({ attributes: ['name'] });
 
             // const camelCaseReaction = toCamelCase(existing.toJSON());
             const reactionObj = {
@@ -130,8 +130,8 @@ const reactMessage = async (req, res) => {
                 userId: existing.user_id,
                 userName: userName.name,
                 reaction: existing.reaction,
-                createdAt: existing.createdAt,     
-                targetType: existing.target_type           
+                createdAt: existing.createdAt,
+                targetType: existing.target_type
             }
 
             io.to(`group_${message.group_id}`).emit('messageReaction', { reactionObj });

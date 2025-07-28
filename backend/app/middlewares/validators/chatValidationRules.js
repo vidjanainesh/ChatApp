@@ -2,13 +2,20 @@ const { body, param } = require("express-validator");
 
 const chatValidationRules = {
   sendMessage: [
-    // body("message")
-    //   .notEmpty().withMessage("Message content is required")
-    //   .isLength({ min: 1, max: 1000 }).withMessage("Message must be between 1 and 1000 characters"),
+    body("message")
+      .optional()
+      .isLength({ min: 1, max: 1000 })
+      .withMessage("Message must be between 1 and 1000 characters"),
 
     body("receiverId")
       .notEmpty().withMessage("Receiver ID is required")
       .isInt({ min: 1 }).withMessage("Receiver ID must be a valid integer"),
+
+    body("replyTo")
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage("ReplyTo must be a valid message ID"),
+
   ],
 
   getMessages: [
