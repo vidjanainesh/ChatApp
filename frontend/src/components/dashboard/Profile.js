@@ -254,7 +254,7 @@ export default function Profile() {
                                         name="name"
                                         value={form.name}
                                         onChange={handleChange}
-                                        disabled={!editMode}
+                                        disabled={!editMode || loading}
                                         className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                     />
                                 </div>
@@ -278,7 +278,7 @@ export default function Profile() {
                                             name="phoneNo"
                                             value={form.phoneNo}
                                             onChange={handleChange}
-                                            disabled={!editMode}
+                                            disabled={!editMode || loading}
                                             className="w-full px-4 py-2 border rounded-md rounded-l-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                             maxLength={10}
                                         />
@@ -291,7 +291,7 @@ export default function Profile() {
                                         name="dob"
                                         value={form.dob}
                                         onChange={handleChange}
-                                        disabled={!editMode}
+                                        disabled={!editMode || loading}
                                         className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                     />
                                 </div>
@@ -301,7 +301,7 @@ export default function Profile() {
                                         name="gender"
                                         value={form.gender}
                                         onChange={handleChange}
-                                        disabled={!editMode}
+                                        disabled={!editMode || loading}
                                         className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                     >
                                         <option value="">Select gender</option>
@@ -317,7 +317,7 @@ export default function Profile() {
                                         name="address"
                                         value={form.address}
                                         onChange={handleChange}
-                                        disabled={!editMode}
+                                        disabled={!editMode || loading}
                                         className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                     />
                                 </div>
@@ -338,7 +338,7 @@ export default function Profile() {
                                         <button
                                             onClick={editHandler}
                                             type="button"
-                                            disabled={loading}
+                                            disabled={loading || loading}
                                             className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition"
                                         >
                                             {loading ? "Saving..." : "Save"}
