@@ -9,7 +9,7 @@ const dashboardValidationRules = {
             .isLength({ min: 2, max: 50 }).withMessage("Name must be 2 to 50 characters"),
 
         body("phoneNo")
-            .optional()
+            .optional({ checkFalsy: true })
             .isLength({ min: 10, max: 10 }).withMessage("Phone number must be exactly 10 digits")
             .isNumeric().withMessage("Phone number must contain only digits"),
 
