@@ -22,7 +22,7 @@ const dashboardValidationRules = {
             .isIn(["male", "female", "other"]).withMessage("Gender must be one of: male, female, other"),
 
         body("address")
-            .optional()
+            .optional({ checkFalsy: true })
             .isLength({ min: 3, max: 255 }).withMessage("Address must be 3 to 255 characters long"),
     ],
 };
