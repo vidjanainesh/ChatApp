@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { HiOutlineUserCircle, HiOutlineLogout } from "react-icons/hi";
-import { FaUserCircle } from "react-icons/fa";
 import {
     getDashboardData,
     createGroup,
@@ -328,7 +327,10 @@ export default function Dashboard() {
                                         className="w-8 h-8 rounded-full object-cover border"
                                     />
                                 ) : (
-                                    <FaUserCircle className="w-8 h-8 text-gray-500 border rounded-full bg-white" />
+                                    // <FaUserCircle className="w-8 h-8 text-gray-500 border rounded-full bg-white" />
+                                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-bold text-lg">
+                                        {user?.name?.charAt(0).toUpperCase()}
+                                    </div>
                                 )}
                                 <svg
                                     className="w-3.5 h-3.5 text-gray-600"
@@ -413,9 +415,18 @@ export default function Dashboard() {
                                     onClick={() => handleUserClick(user)}
                                     className="flex items-center space-x-4 cursor-pointer"
                                 >
-                                    <div className="w-12 h-12 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-bold text-lg">
-                                        {user.name?.charAt(0).toUpperCase()}
-                                    </div>
+                                    {user?.profileImageUrl ? (
+                                        <img
+                                            src={user.profileImageUrl}
+                                            alt="Avatar"
+                                            className="w-12 h-12 rounded-full object-cover border"
+                                        />
+                                    ) : (
+                                        // <FaUserCircle className="w-8 h-8 text-gray-500 border rounded-full bg-white" />
+                                        <div className="w-12 h-12 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-bold text-lg">
+                                            {user.name?.charAt(0).toUpperCase()}
+                                        </div>
+                                    )}
                                     <div>
                                         <p className="font-medium text-gray-800">{user.name}</p>
                                         <p className="text-sm text-gray-500">{user.email}</p>

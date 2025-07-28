@@ -1,6 +1,6 @@
 const { Op, Sequelize } = require("sequelize");
-const { successResponse, errorThrowResponse } = require( "../../helper/response");
-const { Friends, GroupMembers, GroupMessageRead, GroupMessages, Groups, Message, User } = require ("../../models");
+const { successResponse, errorThrowResponse } = require("../../helper/response");
+const { Friends, GroupMembers, GroupMessageRead, GroupMessages, Groups, Message, User } = require("../../models");
 
 const getDashboardData = async (req, res) => {
     try {
@@ -23,12 +23,12 @@ const getDashboardData = async (req, res) => {
                 {
                     model: User,
                     as: "sender",
-                    attributes: ["id", "name", "email"],
+                    attributes: ["id", "name", "email", "profile_image_url"],
                 },
                 {
                     model: User,
                     as: "receiver",
-                    attributes: ["id", "name", "email"],
+                    attributes: ["id", "name", "email", "profile_image_url"],
                 },
             ],
             attributes: ["id", "sender_id", "receiver_id", "status"],
@@ -41,6 +41,7 @@ const getDashboardData = async (req, res) => {
                 id: otherUser.id,
                 name: otherUser.name,
                 email: otherUser.email,
+                profileImageUrl: otherUser.profile_image_url,
             };
         });
 
@@ -74,8 +75,8 @@ const getDashboardData = async (req, res) => {
 
         // Get Groups ----------------------------------------------------------------------------
         let groups = await GroupMembers.findAll({
-            where: {user_id: user.id, status: 'active'},
-            attributes: [['group_id','id']],
+            where: { user_id: user.id, status: 'active' },
+            attributes: [['group_id', 'id']],
             include: [
                 {
                     model: Groups,
@@ -93,29 +94,29 @@ const getDashboardData = async (req, res) => {
         })
 
         // Get unread group messages --------------------------------------------------------------
-        
+
         // Get all messages that are unread (read_at is null) for this user
         const unread = await GroupMessageRead.findAll({
-        where: {
-            user_id: user.id,
-            read_at: null,
-        },
-        attributes: ["group_message_id"],
-        include: [
-            {
-            model: GroupMessages,
-            as: 'message',
-            attributes: ["group_id"],
+            where: {
+                user_id: user.id,
+                read_at: null,
             },
-        ],
+            attributes: ["group_message_id"],
+            include: [
+                {
+                    model: GroupMessages,
+                    as: 'message',
+                    attributes: ["group_id"],
+                },
+            ],
         });
 
         const unreadGroupMap = {};
         unread.forEach((entry) => {
-        const groupId = entry.message?.group_id;
-        if (groupId) {
-            unreadGroupMap[groupId] = true;
-        }
+            const groupId = entry.message?.group_id;
+            if (groupId) {
+                unreadGroupMap[groupId] = true;
+            }
         });
 
         // Final response object

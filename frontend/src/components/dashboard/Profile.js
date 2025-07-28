@@ -5,7 +5,6 @@ import { setUser } from "../../store/userSlice";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaUserCircle } from "react-icons/fa";
 
 export default function Profile() {
     const dispatch = useDispatch();
@@ -163,7 +162,10 @@ export default function Profile() {
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
-                                <FaUserCircle className="w-full h-full text-gray-400 bg-gray-100 rounded-full p-4" />
+                                // <FaUserCircle className="w-full h-full text-gray-400 bg-gray-100 rounded-full p-4" />
+                                <div className="w-full h-full flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-bold text-3xl">
+                                    {user.name?.charAt(0).toUpperCase()}
+                                </div>
                             )}
 
                             {editMode && (
@@ -252,7 +254,7 @@ export default function Profile() {
                                         name="name"
                                         value={form.name}
                                         onChange={handleChange}
-                                        disabled={!editMode}
+                                        disabled={!editMode || loading}
                                         className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                     />
                                 </div>
@@ -276,7 +278,7 @@ export default function Profile() {
                                             name="phoneNo"
                                             value={form.phoneNo}
                                             onChange={handleChange}
-                                            disabled={!editMode}
+                                            disabled={!editMode || loading}
                                             className="w-full px-4 py-2 border rounded-md rounded-l-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                             maxLength={10}
                                         />
@@ -289,7 +291,7 @@ export default function Profile() {
                                         name="dob"
                                         value={form.dob}
                                         onChange={handleChange}
-                                        disabled={!editMode}
+                                        disabled={!editMode || loading}
                                         className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                     />
                                 </div>
@@ -299,7 +301,7 @@ export default function Profile() {
                                         name="gender"
                                         value={form.gender}
                                         onChange={handleChange}
-                                        disabled={!editMode}
+                                        disabled={!editMode || loading}
                                         className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                     >
                                         <option value="">Select gender</option>
@@ -315,7 +317,7 @@ export default function Profile() {
                                         name="address"
                                         value={form.address}
                                         onChange={handleChange}
-                                        disabled={!editMode}
+                                        disabled={!editMode || loading}
                                         className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                     />
                                 </div>
@@ -336,7 +338,7 @@ export default function Profile() {
                                         <button
                                             onClick={editHandler}
                                             type="button"
-                                            disabled={loading}
+                                            disabled={loading || loading}
                                             className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition"
                                         >
                                             {loading ? "Saving..." : "Save"}

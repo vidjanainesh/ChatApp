@@ -66,11 +66,30 @@ function GroupChatMessage({
                     </div>
                 </motion.div>
             ) : (
-                <div className={`flex ${isSender ? "justify-end" : "justify-start"} relative`}>
+                <div className={`flex ${isSender ? "justify-end" : "justify-start"} flex-1 relative`}>
+                    {!isSender && (
+                        <div className="mr-1 mt-1.5">
+                            {msg?.sender?.profileImageUrl ? (
+                                <img
+                                    src={msg.sender.profileImageUrl}
+                                    alt="Avatar"
+                                    className="w-6 h-6 rounded-full object-cover border"
+                                />
+                            ) : (
+                                <div className="w-6 h-6 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-bold text-sm">
+                                    {msg?.sender?.name?.charAt(0)?.toUpperCase()}
+                                </div>
+                            )}
+                        </div>
+                    )}
                     <motion.div
                         {...tempMotionProps}
                         className={`group mb-3.5 p-3 rounded-xl text-sm shadow-md w-fit break-words whitespace-pre-wrap relative ${isSender ? "bg-indigo-100 self-end" : "bg-white self-start"} ${msgCount === 0 && "mt-2"}`}
-                        style={{ minWidth: getMinWidth(msg), maxWidth: getMaxWidth(msg) }}
+                        style={{
+                            minWidth: getMinWidth(msg),
+                            maxWidth: getMaxWidth(msg)
+                            // maxWidth: '85%'
+                        }}
                     >
                         {!isSender && (
                             <div className={`text-xs font-semibold ${getUserColor(msg?.senderId)} mb-1`}>

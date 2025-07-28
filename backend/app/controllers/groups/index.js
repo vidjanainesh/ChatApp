@@ -333,7 +333,7 @@ const getGroupData = async (req, res) => {
                 {
                     model: User,
                     as: "sender",
-                    attributes: ["name"],
+                    attributes: ["name", ["profile_image_url", "profileImageUrl"]],
                 },
                 {
                     model: GroupMessages,
@@ -440,13 +440,13 @@ const getGroupData = async (req, res) => {
                 {
                     model: User,
                     as: "members",
-                    attributes: ["id", "name", "email"],
+                    attributes: ["id", "name", "email", ["profile_image_url", "profileImageUrl"]],
                     through: { where: { status: 'active' }, attributes: [] },
                 },
             ],
         });
 
-        const plainMembers = members.toJSON();
+        let plainMembers = members.toJSON();
 
         const result = { messages: messagesWithReactions.reverse(), members: plainMembers }
 

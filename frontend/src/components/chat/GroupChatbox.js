@@ -9,7 +9,7 @@ import { useDispatch, useSelector } from "react-redux";
 import GroupChatMessage from "./GroupChatMessage";
 import { setGroupMessages, addGroupMessage, updateGroupMessageId, setGroupMembers, deleteGroupMsgAction, editGroupMsgAction, clearGroupMessages, clearChatState, addReactionToGroupMessage, setCurrentChat, prependGroupMessages } from "../../store/chatSlice";
 import EmojiPicker from "emoji-picker-react";
-import { HiOutlineLogout, HiUserAdd, HiOutlineUsers, HiOutlineChat, HiPaperClip, HiPhotograph, HiVideoCamera } from "react-icons/hi";
+import { HiOutlineLogout, HiUserAdd, HiOutlineUsers, HiOutlineChat, HiPaperClip, HiPhotograph, HiVideoCamera, HiChevronDown } from "react-icons/hi";
 import { BsCheck, BsCheckAll } from "react-icons/bs";
 import { setGroups } from "../../store/userSlice";
 import { v4 as uuidv4 } from 'uuid';
@@ -31,7 +31,7 @@ export default function GroupChatbox() {
     const groups = useSelector((state) => state.user.groups);
 
     const [input, setInput] = useState("");
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    // const [isSubmitting, setIsSubmitting] = useState(false);
     const [editMode, setEditMode] = useState(null);
     const [replyTo, setReplyTo] = useState(null);
     const [isTyping, setIsTyping] = useState(false);
@@ -53,6 +53,7 @@ export default function GroupChatbox() {
     const [seenModalData, setSeenModalData] = useState(null);
     const [firstUnreadMessageId, setFirstUnreadMessageId] = useState(null);
     const [addingMember, setAddingMember] = useState(false);
+    const [notifyNewMessage, setNotifyNewMessage] = useState(false);
 
     const hasInitScrolled = useRef(false);
     const emojiRef = useRef(null);
@@ -67,6 +68,7 @@ export default function GroupChatbox() {
     const inputRef = useRef(null);
     const fileInputRef = useRef();
     const lastMessageId = useRef(null);
+    const isInitialLoad = useRef(true);
 
     let msgCount = -1;
     let loggedInUserId = null;
@@ -90,8 +92,8 @@ export default function GroupChatbox() {
     });
 
     useEffect(() => {
-        console.log(messages);
-    }, [messages]);
+        console.log(members);
+    }, [members]);
 
     // Callback function to fetch group messages
     const fetchGroupMessages = useCallback(async (beforeId = null) => {
@@ -196,10 +198,7 @@ export default function GroupChatbox() {
                         }
                     } else {
                         // Scroll to bottom if no unread marker
-                        chatWindowRef.current.scrollTo({
-                            top: chatWindowRef.current.scrollHeight,
-                            behavior: "smooth"
-                        });
+                        scrollToBottom();
                     }
                     hasInitScrolled.current = true;
                 }, 50);
@@ -219,21 +218,61 @@ export default function GroupChatbox() {
     // 3. Scroll to bottom if new and you are near bottom
     useEffect(() => {
         const el = chatWindowRef.current;
-        if (!el || messages.length === 0) return;
+        if (!el || messages?.length === 0) return;
 
-        const newLastMessageId = messages[messages.length - 1]?.id;
+        const newLastMessage = messages[messages.length - 1];
+        const newLastMessageId = newLastMessage?.id;
+        const isOwnMessage = newLastMessage?.senderId === loggedInUserId;
 
-        if (lastMessageId.current !== newLastMessageId) {
-            const threshold = 400;
-            const isNearBottom = el.scrollHeight - (el.scrollTop + el.clientHeight) < threshold;
-
-            if (isNearBottom) {
-                el.scrollTop = el.scrollHeight;
-            }
-
+        if (isInitialLoad.current) {
             lastMessageId.current = newLastMessageId;
+            isInitialLoad.current = false;
+
+            // Already handled by initial scroll logic above
+            return;
         }
-    }, [messages]);
+
+        if (newLastMessageId === lastMessageId.current) return;
+
+        lastMessageId.current = newLastMessageId;
+
+        const threshold = 200;
+        const isNearBottom = el.scrollHeight - (el.scrollTop + el.clientHeight) < threshold;
+
+        if (isOwnMessage || isNearBottom) {
+            scrollToBottom();
+        } else {
+            setNotifyNewMessage(true);
+        }
+    }, [messages, loggedInUserId]);
+
+    // 4. Hide notify button if user scrolls to bottom manually
+    useEffect(() => {
+        const el = chatWindowRef.current;
+        if (!el) return;
+
+        const handleScroll = () => {
+            const threshold = 50;
+            const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+            if (isAtBottom) {
+                setNotifyNewMessage(false);
+            }
+        };
+
+        el.addEventListener("scroll", handleScroll);
+        return () => el.removeEventListener("scroll", handleScroll);
+    }, []);
+
+    // Scroll to bottom function
+    const scrollToBottom = () => {
+        if (chatWindowRef.current) {
+            chatWindowRef.current.scrollTo({
+                top: chatWindowRef.current.scrollHeight,
+                behavior: "smooth",
+            });
+            setNotifyNewMessage(false);
+        }
+    };
 
     // Mark messages seen
     useEffect(() => {
@@ -283,7 +322,7 @@ export default function GroupChatbox() {
         e.preventDefault();
         if (!input.trim() && !selectedFile) return;
 
-        setIsSubmitting(true);
+        // setIsSubmitting(true);
         setShowEmojiPicker(false);
         setInput("");
         setReplyTo(null);
@@ -301,7 +340,7 @@ export default function GroupChatbox() {
 
                 if (res.data.status === "success") {
                     dispatch(editGroupMsgAction(res.data.data));
-                    setIsSubmitting(false);
+                    // setIsSubmitting(false);
                 } else {
                     toast.error("Could not send message", { autoClose: 3000 });
                 }
@@ -357,7 +396,7 @@ export default function GroupChatbox() {
                     toast.error(msg, { autoClose: 3000 });
                 }
             } finally {
-                setIsSubmitting(false);
+                // setIsSubmitting(false);
             }
         }
     };
@@ -600,7 +639,7 @@ export default function GroupChatbox() {
 
     return (
         <div className="min-h-screen bg-gradient-to-tr from-white to-indigo-50 p-4">
-            <div className="w-full max-w-md mx-auto flex flex-col h-[86vh] sm:h-[95vh] px-2 sm:px-4 rounded-lg shadow-md">
+            <div className="relative w-full max-w-md mx-auto flex flex-col h-[86vh] sm:h-[95vh] px-2 sm:px-4 rounded-lg shadow-md">
                 <div className="flex items-center justify-between mb-4 relative">
                     <button
                         onClick={() => navigate("/dashboard")}
@@ -661,7 +700,7 @@ export default function GroupChatbox() {
                                                         }`}
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-semibold text-sm uppercase">
+                                                        {/* <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-semibold text-sm uppercase">
                                                             {member.name
                                                                 .split(" ")
                                                                 .map(
@@ -669,7 +708,19 @@ export default function GroupChatbox() {
                                                                 )
                                                                 .slice(0, 2)
                                                                 .join("")}
-                                                        </div>
+                                                        </div> */}
+                                                        {member?.profileImageUrl ? (
+                                                            <img
+                                                                src={member.profileImageUrl}
+                                                                alt="Avatar"
+                                                                className="w-10 h-10 rounded-full object-cover border"
+                                                            />
+                                                        ) : (
+                                                            // <FaUserCircle className="w-8 h-8 text-gray-500 border rounded-full bg-white" />
+                                                            <div className="w-10 h-10 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-bold text-lg">
+                                                                {member.name?.charAt(0).toUpperCase()}
+                                                            </div>
+                                                        )}
                                                         <div className="flex flex-col">
                                                             <p className="text-sm font-medium text-gray-800">
                                                                 {isCurrentUser
@@ -776,6 +827,26 @@ export default function GroupChatbox() {
                                 </React.Fragment>
                             );
                         })
+                    )}
+
+                    {notifyNewMessage && (
+                        <button
+                            onClick={scrollToBottom}
+                            className="absolute bottom-24 left-4 text-white bg-white rounded-full shadow-md transition-all z-50 flex animate-bounce"
+                        >
+                            {/* {friend?.profileImageUrl ? (
+                                <img
+                                    src={friend?.profileImageUrl}
+                                    alt="Avatar"
+                                    className="w-7 h-7 rounded-full object-cover border"
+                                />
+                            ) : (
+                                <div className="w-7 h-7 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-bold text-lg">
+                                    {friend?.name?.charAt(0).toUpperCase()}
+                                </div>
+                            )} */}
+                            <HiChevronDown className="w-6 h-6 text-indigo-600 bg-indigo-300 rounded-full text-lg mt-1 drop-shadow-sm" />
+                        </button>
                     )}
                 </div>
                 {selectedMessage && selectedMessage.mode !== "edit" && (
