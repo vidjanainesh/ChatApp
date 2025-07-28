@@ -282,12 +282,15 @@ export default function Dashboard() {
             <div className="max-w-4xl mx-auto relative min-h-screen py-8">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-                    <div>
-                        <h1 className="text-3xl font-bold text-indigo-700">
-                            {user
-                                ? `Welcome ${user?.name.trim().split(" ")[0]}!`
-                                : "Welcome!"}
-                        </h1>
+                    <div className="max-w-full">
+                        <div className="max-w-[90vw] sm:max-w-[60vw] md:max-w-[50vw] lg:max-w-[40vw] truncate">
+                            <h1
+                                className="text-3xl font-bold text-indigo-700 truncate"
+                                title={user ? `Welcome ${user?.name.trim().split(" ")[0]}!` : "Welcome!"}
+                            >
+                                {user ? `Welcome ${user?.name.trim().split(" ")[0]}!` : "Welcome!"}
+                            </h1>
+                        </div>
                         <p className="text-gray-500 text-sm sm:text-base">
                             Stay connected and chat with your friends
                         </p>
@@ -405,7 +408,7 @@ export default function Dashboard() {
                             <motion.div
                                 key={user.id}
                                 className="bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition duration-300 relative"
-                                title={`Chat with ${user.name}`}
+                                title={`Chat with ${user?.name?.split(' ')[0]}`}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.05 }}
@@ -427,9 +430,9 @@ export default function Dashboard() {
                                             {user.name?.charAt(0).toUpperCase()}
                                         </div>
                                     )}
-                                    <div>
-                                        <p className="font-medium text-gray-800">{user.name}</p>
-                                        <p className="text-sm text-gray-500">{user.email}</p>
+                                    <div className="max-w-[60vw] sm:max-w-[40vw] md:max-w-[30vw] lg:max-w-[20vw] truncate">
+                                        <p className="font-medium text-gray-800 truncate" title={user.name}> {user.name} </p>
+                                        <p className="text-sm text-gray-500 truncate" title={user.email}> {user.email} </p>
                                     </div>
                                 </div>
 
