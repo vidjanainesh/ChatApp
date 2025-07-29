@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import ChatMessage from "./ChatMessage";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
-import { getMessages, sendMessage, deleteMessage, editMessage, reactMessage, deleteReactions, sendFriendReq } from "../../api";
+import { getMessages, sendMessage, deleteMessage, editMessage, reactMessage, deleteReactions, sendFriendReq, whatsappNotify } from "../../api";
 import { toast } from "react-toastify";
 import { motion } from 'framer-motion';
 import { jwtDecode } from "jwt-decode";
@@ -10,7 +10,7 @@ import EmojiPicker from "emoji-picker-react";
 import { useDispatch, useSelector } from "react-redux";
 import { setMessages, updateMessageId, editPrivateMessage, deletePrivateMessage, clearMessages, clearChatState, addReactionToPrivateMessage, prependMessages, addMessage } from "../../store/chatSlice";
 import { HiOutlineChat, HiPaperClip, HiPhotograph, HiVideoCamera, HiChevronDown } from "react-icons/hi";
-import { BsCheck, BsCheckAll } from "react-icons/bs";
+import { BsCheck, BsCheckAll, BsBellSlashFill, BsBellFill } from "react-icons/bs";
 import { v4 as uuidv4 } from 'uuid';
 
 import { formatRelativeTime, formatDate, formatTime, formatFullTimestamp } from "../../helper/formatDateAndTime";
@@ -72,6 +72,7 @@ export default function Chatbox() {
   const [firstUnreadMessageId, setFirstUnreadMessageId] = useState(null);
   const [sendingRequest, setSendingRequest] = useState(false);
   const [notifyNewMessage, setNotifyNewMessage] = useState(false);
+  const [loadingWANoti, setLoadingWANoti] = useState("idle");
 
   const availableReactions = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
@@ -81,10 +82,6 @@ export default function Chatbox() {
     loggedInUserId,
     setIsTyping,
   });
-
-  useEffect(() => {
-    console.log(loggedInUserId);
-  }, [loggedInUserId]);
 
   // Function to fetch messages
   const fetchMessages = useCallback(async (beforeId = null) => {
@@ -486,6 +483,23 @@ export default function Chatbox() {
     setSelectedFile(e.target.files[0]);
   };
 
+  const handleWhatsappNotify = async () => {
+    setLoadingWANoti("loading");
+    try {
+      const response = await whatsappNotify(id, token);
+      if (response.data.status === 'success') {
+        setLoadingWANoti("done");
+      }
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message ||
+        "Something went wrong while sending whatsapp notification";
+      toast.error(errorMessage, { autoClose: 3000 });
+
+      setLoadingWANoti("idle");
+    }
+  }
+
   // Click outside events
   useEffect(() => {
     function handleClickOutside(event) {
@@ -535,10 +549,28 @@ export default function Chatbox() {
           >
             ← Back
           </button>
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-800 max-w-[12rem] truncate">
             {name?.split(' ')[0]}
           </h2>
-          <div className="w-12" />
+          {loadingWANoti === "idle" ? (
+            <button
+              onClick={handleWhatsappNotify}
+              title="Notify via WhatsApp"
+              className="text-gray-500 hover:text-green-600 transition p-1 rounded-full"
+            >
+              <BsBellFill className="w-5 h-5" />
+            </button>
+          ) : loadingWANoti === "loading" ? (
+            <div
+              className="w-5 h-5 border-2 border-t-2 border-green-500 border-t-transparent rounded-full animate-spin"
+              title="Sending WhatsApp notification..."
+            />
+          ) : (
+            <BsBellSlashFill
+              className="w-5 h-5 text-gray-500"
+              title="Notification disabled"
+            />
+          )}
         </div>
 
         <div

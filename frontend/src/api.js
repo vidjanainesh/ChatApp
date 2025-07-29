@@ -295,3 +295,15 @@ export const deleteReactions = (id, token) => {
         }
     )
 }
+
+// -------------------------------------------------------------------
+
+export const whatsappNotify = (receiverId, token) => {
+    return axios.post(`${API_BASE}/whatsapp/notify`,
+        { receiverId }, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    }
+    )
+}

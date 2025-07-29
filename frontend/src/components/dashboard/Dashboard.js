@@ -78,10 +78,6 @@ export default function Dashboard() {
     });
 
     useEffect(() => {
-        console.log(user);
-    }, [user])
-
-    useEffect(() => {
         if (!token || isUserInitialized || user) return;
 
         try {

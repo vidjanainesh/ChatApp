@@ -8,9 +8,7 @@ const userRoutes = require('./userRoutes');
 const groupRoutes = require('./groupRoutes');
 const messageReactionRoutes = require('./msgReactionRoutes');
 const dashboardRoutes = require('./dashboardRoutes');
-
-const getDashboardData = require('../app/controllers/dashboard');
-const authMiddleware = require('../app/middlewares/authMiddleware');
+const whatsappRoutes = require('./whatsappRoutes');
 
 router.use('/auth', authRoutes);
 router.use('/chat', chatRoutes);
@@ -18,7 +16,8 @@ router.use('/friend', friendRoutes);
 router.use('/user', userRoutes);
 router.use('/group', groupRoutes);
 router.use('/react', messageReactionRoutes);
-router.use('/dashboard', dashboardRoutes)
+router.use('/dashboard', dashboardRoutes);
+router.use('/whatsapp', whatsappRoutes);
 
 router.get('/ping', (req, res) => res.status(200).send('PING!'));
 
