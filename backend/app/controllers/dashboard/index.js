@@ -95,15 +95,17 @@ const getDashboardData = async (req, res) => {
                 {
                     model: Groups,
                     as: 'group',
-                    attributes: ['name']
+                    attributes: ['name', ['created_by', 'admin']]
                 }
             ]
         });
 
         groups = groups.map((curr) => {
+            curr = curr.toJSON();
             return ({
                 id: curr.id,
-                name: curr.group.name
+                name: curr.group.name,
+                admin: curr.group.admin,
             })
         })
 

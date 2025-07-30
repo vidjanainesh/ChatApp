@@ -51,6 +51,10 @@ const userSlice = createSlice({
                 state.groups.push(action.payload);
             }
         },
+        removeGroup: (state, action) => {
+            const groupId = action.payload;
+            state.groups = state.groups.filter((grp) => grp.id !== groupId);
+        },
         setUnreadPrivateMap: (state, action) => {
             state.unreadPrivateMap = action.payload;
         },
@@ -98,6 +102,7 @@ export const {
     setFriends,
     setGroups,
     addGroup,
+    removeGroup,
     addFriend,
     removeFriend,
     setUnreadPrivateMap,

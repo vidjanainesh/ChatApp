@@ -293,6 +293,8 @@ const getGroupData = async (req, res) => {
         const group = await Groups.findOne({ where: { id: groupId } });
         if (!group) notFoundResponse(res, "Group not found");
 
+        const admin = group.created_by;
+
         const users = await group.getGroupMembers({ where: { status: 'active' }, attributes: ["user_id"] }); //Magic method to get all the group member ids
         let userIds = users.map((curr) => curr.user_id);
 
@@ -448,7 +450,7 @@ const getGroupData = async (req, res) => {
 
         let plainMembers = members.toJSON();
 
-        const result = { messages: messagesWithReactions.reverse(), members: plainMembers }
+        const result = { messages: messagesWithReactions.reverse(), members: plainMembers, admin }
 
         return successResponse(res, result, "Fetched all messages");
     } catch (error) {
@@ -466,15 +468,17 @@ const getGroups = async (req, res) => {
                 {
                     model: Groups,
                     as: 'group',
-                    attributes: ['name']
+                    attributes: ['name', ['created_by', 'admin']]
                 }
-            ]
+            ],
         });
 
         groups = groups.map((curr) => {
+            curr = curr.toJSON();
             return ({
                 id: curr.id,
-                name: curr.group.name
+                name: curr.group.name,
+                admin: curr.group.admin,
             })
         })
 
@@ -528,6 +532,18 @@ const leaveGroup = async (req, res) => {
         let groupMessageIds = await GroupMessages.findAll({ where: { group_id: groupId }, attributes: ['id'] });
         groupMessageIds = groupMessageIds.map(curr => curr.id);
 
+        const group = await Groups.findOne({
+            where: {
+                id: groupId,
+            },
+            attributes: [
+                'id',
+                'name',
+                ['created_by', 'admin']
+            ]
+        });
+        if (group.admin === user.id) return errorResponse(res, "Admin cannot leave the group");
+
         const partOfGroup = await GroupMembers.findOne({
             where: {
                 group_id: groupId,
@@ -562,7 +578,7 @@ const leaveGroup = async (req, res) => {
         };
 
         const io = req.app.get('io');
-        io.to(`group_${groupId}`).emit("newGroupMessage", { message, groupId });
+        io.to(`group_${groupId}`).emit("newGroupMessage", { message, groupId, groupName: group.name });
 
         return successPostResponse(res, {}, "User left this group successfully")
     } catch (error) {
@@ -570,13 +586,25 @@ const leaveGroup = async (req, res) => {
     }
 }
 
-const joinGroup = async (req, res) => {
+const inviteToGroup = async (req, res) => {
     try {
         const { groupId, friendIds } = req.body;
         const user = req.user;
 
         const partOfGroup = await GroupMembers.findOne({ where: { group_id: groupId, user_id: user.id, status: 'active' } });
         if (!partOfGroup) return errorResponse(res, "User not part of the group");
+
+        const group = await Groups.findOne({
+            where: {
+                id: groupId,
+            },
+            attributes: [
+                'id',
+                'name',
+                ['created_by', 'admin']
+            ]
+        });
+        if (group.admin === user.id) return errorResponse(res, "Admin cannot leave the group");
 
         const existingMembers = await GroupMembers.findAll({ where: { group_id: groupId, user_id: friendIds } });
 
@@ -619,8 +647,6 @@ const joinGroup = async (req, res) => {
             }))
         );
 
-        const group = await Groups.findOne({ where: { id: groupId }, attributes: ['name'] });
-
         const io = req.app.get('io');
         systemMessages.forEach((msg) => {
             const message = {
@@ -633,7 +659,7 @@ const joinGroup = async (req, res) => {
                     name: null,
                 },
             };
-            io.to(`group_${groupId}`).emit("newGroupMessage", { message, groupId });
+            io.to(`group_${groupId}`).emit("newGroupMessage", { message, groupId, groupName: group.name });
         });
 
         newMemberIds.forEach((id) => {
@@ -641,6 +667,79 @@ const joinGroup = async (req, res) => {
         })
 
         return successPostResponse(res, {}, "Users successfully joined the group")
+    } catch (error) {
+        return errorThrowResponse(res, `${error.message}`, error);
+    }
+}
+
+const removeFromGroup = async (req, res) => {
+    try {
+        const { memberId } = req.body;
+        const groupId = req.params.id;
+        const user = req.user;
+
+        const group = await Groups.findOne({
+            where: {
+                id: groupId,
+            },
+            attributes: [
+                'id',
+                'name',
+                ['created_by', 'admin']
+            ]
+        });
+        if (group.admin === user.id) return errorResponse(res, "Admin cannot leave the group");
+
+        const userPartOfGroup = await GroupMembers.findOne({ where: { group_id: groupId, user_id: user.id, status: 'active' } });
+        if (!userPartOfGroup) return errorResponse(res, "User not part of the group");
+
+        const member = await GroupMembers.findOne({
+            where: {
+                group_id: groupId,
+                user_id: memberId,
+                status: 'active'
+            },
+            include: [
+                {
+                    model: User,
+                    as: 'user',
+                    attributes: ['name']
+                }
+            ]
+        });
+        if (!member) return errorResponse(res, "Member not part of the group");
+
+        // Database queries
+        await GroupMembers.update(
+            { status: 'left' },
+            { where: { group_id: groupId, user_id: memberId } }
+        );
+
+        // For system messages in groups
+        const systemMessage = await GroupMessages.create({
+            group_id: groupId,
+            sender_id: null,
+            message: `${user.name?.split(' ')[0]} removed ${member?.user?.name?.split(" ")[0]}`,
+            type: 'system',
+        });
+
+        const io = req.app.get('io');
+
+        const message = {
+            id: systemMessage.id,
+            senderId: null,
+            message: systemMessage.message,
+            createdAt: systemMessage.createdAt,
+            type: systemMessage.type,
+            sender: {
+                name: null,
+            },
+        };
+
+        io.to(`group_${groupId}`).emit("newGroupMessage", { message, groupId, groupName: group?.name });
+        io.to(`user_${memberId}`).emit("removedFromGroup", { groupId: groupId });
+
+        return successPostResponse(res, {}, "User successfully removed the group")
     } catch (error) {
         return errorThrowResponse(res, `${error.message}`, error);
     }
@@ -655,5 +754,6 @@ module.exports = {
     getGroups,
     deleteGroup,
     leaveGroup,
-    joinGroup
+    inviteToGroup,
+    removeFromGroup
 };

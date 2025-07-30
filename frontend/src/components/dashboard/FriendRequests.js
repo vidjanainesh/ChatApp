@@ -14,7 +14,6 @@ export default function FriendRequests() {
   const friendReqCount = useSelector((state => state.user.friendReqCount));
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
   const [processingIds, setProcessingIds] = useState([]);
 
   useEffect(() => {
