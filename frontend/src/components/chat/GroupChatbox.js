@@ -52,6 +52,7 @@ export default function GroupChatbox() {
     const [leavingGroup, setLeavingGroup] = useState(false);
     const [removingFromGroup, setRemovingFromGroup] = useState([]);
     const [removedMembers, setRemovedMembers] = useState([]);
+    const [confirmRemoveMember, setConfirmRemoveMember] = useState(null);
     const [downloadedFiles, setDownloadedFiles] = useState({});
     const [selectedFile, setSelectedFile] = useState(null);
     const [seenModalData, setSeenModalData] = useState(null);
@@ -827,7 +828,7 @@ export default function GroupChatbox() {
                                                                                 <button
                                                                                     onClick={(e) => {
                                                                                         e.stopPropagation();
-                                                                                        handleRemoveFromGroup(member.id);
+                                                                                        setConfirmRemoveMember(member);
                                                                                     }}
                                                                                     title="Remove from group"
                                                                                     className="text-gray-500 hover:text-red-600 transition rounded-full"
@@ -1332,6 +1333,40 @@ export default function GroupChatbox() {
                     </div>
                 )
                 }
+
+                {/* Confirm Removing Member Modal */}
+                {confirmRemoveMember && (
+                    <div className="fixed inset-0 z-50 bg-black bg-opacity-40 flex justify-center items-center">
+                        <div className="bg-white rounded-xl shadow-lg p-6 w-80">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-2">Confirm</h3>
+                            <p className="text-sm text-gray-600 mb-4">
+                                Are you sure you want to remove{" "}
+                                <strong className="text-gray-800 font-medium">
+                                    {confirmRemoveMember?.name}
+                                </strong>{" "}
+                                from the group?
+                            </p>
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    onClick={() => setConfirmRemoveMember(null)}
+                                    className="px-3 py-1 text-sm bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        handleRemoveFromGroup(confirmRemoveMember?.id);
+                                        setConfirmRemoveMember(null);
+                                    }}
+                                    className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition"
+                                >
+                                    Confirm
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
 
                 {/* Seen by modal */}
                 {seenModalData && (
