@@ -78,6 +78,10 @@ export default function Dashboard() {
     });
 
     useEffect(() => {
+        console.log(groups);
+    }, [groups])
+
+    useEffect(() => {
         if (!token || isUserInitialized || user) return;
 
         try {
@@ -480,76 +484,82 @@ export default function Dashboard() {
                     <>
                         <h2 className="text-xl font-semibold text-gray-700 mb-4">Your Groups:</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 items-start">
-                            {groups.map((group, index) => (
-                                <motion.div
-                                    key={group.id}
-                                    className="bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition duration-300 relative"
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.05 }}
-                                >
-                                    <div
-                                        onClick={() => handleGroupClick(group)}
-                                        className="cursor-pointer flex items-center space-x-4"
-                                        title={`Enter group ${group.name}`}
+                            {groups.map((group, index) => {
+                                const isAdmin = group.admin === user?.id;
+                                return (
+                                    < motion.div
+                                        key={group.id}
+                                        className="bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition duration-300 relative"
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.05 }}
                                     >
-                                        <div className="w-12 h-12 flex items-center justify-center rounded-full bg-green-100 text-green-600 font-bold text-lg">
-                                            {group.name?.charAt(0).toUpperCase()}
+                                        <div
+                                            onClick={() => handleGroupClick(group)}
+                                            className="cursor-pointer flex items-center space-x-4"
+                                            title={`Enter group ${group.name}`}
+                                        >
+                                            <div className="w-12 h-12 flex items-center justify-center rounded-full bg-green-100 text-green-600 font-bold text-lg">
+                                                {group.name?.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div className="max-w-[10rem]">
+                                                <p className="font-medium text-gray-800 break-words leading-snug">
+                                                    {group.name}
+                                                </p>
+                                                <p className="text-sm text-gray-500">Group Chat</p>
+                                            </div>
                                         </div>
-                                        <div className="max-w-[10rem]">
-                                            <p className="font-medium text-gray-800 break-words leading-snug">
-                                                {group.name}
-                                            </p>
-                                            <p className="text-sm text-gray-500">Group Chat</p>
-                                        </div>
-                                    </div>
 
-                                    {/* ⋮ Menu Toggle */}
-                                    <div
-                                        className="absolute top-2 right-2"
-                                        ref={(el) => {
-                                            if (el) groupRefs.current[group.id] = el;
-                                        }}
-                                    >
-                                        <button
-                                            className="text-gray-500 hover:text-gray-800 text-lg"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setActiveMenuGroupId((prev) =>
-                                                    prev === group.id ? null : group.id
-                                                );
+                                        {/* ⋮ Menu Toggle */}
+                                        <div
+                                            className="absolute top-2 right-2"
+                                            ref={(el) => {
+                                                if (el) groupRefs.current[group.id] = el;
                                             }}
                                         >
-                                            ⋮
-                                        </button>
+                                            <button
+                                                className="text-gray-500 hover:text-gray-800 text-lg"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setActiveMenuGroupId((prev) =>
+                                                        prev === group.id ? null : group.id
+                                                    );
+                                                }}
+                                            >
+                                                ⋮
+                                            </button>
 
-                                        {activeMenuGroupId === group.id && (
-                                            <div className="absolute right-0 mt-2 w-28 bg-white border rounded-md shadow-md z-50">
-                                                <button
-                                                    onClick={() => {
-                                                        setConfirmingDeleteId(group.id);
-                                                        setActiveMenuGroupId(null);
-                                                    }}
-                                                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                                                >
-                                                    Leave
-                                                </button>
-                                            </div>
+                                            {activeMenuGroupId === group.id && (
+                                                <div className="absolute right-0 mt-2 w-28 bg-white border rounded-md shadow-md z-50">
+                                                    <button
+                                                        onClick={() => {
+                                                            setConfirmingDeleteId(group.id);
+                                                            setActiveMenuGroupId(null);
+                                                        }}
+                                                        className={`w-full text-left px-4 py-2 text-sm text-red-600 ${isAdmin ? 'cursor-not-allowed' : 'hover:bg-red-50'}`}
+                                                        disabled={isAdmin}
+                                                        title={isAdmin ? "Admin cannot leave group" : "Leave group"}
+                                                    >
+                                                        Leave
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* 🔴 Unread Indicator */}
+                                        {unreadGroupMap[group.id] && (
+                                            <span className="absolute top-2 left-2 w-3 h-3 bg-red-500 rounded-full animate-bounce"></span>
                                         )}
-                                    </div>
-
-                                    {/* 🔴 Unread Indicator */}
-                                    {unreadGroupMap[group.id] && (
-                                        <span className="absolute top-2 left-2 w-3 h-3 bg-red-500 rounded-full animate-bounce"></span>
-                                    )}
-                                </motion.div>
-                            ))}
+                                    </motion.div>
+                                )
+                            })}
                         </div>
                     </>
                 )}
             </div>
             {/* Floating + Button aligned to container but fixed on screen (Only show if atleast one friend exists)*/}
-            {friends.length > 0 &&
+            {
+                friends.length > 0 &&
                 <div className="fixed bottom-6 left-1/2 w-full max-w-4xl px-4 transform -translate-x-1/2 flex justify-end z-50">
                     <button
                         onClick={() => setShowCreateModal(true)}
@@ -599,160 +609,166 @@ export default function Dashboard() {
                 )}
             </AnimatePresence>
             {/* Create Group Modal */}
-            {showCreateModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-                        <h2 className="text-xl font-semibold mb-4 text-indigo-700">
-                            Create New Group
-                        </h2>
+            {
+                showCreateModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+                            <h2 className="text-xl font-semibold mb-4 text-indigo-700">
+                                Create New Group
+                            </h2>
 
-                        <input
-                            type="text"
-                            placeholder="Group Name"
-                            className="w-full mb-4 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                            value={groupName}
-                            onChange={(e) => setGroupName(e.target.value)}
-                        />
+                            <input
+                                type="text"
+                                placeholder="Group Name"
+                                className="w-full mb-4 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                value={groupName}
+                                onChange={(e) => setGroupName(e.target.value)}
+                            />
 
-                        <div className="mb-4 max-h-40 overflow-y-auto">
-                            <p className="mb-2 text-sm font-medium text-gray-700">
-                                Select Friends:
+                            <div className="mb-4 max-h-40 overflow-y-auto">
+                                <p className="mb-2 text-sm font-medium text-gray-700">
+                                    Select Friends:
+                                </p>
+                                {friends.map((f) => (
+                                    <label
+                                        key={f.id}
+                                        className="flex items-center space-x-2 mb-1 text-sm text-gray-800"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedFriendIds.includes(
+                                                f.id
+                                            )}
+                                            onChange={(e) =>
+                                                setSelectedFriendIds((prev) =>
+                                                    e.target.checked
+                                                        ? [...prev, f.id]
+                                                        : prev.filter(
+                                                            (id) => id !== f.id
+                                                        )
+                                                )
+                                            }
+                                        />
+                                        <span>{f.name}</span>
+                                    </label>
+                                ))}
+                            </div>
+
+                            <div className="flex justify-end space-x-3">
+
+                                {creatingGroup ? (
+                                    <div className="flex flex-col items-center px-4 py-2">
+                                        <div className="flex space-x-1">
+                                            <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                            <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                            <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce"></span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={() => setShowCreateModal(false)}
+                                            className="px-4 py-2 text-sm rounded-md bg-gray-300 hover:bg-gray-400"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleCreateGroup}
+                                            className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+                                        >
+                                            Create
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {
+                confirmingDeleteId && (
+                    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-md p-5 shadow-lg max-w-sm w-full text-center">
+                            <p className="text-gray-800 font-medium mb-4">
+                                {leavingGroup ? "One moment... leaving the group" : "Are you sure you want to leave this group?"}
                             </p>
-                            {friends.map((f) => (
-                                <label
-                                    key={f.id}
-                                    className="flex items-center space-x-2 mb-1 text-sm text-gray-800"
-                                >
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedFriendIds.includes(
-                                            f.id
-                                        )}
-                                        onChange={(e) =>
-                                            setSelectedFriendIds((prev) =>
-                                                e.target.checked
-                                                    ? [...prev, f.id]
-                                                    : prev.filter(
-                                                        (id) => id !== f.id
-                                                    )
-                                            )
-                                        }
-                                    />
-                                    <span>{f.name}</span>
-                                </label>
-                            ))}
-                        </div>
-
-                        <div className="flex justify-end space-x-3">
-
-                            {creatingGroup ? (
-                                <div className="flex flex-col items-center px-4 py-2">
-                                    <div className="flex space-x-1">
-                                        <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                                        <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                                        <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce"></span>
+                            <div className="flex justify-center gap-4">
+                                {leavingGroup ? (
+                                    <div className="flex flex-col items-center px-4 py-2">
+                                        <div className="flex space-x-1">
+                                            <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                            <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                            <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce"></span>
+                                        </div>
                                     </div>
-                                </div>
-                            ) : (
-                                <>
-                                    <button
-                                        onClick={() => setShowCreateModal(false)}
-                                        className="px-4 py-2 text-sm rounded-md bg-gray-300 hover:bg-gray-400"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleCreateGroup}
-                                        className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
-                                    >
-                                        Create
-                                    </button>
-                                </>
-                            )}
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={() => {
+                                                setConfirmingDeleteId(false);
+                                                setActiveMenuGroupId(false);
+                                            }}
+                                            className="px-4 py-2 text-sm bg-gray-300 hover:bg-gray-400 rounded-md"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                handleLeaveGroup(confirmingDeleteId);
+                                            }}
+                                            className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md"
+                                        >
+                                            Yes
+                                        </button>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
-            {confirmingDeleteId && (
-                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-md p-5 shadow-lg max-w-sm w-full text-center">
-                        <p className="text-gray-800 font-medium mb-4">
-                            {leavingGroup ? "One moment... leaving the group" : "Are you sure you want to leave this group?"}
-                        </p>
-                        <div className="flex justify-center gap-4">
-                            {leavingGroup ? (
-                                <div className="flex flex-col items-center px-4 py-2">
-                                    <div className="flex space-x-1">
-                                        <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                                        <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                                        <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce"></span>
+            {
+                confirmUnfriendId && (
+                    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-md p-5 shadow-lg max-w-sm w-full text-center">
+                            <p className="text-gray-800 font-medium mb-4">
+                                {removingFriend ? "One moment... Removing friend" : "Are you sure you want to unfriend this person?"}
+                            </p>
+                            <div className="flex justify-center gap-4">
+                                {removingFriend ? (
+                                    <div className="flex flex-col items-center px-4 py-2">
+                                        <div className="flex space-x-1">
+                                            <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                            <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                            <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce"></span>
+                                        </div>
                                     </div>
-                                </div>
-                            ) : (
-                                <>
-                                    <button
-                                        onClick={() => {
-                                            setConfirmingDeleteId(false);
-                                            setActiveMenuGroupId(false);
-                                        }}
-                                        className="px-4 py-2 text-sm bg-gray-300 hover:bg-gray-400 rounded-md"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            handleLeaveGroup(confirmingDeleteId);
-                                        }}
-                                        className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md"
-                                    >
-                                        Yes
-                                    </button>
-                                </>
-                            )}
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={() => setConfirmUnfriendId(null)}
+                                            className="px-4 py-2 text-sm bg-gray-300 hover:bg-gray-400 rounded-md"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                handleUnfriend(confirmUnfriendId);
+                                            }}
+                                            className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md"
+                                        >
+                                            Unfriend
+                                        </button>
+                                    </>
+                                )}
+
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-
-            {confirmUnfriendId && (
-                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-md p-5 shadow-lg max-w-sm w-full text-center">
-                        <p className="text-gray-800 font-medium mb-4">
-                            {removingFriend ? "One moment... Removing friend" : "Are you sure you want to unfriend this person?"}
-                        </p>
-                        <div className="flex justify-center gap-4">
-                            {removingFriend ? (
-                                <div className="flex flex-col items-center px-4 py-2">
-                                    <div className="flex space-x-1">
-                                        <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                                        <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                                        <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce"></span>
-                                    </div>
-                                </div>
-                            ) : (
-                                <>
-                                    <button
-                                        onClick={() => setConfirmUnfriendId(null)}
-                                        className="px-4 py-2 text-sm bg-gray-300 hover:bg-gray-400 rounded-md"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            handleUnfriend(confirmUnfriendId);
-                                        }}
-                                        className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md"
-                                    >
-                                        Unfriend
-                                    </button>
-                                </>
-                            )}
-
-                        </div>
-                    </div>
-                </div>
-            )}
+                )
+            }
         </div >
     );
 }

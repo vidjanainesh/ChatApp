@@ -3,7 +3,7 @@ import { initSocket } from "./socketManager";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { addMessage, addGroupMessage, markMessagesAsSeen, markGroupMessagesAsSeen } from "../store/chatSlice";
-import { addFriend, addGroup, appendUnreadPrivate, appendUnreadGroup, incrementFriendReqCount } from "../store/userSlice";
+import { addFriend, addGroup, removeGroup, appendUnreadPrivate, appendUnreadGroup, incrementFriendReqCount } from "../store/userSlice";
 import { deletePrivateMessage, editPrivateMessage, deleteGroupMsgAction, editGroupMsgAction, addReactionToPrivateMessage, removeReactionFromPrivateMessage, addReactionToGroupMessage, removeReactionFromGroupMessage } from "../store/chatSlice";
 
 export default function useSocket({ token, chatUserId, groupId, loggedInUserId, setIsTyping }) {
@@ -185,6 +185,15 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
             };
           }
         }
+      }
+    });
+
+    // Removed from group
+    socket.on("removedFromGroup", (data) => {
+      const { groupId } = data;
+      if (groupId) {
+        dispatch(removeGroup(groupId));
+        socket.emit("leaveGroupRoom", `group_${groupId}`);
       }
     });
 

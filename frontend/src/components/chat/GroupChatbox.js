@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
-import { getGroupData, sendGroupMessage, joinGroup, leaveGroup, deleteGroupMessage, editGroupMessage, deleteReactions, reactMessage, whatsappNotify } from "../../api";
+import { getGroupData, sendGroupMessage, inviteToGroup, leaveGroup, removeFromGroup, deleteGroupMessage, editGroupMessage, deleteReactions, reactMessage, whatsappNotify } from "../../api";
 import { toast } from "react-toastify";
 import { motion } from 'framer-motion';
 import { jwtDecode } from "jwt-decode";
@@ -9,7 +9,7 @@ import { useDispatch, useSelector } from "react-redux";
 import GroupChatMessage from "./GroupChatMessage";
 import { setGroupMessages, addGroupMessage, updateGroupMessageId, setGroupMembers, deleteGroupMsgAction, editGroupMsgAction, clearGroupMessages, clearChatState, addReactionToGroupMessage, setCurrentChat, prependGroupMessages } from "../../store/chatSlice";
 import EmojiPicker from "emoji-picker-react";
-import { HiOutlineLogout, HiUserAdd, HiOutlineUsers, HiOutlineChat, HiPaperClip, HiPhotograph, HiVideoCamera, HiChevronDown, } from "react-icons/hi";
+import { HiOutlineLogout, HiUserAdd, HiOutlineUsers, HiOutlineChat, HiPaperClip, HiPhotograph, HiVideoCamera, HiChevronDown, HiShieldCheck, HiUserRemove } from "react-icons/hi";
 import { BsBellFill, BsBellSlashFill, BsCheck, BsCheckAll } from "react-icons/bs";
 import { setGroups } from "../../store/userSlice";
 import { v4 as uuidv4 } from 'uuid';
@@ -36,6 +36,8 @@ export default function GroupChatbox() {
     const [replyTo, setReplyTo] = useState(null);
     const [isTyping, setIsTyping] = useState(false);
     const [messageLoading, setMessageLoading] = useState(true);
+    const [admin, setAdmin] = useState();
+    const [isAdmin, setIsAdmin] = useState(null);
     const [showMembers, setShowMembers] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -48,6 +50,8 @@ export default function GroupChatbox() {
     const [hasMore, setHasMore] = useState(true);
     const [loadingOlder, setLoadingOlder] = useState(false);
     const [leavingGroup, setLeavingGroup] = useState(false);
+    const [removingFromGroup, setRemovingFromGroup] = useState([]);
+    const [removedMembers, setRemovedMembers] = useState([]);
     const [downloadedFiles, setDownloadedFiles] = useState({});
     const [selectedFile, setSelectedFile] = useState(null);
     const [seenModalData, setSeenModalData] = useState(null);
@@ -93,6 +97,15 @@ export default function GroupChatbox() {
         setIsTyping,
     });
 
+    useEffect(() => {
+        console.log("Removed Members: ", removedMembers);
+    }, [removedMembers])
+
+    // To set group admin
+    useEffect(() => {
+        setIsAdmin(admin === loggedInUserId)
+    }, [admin, loggedInUserId]);
+
     // Callback function to fetch group messages
     const fetchGroupMessages = useCallback(async (beforeId = null) => {
         if (beforeId) {
@@ -106,6 +119,7 @@ export default function GroupChatbox() {
             const res = await getGroupData(id, token, beforeId);
             if (res.data.status === "success") {
                 const newMessages = res.data.data.messages;
+                setAdmin(res.data.data.admin);
 
                 if (beforeId) {
                     if (newMessages.length < 9) setHasMore(false);
@@ -137,7 +151,7 @@ export default function GroupChatbox() {
                 setMessageLoading(false);
             }
         }
-    }, [id, token, dispatch, navigate]);
+    }, [dispatch, id, token, navigate]);
 
     // useEffect to fetch group messages
     useEffect(() => {
@@ -532,7 +546,7 @@ export default function GroupChatbox() {
         try {
             const res = await leaveGroup(id, token);
             if (res.data.status === "success") {
-                toast.success("You left the group");
+                // toast.success("You left the group");
                 setTimeout(() => {
                     setShowLeaveModal(false);
                     dispatch(setGroups(groups.filter((g) => g.id !== parseInt(id))));
@@ -550,10 +564,26 @@ export default function GroupChatbox() {
         }
     };
 
+    const handleRemoveFromGroup = async (memberId) => {
+        setRemovingFromGroup((prev) => [...prev, memberId]);
+        try {
+            const res = await removeFromGroup(id, memberId, token);
+            if (res.data.status === "success") {
+                // dispatch(setGroupMembers(members.filter((m) => m.id !== memberId)));
+                setRemovedMembers((prev) => [...prev, memberId]);
+            }
+        } catch (error) {
+            const msg = error.response?.data?.message || "Error removing from group";
+            toast.error(msg);
+        } finally {
+            setRemovingFromGroup((prev) => prev.filter((mem) => mem !== memberId));
+        }
+    }
+
     const handleInviteMultiple = async (friendIds) => {
         setAddingMember(true);
         try {
-            const res = await joinGroup(
+            const res = await inviteToGroup(
                 { groupId: parseInt(id), friendIds },
                 token
             );
@@ -672,8 +702,9 @@ export default function GroupChatbox() {
                         {/* Leave Button */}
                         <button
                             onClick={() => setShowLeaveModal(true)}
-                            className="p-1.5 rounded hover:bg-red-100 text-red-500 hover:text-red-600"
-                            title="Leave Group"
+                            disabled={isAdmin}
+                            className={`p-1.5 rounded  text-red-500  ${isAdmin ? 'cursor-not-allowed' : 'hover:bg-red-100 hover:text-red-600'}`}
+                            title={isAdmin ? "Admin cannot leave group" : "Leave Group"}
                         >
                             <HiOutlineLogout className="w-5 h-5" />
                         </button>
@@ -691,34 +722,40 @@ export default function GroupChatbox() {
                                 <div className="absolute right-0 mt-2 w-auto bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                                     <div className="flex items-center justify-between px-4 py-2 font-semibold text-gray-700 border-b">
                                         <span>Group Members</span>
-                                        <button
-                                            onClick={() => {
-                                                setShowInviteModal(true);
-                                                setShowMembers(false); // optional: auto-close dropdown
-                                            }}
-                                            className="text-indigo-600 hover:text-indigo-800 text-sm"
-                                            title="Invite Friends"
-                                        >
-                                            <HiUserAdd className="w-5 h-5" />
-                                        </button>
+                                        {isAdmin && (
+                                            <button
+                                                onClick={() => {
+                                                    setShowInviteModal(true);
+                                                    setShowMembers(false); // optional: auto-close dropdown
+                                                }}
+                                                className="text-indigo-600 hover:text-indigo-800 text-sm"
+                                                title="Invite Friends"
+                                            >
+                                                <HiUserAdd className="w-5 h-5" />
+                                            </button>
+                                        )}
                                     </div>
                                     <ul className="max-h-50 overflow-y-auto divide-y divide-gray-100">
                                         {members.map((member) => {
                                             const isCurrentUser = member.id === loggedInUserId;
+                                            const isAdminUser = member.id === admin;
+                                            const isRemoved = removedMembers.includes(member.id);
 
                                             return (
-                                                <li key={member.id} className="">
-                                                    <div className="flex items-center justify-between gap-3">
+                                                <li key={member.id}>
+                                                    <div
+                                                        className={`flex items-center justify-between gap-3 ${isCurrentUser ? 'cursor-default bg-gray-50' : ''
+                                                            }`}
+                                                    >
                                                         {/* LEFT CLICKABLE PART */}
                                                         <div
-                                                            className={`flex items-center gap-3 flex-1 px-4 py-3 w-full rounded-md transition ${!isCurrentUser
-                                                                ? "cursor-pointer hover:bg-indigo-50"
-                                                                : "cursor-default bg-gray-50"
+                                                            className={`flex items-center gap-3 flex-1 px-4 py-3 w-full rounded-md transition ${!isCurrentUser && !isRemoved && 'cursor-pointer hover:bg-indigo-50'
                                                                 }`}
-                                                            onClick={() =>
-                                                                !isCurrentUser &&
-                                                                navigate(`/chatbox/${member.id}?name=${encodeURIComponent(member.name)}`)
-                                                            }
+                                                            onClick={() => {
+                                                                if (!isCurrentUser && !isRemoved) {
+                                                                    navigate(`/chatbox/${member.id}?name=${encodeURIComponent(member.name)}`);
+                                                                }
+                                                            }}
                                                         >
                                                             {member?.profileImageUrl ? (
                                                                 <img
@@ -734,45 +771,83 @@ export default function GroupChatbox() {
 
                                                             <div className="flex flex-col max-w-[12rem] truncate">
                                                                 <p
-                                                                    className="text-sm font-medium text-gray-800"
-                                                                    title={isCurrentUser ? "You" : member.name}
+                                                                    className={`text-sm font-medium ${isRemoved ? 'text-gray-400 italic' : 'text-gray-800'
+                                                                        }`}
+                                                                    title={isCurrentUser ? 'You' : member.name}
                                                                 >
-                                                                    {isCurrentUser ? "You" : member.name}
+                                                                    {isCurrentUser ? 'You' : member.name}
                                                                 </p>
-                                                                <p className="text-xs text-gray-500">{isCurrentUser ? "" : member.email}</p>
+                                                                <p className={`text-xs ${isRemoved ? 'text-gray-300 italic' : 'text-gray-500'}`}>
+                                                                    {isCurrentUser ? '' : member.email}
+                                                                </p>
                                                             </div>
                                                         </div>
 
-                                                        {/* RIGHT ACTION ICON */}
-                                                        {!isCurrentUser && (
-                                                            <div className="flex px-3">
-                                                                {!notifyingMembers.includes(member?.id) &&
-                                                                    !notifiedMembers.includes(member?.id) ? (
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation(); // Prevent outer div's click
-                                                                            handleWhatsappNotify(member?.id);
-                                                                        }}
-                                                                        title="Notify via WhatsApp"
-                                                                        className="text-gray-500 hover:text-green-600 transition rounded-full"
-                                                                    >
-                                                                        <BsBellFill className="w-5 h-5" />
-                                                                    </button>
-                                                                ) : notifyingMembers.includes(member?.id) ? (
-                                                                    <div
-                                                                        className="w-5 h-5 border-2 border-t-2 border-green-500 border-t-transparent rounded-full animate-spin"
-                                                                        title="Sending WhatsApp notification..."
-                                                                    />
-                                                                ) : (
-                                                                    <BsBellSlashFill
-                                                                        className="w-5 h-5 text-gray-500"
-                                                                        title="Notification disabled"
-                                                                    />
-                                                                )}
-                                                            </div>
-                                                        )}
+                                                        {/* RIGHT SIDE ICONS or REMOVED BADGE */}
+                                                        <div className="flex px-3 items-center gap-2">
+                                                            {isRemoved ? (
+                                                                <span
+                                                                    className="text-xs font-semibold bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full"
+                                                                    title="This user has been removed from the group"
+                                                                >
+                                                                    Removed
+                                                                </span>
+                                                            ) : (
+                                                                <>
+                                                                    {isAdminUser && (
+                                                                        <HiShieldCheck className="text-indigo-500 w-4 h-4" title="Group Admin" />
+                                                                    )}
+
+                                                                    {!isCurrentUser && (
+                                                                        !notifyingMembers.includes(member?.id) &&
+                                                                            !notifiedMembers.includes(member?.id) ? (
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handleWhatsappNotify(member?.id);
+                                                                                }}
+                                                                                title="Notify via WhatsApp"
+                                                                                className="text-gray-500 hover:text-green-600 transition rounded-full"
+                                                                            >
+                                                                                <BsBellFill className="w-5 h-5" />
+                                                                            </button>
+                                                                        ) : notifyingMembers.includes(member?.id) ? (
+                                                                            <div
+                                                                                className="w-5 h-5 border-2 border-t-2 border-green-500 border-t-transparent rounded-full animate-spin"
+                                                                                title="Sending WhatsApp notification..."
+                                                                            />
+                                                                        ) : (
+                                                                            <BsBellSlashFill className="w-5 h-5 text-gray-500" title="Notification disabled" />
+                                                                        )
+                                                                    )}
+
+                                                                    {loggedInUserId === admin && !isCurrentUser && (
+                                                                        <>
+                                                                            {!removingFromGroup.includes(member.id) ? (
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        handleRemoveFromGroup(member.id);
+                                                                                    }}
+                                                                                    title="Remove from group"
+                                                                                    className="text-gray-500 hover:text-red-600 transition rounded-full"
+                                                                                >
+                                                                                    <HiUserRemove className="w-5 h-5" />
+                                                                                </button>
+                                                                            ) : (
+                                                                                <div
+                                                                                    className="w-5 h-5 border-2 border-t-2 border-red-500 border-t-transparent rounded-full animate-spin"
+                                                                                    title="Removing from group..."
+                                                                                />
+                                                                            )}
+                                                                        </>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </li>
+
                                             );
                                         })}
                                     </ul>

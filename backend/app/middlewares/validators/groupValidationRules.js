@@ -51,6 +51,16 @@ const groupValidationRules = {
       .isInt({ min: 1 }).withMessage("Group ID must be a valid positive integer"),
   ],
 
+  removeFromGroup: [
+    param("id")
+      .notEmpty().withMessage("Group ID is required in URL")
+      .isInt({ min: 1 }).withMessage("Group ID must be a valid positive integer"),
+
+    body("memberId")
+      .notEmpty().withMessage("Member ID is required in request body")
+      .isInt({ min: 1 }).withMessage("Member ID must be a valid positive integer")
+  ],
+
   // For deleting a group
   deleteGroup: [
     param("id")

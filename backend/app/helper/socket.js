@@ -52,7 +52,8 @@ function setupSocket(server) {
       console.error("Error joining group rooms:", err);
     }
 
-    socket.on('joinGroupRoom', (roomId) => { socket.join(roomId) })
+    socket.on('joinGroupRoom', (roomId) => { socket.join(roomId) });
+    socket.on('leaveGroupRoom', (roomId) => { socket.leave(roomId) });
 
     // Private typing
     socket.on("typing", (data) => {

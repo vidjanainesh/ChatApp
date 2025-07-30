@@ -179,7 +179,7 @@ export const createGroup = (data, token) => {
     );
 }
 
-export const joinGroup = (data, token) => {
+export const inviteToGroup = (data, token) => {
     return axios.post(`${API_BASE}/group/join`,
         data,
         {
@@ -192,6 +192,17 @@ export const joinGroup = (data, token) => {
 
 export const leaveGroup = (id, token) => {
     return axios.get(`${API_BASE}/group/leave/${id}`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    )
+};
+
+export const removeFromGroup = (id, memberId, token) => {
+    return axios.post(`${API_BASE}/group/remove/${id}`,
+        { memberId },
         {
             headers: {
                 Authorization: `Bearer ${token}`
