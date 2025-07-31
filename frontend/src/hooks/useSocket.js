@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 import { initSocket } from "./socketManager";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { addMessage, addGroupMessage, markMessagesAsSeen, markGroupMessagesAsSeen } from "../store/chatSlice";
-import { addFriend, addGroup, removeGroup, appendUnreadPrivate, appendUnreadGroup, incrementFriendReqCount } from "../store/userSlice";
+import { addFriend, addGroup, removeGroup, appendUnreadPrivate, appendUnreadGroup, incrementFriendReqCount, addOnlineFriends, removeOnlineFriends } from "../store/userSlice";
 import { deletePrivateMessage, editPrivateMessage, deleteGroupMsgAction, editGroupMsgAction, addReactionToPrivateMessage, removeReactionFromPrivateMessage, addReactionToGroupMessage, removeReactionFromGroupMessage } from "../store/chatSlice";
 
-export default function useSocket({ token, chatUserId, groupId, loggedInUserId, setIsTyping }) {
+export default function useSocket({ token, chatUserId, groupId, loggedInUserId, setIsTyping, onNewMessageAlert }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [socketInstance, setSocketInstance] = useState(null);
@@ -25,6 +26,24 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
     socket.off("connect");
     socket.on("connect", () => {
       console.log("Socket connected:", socket.id);
+      socket.emit("showOnline");
+    });
+
+    socket.on('currentOnlineUsers', (onlineUserIds) => {
+      console.log("Current Online users: ", onlineUserIds);
+      onlineUserIds.forEach((id) => {
+        dispatch(addOnlineFriends(id));
+      });
+    });
+
+    socket.on('setOnline', (userId) => {
+      console.log(`User ${userId} is online!`);
+      dispatch(addOnlineFriends(userId));
+    });
+
+    socket.on('unSetOnline', (userId) => {
+      console.log(`User ${userId} is offline!`);
+      dispatch(removeOnlineFriends(userId));
     });
 
     socket.on('newFriendReqSent', () => {
@@ -100,8 +119,15 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
       }
 
       // 2. Global notification logic
+      // if (senderIdStr !== loggedInUserIdStr) {
+      //   dispatch(appendUnreadPrivate(senderIdStr));
+      // }
       if (senderIdStr !== loggedInUserIdStr) {
-        dispatch(appendUnreadPrivate(senderIdStr));
+        if (onNewMessageAlert) {
+          onNewMessageAlert(senderIdStr, "private");
+        } else {
+          dispatch(appendUnreadPrivate(senderIdStr));
+        }
       }
 
       // 3. Push browser notification
@@ -190,11 +216,13 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
 
     // Removed from group
     socket.on("removedFromGroup", (data) => {
-      const { groupId } = data;
+      let { group } = data;
+      const groupId = group.id;
       if (groupId) {
         dispatch(removeGroup(groupId));
         socket.emit("leaveGroupRoom", `group_${groupId}`);
       }
+      toast.info(`You are removed from group: ${group.name}`)
     });
 
     // New: Handle newGroupMessage
@@ -204,12 +232,20 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
       // Ignore messages from self - because temp msg already being displayed 
       if (message.senderId === loggedInUserId) return;
 
+      // 1. If user is currently inside the group chat
       if (groupId && parseInt(groupId) === parseInt(msgGroupId)) {
         dispatch(addGroupMessage(message));
       }
 
-      dispatch(appendUnreadGroup(msgGroupId));
+      // 2. Global notification
+      // dispatch(appendUnreadGroup(msgGroupId));
+      if (onNewMessageAlert) {
+        onNewMessageAlert(msgGroupId, "group");
+      } else {
+        dispatch(appendUnreadGroup(msgGroupId));
+      }
 
+      // 3. Push browser notification
       if (
         Notification.permission === "granted" &&
         document.visibilityState !== "visible"
@@ -249,6 +285,9 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
 
     return () => {
       // Detach only listeners, not socket itself
+      socket.off("currentOnlineUsers");
+      socket.off("setOnline");
+      socket.off("unSetOnline");
       socket.off("newFriendReqSent");
       socket.off("friendAccepted");
       socket.off("newMessage");
@@ -259,12 +298,15 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
       socket.off("typing");
       socket.off("groupCreated");
       socket.off("groupJoined");
+      socket.off("removedFromGroup");
       socket.off("newGroupMessage");
       socket.off("deleteGroupMessage");
       socket.off("editGroupMessage");
       socket.off("groupTyping");
+
+      // socket.disconnect();
     };
-  }, [token, chatUserId, groupId, loggedInUserId, setIsTyping, groups, chatType, dispatch, navigate]);
+  }, [token, chatUserId, groupId, loggedInUserId, setIsTyping, groups, chatType, dispatch, navigate, onNewMessageAlert]);
 
   return socketInstance;
 }

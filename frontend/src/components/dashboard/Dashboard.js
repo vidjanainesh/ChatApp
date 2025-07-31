@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { HiOutlineUserCircle, HiOutlineLogout } from "react-icons/hi";
+import { HiOutlineUserCircle, HiOutlineLogout, HiOutlineStatusOnline } from "react-icons/hi";
 import {
     getDashboardData,
     createGroup,
@@ -19,6 +19,8 @@ import {
     addGroup,
     setUnreadPrivateMap,
     setUnreadGroupMap,
+    appendUnreadPrivate,
+    appendUnreadGroup,
     clearUnreadPrivateMapEntry,
     clearUnreadGroupMapEntry,
     setFriendReqCount,
@@ -35,6 +37,7 @@ export default function Dashboard() {
 
     const user = useSelector((state) => state.user.user);
     const friends = useSelector((state) => state.user.friends);
+    const onlineFriends = useSelector((state) => state.user.onlineFriends);
     const hasFetched = useSelector((state) => state.user.hasFetchedDashboardData);
     const groups = useSelector((state) => state.user.groups);
     const unreadPrivateMap = useSelector((state) => state.user.unreadPrivateMap);
@@ -61,25 +64,25 @@ export default function Dashboard() {
     const dropdownRef = useRef(null);
 
     // Use socket globally just for notifications
-    useSocket({
+    const socketRef = useSocket({
         token,
         chatUserId: null,
         groupId: null,
         loggedInUserId: user?.id,
         setMessages: null,
         setIsTyping: null,
-        onNewMessageAlert: (fromUserId, type, roomId) => {
+        onNewMessageAlert: (fromId, type) => {
             if (type === "group") {
-                dispatch(setUnreadGroupMap(roomId));
+                dispatch(appendUnreadGroup(fromId));
             } else {
-                dispatch(setUnreadPrivateMap(fromUserId));
+                dispatch(appendUnreadPrivate(fromId));
             }
         },
     });
 
     useEffect(() => {
-        console.log(groups);
-    }, [groups])
+        console.log("Online Friends: ", onlineFriends);
+    }, [onlineFriends])
 
     useEffect(() => {
         if (!token || isUserInitialized || user) return;
@@ -96,6 +99,9 @@ export default function Dashboard() {
 
     // Fetch dashboard data
     useEffect(() => {
+        if (socketRef && socketRef.connected) {
+            socketRef.connect();
+        }
         const fetchData = async () => {
             try {
                 if (!token) {
@@ -136,9 +142,12 @@ export default function Dashboard() {
         } else {
             setLoading(false); // ensure loading is false if we skip fetch
         }
-    }, [token, navigate, dispatch, hasFetched]);
+    }, [token, navigate, dispatch, hasFetched, socketRef]);
 
     const handleLogout = () => {
+        if (socketRef && socketRef.connected) {
+            socketRef.disconnect();
+        }
         localStorage.removeItem("jwt");
         // toast.success("Logged out", { autoClose: 1000 });
         dispatch(clearUser());
@@ -174,7 +183,7 @@ export default function Dashboard() {
             const res = await unFriend(friendId, token);
 
             if (res.data.status === "success") {
-                toast.success("Friend removed!");
+                // toast.success("Friend removed!");
                 setConfirmUnfriendId(null);
                 dispatch(setFriends(friends.filter((f) => f.id !== friendId)));
             } else {
@@ -418,18 +427,26 @@ export default function Dashboard() {
                                     onClick={() => handleUserClick(user)}
                                     className="flex items-center space-x-4 cursor-pointer"
                                 >
-                                    {user?.profileImageUrl ? (
-                                        <img
-                                            src={user.profileImageUrl}
-                                            alt="Avatar"
-                                            className="w-12 h-12 rounded-full object-cover border"
-                                        />
-                                    ) : (
-                                        // <FaUserCircle className="w-8 h-8 text-gray-500 border rounded-full bg-white" />
-                                        <div className="w-12 h-12 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-bold text-lg">
-                                            {user.name?.charAt(0).toUpperCase()}
-                                        </div>
-                                    )}
+                                    <div className="relative flex-shrink-0">
+                                        {user?.profileImageUrl ? (
+                                            <img
+                                                src={user.profileImageUrl}
+                                                alt="Avatar"
+                                                className="w-12 h-12 rounded-full object-cover border"
+                                            />
+                                        ) : (
+                                            <div className="w-12 h-12 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-bold text-lg">
+                                                {user.name?.charAt(0).toUpperCase()}
+                                            </div>
+                                        )}
+
+                                        {onlineFriends.includes(user.id) && (
+                                            <HiOutlineStatusOnline
+                                                className="absolute bottom-0 right-0 w-5 h-5 text-green-500 bg-white rounded-full p-0.5 shadow"
+                                                title="Online"
+                                            />
+                                        )}
+                                    </div>
                                     <div className="max-w-[60vw] sm:max-w-[40vw] md:max-w-[30vw] lg:max-w-[20vw] truncate">
                                         <p className="font-medium text-gray-800 truncate" title={user.name}> {user.name} </p>
                                         <p className="text-sm text-gray-500 truncate" title={user.email}> {user.email} </p>

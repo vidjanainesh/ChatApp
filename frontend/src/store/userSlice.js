@@ -5,6 +5,7 @@ const initialState = {
     token: null,
     hasFetchedDashboardData: false,
     friends: [],
+    onlineFriends: [],
     groups: [],
     unreadPrivateMap: {},
     unreadGroupMap: {},
@@ -41,6 +42,16 @@ const userSlice = createSlice({
         removeFriend: (state, action) => {
             const unFriendId = action.payload;
             state.friends = state.friends.filter((friend) => friend.id !== unFriendId);
+        },
+        addOnlineFriends: (state, action) => {
+            const userId = action.payload;
+            if (!state.onlineFriends.includes(userId)) state.onlineFriends.push(userId);
+        },
+        removeOnlineFriends: (state, action) => {
+            const userId = action.payload;
+            if (state.onlineFriends.includes(userId)) {
+                state.onlineFriends = state.onlineFriends.filter((id) => id !== userId);
+            }
         },
         setGroups: (state, action) => {
             state.groups = action.payload;
@@ -100,6 +111,8 @@ export const {
     clearUser,
     setHasFetchedDashboardData,
     setFriends,
+    addOnlineFriends,
+    removeOnlineFriends,
     setGroups,
     addGroup,
     removeGroup,

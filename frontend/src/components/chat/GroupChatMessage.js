@@ -61,7 +61,7 @@ function GroupChatMessage({
                     transition={{ duration: 0.2 }}
                     className="flex justify-center"
                 >
-                    <div className="text-gray-700 text-xs px-4 py-1">
+                    <div className="text-gray-700 text-xs px-4 py-1 text-center break-words max-w-[90%]">
                         {msg?.message}
                     </div>
                 </motion.div>

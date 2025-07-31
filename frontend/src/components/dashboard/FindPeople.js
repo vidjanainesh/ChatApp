@@ -4,9 +4,12 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { motion } from "framer-motion";
 import debounce from 'lodash.debounce';
+import { useDispatch } from "react-redux";
+import { setHasFetchedDashboardData } from "../../store/userSlice";
 
 export default function FindPeople() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const token = localStorage.getItem("jwt");
   const [users, setUsers] = useState([]);
   const [requestedIds, setRequestedIds] = useState([]);
@@ -84,6 +87,7 @@ export default function FindPeople() {
         // toast.success("Friend request sent!", { autoClose: 2000 });
         setProcessingIds((prev) => prev.filter((reqId) => reqId !== id));
         setRequestedIds((prev) => [...prev, id]);
+        dispatch(setHasFetchedDashboardData(false));
       } else {
         toast.error(response.data.message || "Failed to send request");
       }

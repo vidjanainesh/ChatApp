@@ -180,7 +180,7 @@ export const createGroup = (data, token) => {
 }
 
 export const inviteToGroup = (data, token) => {
-    return axios.post(`${API_BASE}/group/join`,
+    return axios.post(`${API_BASE}/group/invite`,
         data,
         {
             headers: {

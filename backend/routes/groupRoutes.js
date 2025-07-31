@@ -21,7 +21,7 @@ const handleValidation = require('../app/middlewares/validators/handleValidation
 const upload = require('../app/helper/upload');
 
 router.post('/', groupValidationRules.createGroup, handleValidation, authMiddleware, createGroup);
-router.post('/join', authMiddleware, groupValidationRules.joinGroup, handleValidation, inviteToGroup);
+router.post('/invite', authMiddleware, groupValidationRules.joinGroup, handleValidation, inviteToGroup);
 router.get('/leave/:id', authMiddleware, groupValidationRules.leaveGroup, handleValidation, leaveGroup);
 router.post('/remove/:id', authMiddleware, groupValidationRules.removeFromGroup, handleValidation, removeFromGroup)
 

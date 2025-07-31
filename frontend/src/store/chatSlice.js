@@ -6,6 +6,7 @@ const initialState = {
   currentChat: null, // friend user ID or group ID
   chatType: "private", // "private" or "group"
   groupMembers: [],
+  nonMemberFriends: [],
 };
 
 const chatSlice = createSlice({
@@ -142,6 +143,21 @@ const chatSlice = createSlice({
     setGroupMembers: (state, action) => {
       state.groupMembers = action.payload;
     },
+    addGroupMembers: (state, action) => {
+      state.groupMembers = [...state.groupMembers, ...action.payload];
+    },
+    // removeGroupMembers: (state, action) => {
+
+    // },
+    setNonMemberFriends: (state, action) => {
+      state.nonMemberFriends = action.payload;
+    },
+    removeNonMemberFriends: (state, action) => {
+      const newMembers = action.payload;
+      state.nonMemberFriends = state.nonMemberFriends.filter((frnd) => {
+        return !newMembers.some((mem) => mem.id === frnd.id)
+      });
+    },
     addReactionToGroupMessage: (state, action) => {
       const messageId = Number(action.payload.messageId);
       const reaction = action.payload.reaction;
@@ -196,6 +212,9 @@ export const {
   setCurrentChat,
   clearChatState,
   setGroupMembers,
+  addGroupMembers,
+  setNonMemberFriends,
+  removeNonMemberFriends,
   addReactionToGroupMessage,
   removeReactionFromGroupMessage,
 } = chatSlice.actions;
