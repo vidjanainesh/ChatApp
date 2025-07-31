@@ -302,6 +302,7 @@ const getGroupData = async (req, res) => {
             return errorResponse(res, "User is not a part of this group");
         }
 
+        // Get the group messages
         const gmWhereClause = {
             is_deleted: false,
             group_id: groupId,
@@ -330,8 +331,6 @@ const getGroupData = async (req, res) => {
             limit: 9,
             order: [['id', 'DESC']],
             include: [
-
-
                 {
                     model: User,
                     as: "sender",
@@ -448,9 +447,45 @@ const getGroupData = async (req, res) => {
             ],
         });
 
-        let plainMembers = members.toJSON();
+        // Find friends that are not members
+        let nonMemberFriends = [];
+        if (admin === user.id) {
+            let memberIds = members.members.map((mem) => mem.id);
 
-        const result = { messages: messagesWithReactions.reverse(), members: plainMembers, admin }
+            const friends = await Friends.findAll({
+                where: {
+                    status: 'accepted',
+                    [Op.or]: [
+                        { sender_id: user.id },
+                        { receiver_id: user.id },
+                    ]
+                }
+            });
+
+            let friendIds = friends.map((frnd) => {
+                let id;
+                if (frnd.receiver_id === user.id) id = frnd.sender_id;
+                else id = frnd.receiver_id;
+                return id;
+            });
+
+            const inviteFriendIds = [];
+            friendIds.map((id) => {
+                if (!memberIds.includes(id)) inviteFriendIds.push(id);
+            });
+
+            // console.log(inviteFriendIds);
+            nonMemberFriends = await User.findAll({
+                where: {
+                    id: inviteFriendIds
+                },
+                attributes: ['id', 'name', 'email', ["profile_image_url", "profileImageUrl"]],
+                raw: true
+            });
+        }
+
+
+        const result = { messages: messagesWithReactions.reverse(), members: members.toJSON(), nonMemberFriends, admin }
 
         return successResponse(res, result, "Fetched all messages");
     } catch (error) {
@@ -636,7 +671,7 @@ const inviteToGroup = async (req, res) => {
 
         // For system messages in groups
         const newMemberIds = friendIds.filter((id) => !activeMembers.includes(id));
-        const newMembers = await User.findAll({ where: { id: newMemberIds }, attributes: ['name'] });
+        const newMembers = await User.findAll({ where: { id: newMemberIds }, attributes: ['id', 'name', 'email', ['profile_image_url', 'profileImageUrl']] });
 
         const systemMessages = await GroupMessages.bulkCreate(
             newMembers.map((newUser) => ({
@@ -664,9 +699,9 @@ const inviteToGroup = async (req, res) => {
 
         newMemberIds.forEach((id) => {
             io.to(`user_${id}`).emit("groupJoined", { group: { id: groupId, name: group.name } });
-        })
+        });
 
-        return successPostResponse(res, {}, "Users successfully joined the group")
+        return successPostResponse(res, newMembers, "Users successfully joined the group")
     } catch (error) {
         return errorThrowResponse(res, `${error.message}`, error);
     }
@@ -737,7 +772,7 @@ const removeFromGroup = async (req, res) => {
         };
 
         io.to(`group_${groupId}`).emit("newGroupMessage", { message, groupId, groupName: group?.name });
-        io.to(`user_${memberId}`).emit("removedFromGroup", { groupId: groupId });
+        io.to(`user_${memberId}`).emit("removedFromGroup", { group });
 
         return successPostResponse(res, {}, "User successfully removed the group")
     } catch (error) {

@@ -7,9 +7,10 @@ import { jwtDecode } from "jwt-decode";
 import useSocket from "../../hooks/useSocket";
 import { useDispatch, useSelector } from "react-redux";
 import GroupChatMessage from "./GroupChatMessage";
-import { setGroupMessages, addGroupMessage, updateGroupMessageId, setGroupMembers, deleteGroupMsgAction, editGroupMsgAction, clearGroupMessages, clearChatState, addReactionToGroupMessage, setCurrentChat, prependGroupMessages } from "../../store/chatSlice";
+import { setGroupMessages, addGroupMessage, updateGroupMessageId, setGroupMembers, setNonMemberFriends, deleteGroupMsgAction, editGroupMsgAction, clearGroupMessages, clearChatState, addReactionToGroupMessage, setCurrentChat, prependGroupMessages, addGroupMembers, removeNonMemberFriends } from "../../store/chatSlice";
 import EmojiPicker from "emoji-picker-react";
-import { HiOutlineLogout, HiUserAdd, HiOutlineUsers, HiOutlineChat, HiPaperClip, HiPhotograph, HiVideoCamera, HiChevronDown, HiShieldCheck, HiUserRemove } from "react-icons/hi";
+import { HiOutlineLogout, HiUserAdd, HiOutlineUsers, HiOutlineChat, HiPaperClip, HiPhotograph, HiVideoCamera, HiChevronDown, HiUserRemove } from "react-icons/hi";
+import { GrUserAdmin } from "react-icons/gr";
 import { BsBellFill, BsBellSlashFill, BsCheck, BsCheckAll } from "react-icons/bs";
 import { setGroups } from "../../store/userSlice";
 import { v4 as uuidv4 } from 'uuid';
@@ -27,7 +28,7 @@ export default function GroupChatbox() {
     const dispatch = useDispatch();
     const messages = useSelector((state) => state.chat.groupMessages);
     const members = useSelector((state) => state.chat.groupMembers);
-    const friends = useSelector((state) => state.user.friends);
+    const nonMemberFriends = useSelector((state) => state.chat.nonMemberFriends);
     const groups = useSelector((state) => state.user.groups);
 
     const [input, setInput] = useState("");
@@ -76,6 +77,7 @@ export default function GroupChatbox() {
     const fileInputRef = useRef();
     const lastMessageId = useRef(null);
     const isInitialLoad = useRef(true);
+    const confirmRemoveModalRef = useRef(null);
 
     let msgCount = -1;
     let loggedInUserId = null;
@@ -98,10 +100,6 @@ export default function GroupChatbox() {
         setIsTyping,
     });
 
-    useEffect(() => {
-        console.log("Removed Members: ", removedMembers);
-    }, [removedMembers])
-
     // To set group admin
     useEffect(() => {
         setIsAdmin(admin === loggedInUserId)
@@ -121,6 +119,7 @@ export default function GroupChatbox() {
             if (res.data.status === "success") {
                 const newMessages = res.data.data.messages;
                 setAdmin(res.data.data.admin);
+                dispatch(setNonMemberFriends(res.data.data.nonMemberFriends));
 
                 if (beforeId) {
                     if (newMessages.length < 9) setHasMore(false);
@@ -492,55 +491,48 @@ export default function GroupChatbox() {
         setSelectedFile(e.target.files[0]);
     };
 
-    const handleClickOutside = (event) => {
-        if (emojiRef.current && !emojiRef.current.contains(event.target)) {
-            setShowEmojiPicker(false);
-        }
-
-        if (event.key === "Escape") setShowEmojiPicker(false);
-
-        if (
-            membersDropdownRef.current &&
-            !membersDropdownRef.current.contains(event.target)
-        ) {
-            setShowMembers(false);
-        }
-
-        if (
-            leaveModalRef.current &&
-            !leaveModalRef.current.contains(event.target)
-        ) {
-            setShowLeaveModal(false);
-        }
-
-        if (
-            inviteModalRef.current &&
-            !inviteModalRef.current.contains(event.target)
-        ) {
-            setShowInviteModal(false);
-        }
-
-        if (actionModalRef.current && !actionModalRef.current.contains(event.target)) {
-            setSelectedMessage(null);
-        }
-
-        if (reactionPickerRef.current && !reactionPickerRef.current.contains(event.target)) {
-            setReactionPickerId(null);
-        }
-
-        if (fullReactionPickerRef.current && !fullReactionPickerRef.current.contains(event.target)) {
-            setShowFullEmojiPickerId(null);
-        }
-    };
-
     useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (confirmRemoveMember) return;
+
+            if (emojiRef.current && !emojiRef.current.contains(event.target)) {
+                setShowEmojiPicker(false);
+            }
+
+            if (event.key === "Escape") setShowEmojiPicker(false);
+
+            if (membersDropdownRef.current && !membersDropdownRef.current.contains(event.target)) {
+                setShowMembers(false);
+            }
+
+            if (leaveModalRef.current && !leaveModalRef.current.contains(event.target)) {
+                setShowLeaveModal(false);
+            }
+
+            if (inviteModalRef.current && !inviteModalRef.current.contains(event.target)) {
+                setShowInviteModal(false);
+            }
+
+            if (actionModalRef.current && !actionModalRef.current.contains(event.target)) {
+                setSelectedMessage(null);
+            }
+
+            if (reactionPickerRef.current && !reactionPickerRef.current.contains(event.target)) {
+                setReactionPickerId(null);
+            }
+
+            if (fullReactionPickerRef.current && !fullReactionPickerRef.current.contains(event.target)) {
+                setShowFullEmojiPickerId(null);
+            }
+        };
+
         document.addEventListener("mousedown", handleClickOutside);
         document.addEventListener("keydown", handleClickOutside);
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
             document.removeEventListener("keydown", handleClickOutside);
         };
-    }, []);
+    }, [confirmRemoveMember]);
 
     const handleLeaveGroup = async () => {
         setLeavingGroup(true);
@@ -551,7 +543,7 @@ export default function GroupChatbox() {
                 setTimeout(() => {
                     setShowLeaveModal(false);
                     dispatch(setGroups(groups.filter((g) => g.id !== parseInt(id))));
-                    dispatch(setGroupMembers(members.filter((m) => m.id !== loggedInUserId)))
+                    // dispatch(setGroupMembers(members.filter((m) => m.id !== loggedInUserId)));
                     navigate("/dashboard");
                 }, 0);
             } else {
@@ -589,6 +581,8 @@ export default function GroupChatbox() {
                 token
             );
             if (res.data.status === "success") {
+                dispatch(addGroupMembers(res.data.data));
+                dispatch(removeNonMemberFriends(res.data.data));
                 // toast.success("Friends added to group");
                 // fetchGroupMessages(); // refresh members
             } else {
@@ -772,20 +766,22 @@ export default function GroupChatbox() {
 
                                                             <div className="flex flex-col max-w-[12rem] truncate">
                                                                 <p
-                                                                    className={`text-sm font-medium ${isRemoved ? 'text-gray-400 italic' : 'text-gray-800'
-                                                                        }`}
+                                                                    className={`text-sm font-medium ${isRemoved ? 'text-gray-400 italic' : 'text-gray-800'}`}
                                                                     title={isCurrentUser ? 'You' : member.name}
                                                                 >
                                                                     {isCurrentUser ? 'You' : member.name}
                                                                 </p>
-                                                                <p className={`text-xs ${isRemoved ? 'text-gray-300 italic' : 'text-gray-500'}`}>
+                                                                <p
+                                                                    className={`text-xs ${isRemoved ? 'text-gray-300 italic' : 'text-gray-500'}`}
+                                                                    title={member.email}
+                                                                >
                                                                     {isCurrentUser ? '' : member.email}
                                                                 </p>
                                                             </div>
                                                         </div>
 
                                                         {/* RIGHT SIDE ICONS or REMOVED BADGE */}
-                                                        <div className="flex px-3 items-center gap-2">
+                                                        <div className={`flex px-3 items-center gap-2`}>
                                                             {isRemoved ? (
                                                                 <span
                                                                     className="text-xs font-semibold bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full"
@@ -796,7 +792,10 @@ export default function GroupChatbox() {
                                                             ) : (
                                                                 <>
                                                                     {isAdminUser && (
-                                                                        <HiShieldCheck className="text-indigo-500 w-4 h-4" title="Group Admin" />
+                                                                        <GrUserAdmin
+                                                                            className={`text-indigo-500 w-5 h-5 ${isCurrentUser && "mr-2 w-5.5 h-5.5"}`}
+                                                                            title="Group Admin"
+                                                                        />
                                                                     )}
 
                                                                     {!isCurrentUser && (
@@ -1239,45 +1238,36 @@ export default function GroupChatbox() {
                                 Select friends to add to the group:
                             </p>
 
-                            {friends.filter(
-                                (f) => !members.some((m) => m.id === f.id)
-                            ).length > 0 ? (
+                            {nonMemberFriends.length > 0 ? (
                                 <ul className="divide-y">
-                                    {friends
-                                        .filter(
-                                            (f) =>
-                                                !members.some(
-                                                    (m) => m.id === f.id
-                                                )
-                                        )
-                                        .map((friend) => (
-                                            <li
-                                                key={friend.id}
-                                                className="py-2 flex items-center gap-2"
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedFriends.includes(
-                                                        friend.id
-                                                    )}
-                                                    onChange={(e) => {
-                                                        const checked =
-                                                            e.target.checked;
-                                                        setSelectedFriends(
-                                                            (prev) => checked ? [...prev, friend.id,] : prev.filter((id) => id !== friend.id)
-                                                        );
-                                                    }}
-                                                />
-                                                <div>
-                                                    <div className="text-sm text-gray-800 font-medium">
-                                                        {friend.name}
-                                                    </div>
-                                                    <div className="text-xs text-gray-500">
-                                                        {friend.email}
-                                                    </div>
+                                    {nonMemberFriends.map((friend) => (
+                                        <li
+                                            key={friend.id}
+                                            className="py-2 flex items-center gap-2"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedFriends.includes(
+                                                    friend.id
+                                                )}
+                                                onChange={(e) => {
+                                                    const checked =
+                                                        e.target.checked;
+                                                    setSelectedFriends(
+                                                        (prev) => checked ? [...prev, friend.id,] : prev.filter((id) => id !== friend.id)
+                                                    );
+                                                }}
+                                            />
+                                            <div>
+                                                <div className="text-sm text-gray-800 font-medium max-w-[14rem] truncate">
+                                                    {friend.name}
                                                 </div>
-                                            </li>
-                                        ))}
+                                                <div className="text-xs text-gray-500 max-w-[14rem] truncate">
+                                                    {friend.email}
+                                                </div>
+                                            </div>
+                                        </li>
+                                    ))}
                                 </ul>
                             ) : (
                                 <div className="text-sm text-gray-500 text-center py-6">
@@ -1337,11 +1327,11 @@ export default function GroupChatbox() {
                 {/* Confirm Removing Member Modal */}
                 {confirmRemoveMember && (
                     <div className="fixed inset-0 z-50 bg-black bg-opacity-40 flex justify-center items-center">
-                        <div className="bg-white rounded-xl shadow-lg p-6 w-80">
+                        <div className="bg-white rounded-xl shadow-lg p-6 w-80" ref={confirmRemoveModalRef}>
                             <h3 className="text-lg font-semibold text-gray-800 mb-2">Confirm</h3>
                             <p className="text-sm text-gray-600 mb-4">
                                 Are you sure you want to remove{" "}
-                                <strong className="text-gray-800 font-medium">
+                                <strong className="text-gray-800 font-medium break-words">
                                     {confirmRemoveMember?.name}
                                 </strong>{" "}
                                 from the group?

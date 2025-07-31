@@ -7,6 +7,8 @@ const allowedOrigins = [
   "https://chatapp-frontend-llqt.onrender.com",
 ];
 
+const onlineUsers = new Set();
+
 function setupSocket(server) {
   const io = new Server(server, {
     cors: {
@@ -27,10 +29,12 @@ function setupSocket(server) {
     if (!token) return socket.disconnect();
 
     let userId;
+
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       userId = decoded.id;
       socket.userId = userId;
+      onlineUsers.add(userId);
     } catch (err) {
       return socket.disconnect();
     }
@@ -51,6 +55,22 @@ function setupSocket(server) {
     } catch (err) {
       console.error("Error joining group rooms:", err);
     }
+
+    // Join online room
+    socket.join("onlineUsersRoom");
+
+    // For online status
+    socket.on("showOnline", () => {
+      console.log(`Backend ${userId}: joined and requesting online status sync`);
+
+      // 1. Send current online users to the newly joined user
+      const othersOnline = Array.from(onlineUsers).filter(id => id !== userId);
+      socket.emit("currentOnlineUsers", othersOnline);
+
+      // 2. Broadcast to others that this user came online
+      socket.to("onlineUsersRoom").emit("setOnline", userId);
+    });
+
 
     socket.on('joinGroupRoom', (roomId) => { socket.join(roomId) });
     socket.on('leaveGroupRoom', (roomId) => { socket.leave(roomId) });
@@ -134,6 +154,8 @@ function setupSocket(server) {
 
     socket.on("disconnect", (reason) => {
       console.log(`Socket disconnected: ${socket.id}, userId: ${userId}, Reason: ${reason}`);
+      socket.to("onlineUsersRoom").emit("unSetOnline", userId);
+      onlineUsers.delete(userId);
     });
   });
 
