@@ -379,14 +379,14 @@ export default function GroupChatbox() {
                     senderId: loggedInUserId,
                     groupId: parseInt(id),
                     temp: true,
-                    repliedMessage: {
+                    repliedMessage: replyTo ? {
                         id: replyTo.id,
                         message: replyTo.message,
                         sender: {
                             id: replyTo.senderId,
-                            name: replyTo.sender.name
+                            name: replyTo.sender?.name
                         }
-                    }
+                    } : null
                 };
                 setReplyTo(null);
                 dispatch(addGroupMessage(message));
@@ -409,6 +409,7 @@ export default function GroupChatbox() {
                 }
 
             } catch (err) {
+                console.log(err);
                 const msg = err.response?.data?.message || "Failed to send message";
                 if (msg === "Invalid or expired token") {
                     localStorage.removeItem("jwt");

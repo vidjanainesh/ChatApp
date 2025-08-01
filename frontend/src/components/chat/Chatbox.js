@@ -359,10 +359,10 @@ export default function Chatbox() {
           senderId: loggedInUserId,
           receiverId: parseInt(id),
           temp: true,
-          repliedMessage: {
+          repliedMessage: replyTo ? {
             id: replyTo.id,
             message: replyTo.message,
-          }
+          } : null
         };
         setReplyTo(null);
         dispatch(addMessage(message));
