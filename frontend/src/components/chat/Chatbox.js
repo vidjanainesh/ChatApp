@@ -329,6 +329,8 @@ export default function Chatbox() {
     if (editMode) {
       setEditMode(null); // exit edit mode
       try {
+        dispatch(editPrivateMessage({ ...editMode, message: input }));
+
         const res = await editMessage(editMode.id, input, token);
         if (res.data.status === "success") {
           dispatch(editPrivateMessage(res.data.data));
@@ -411,6 +413,8 @@ export default function Chatbox() {
 
   const handleDeleteClick = async () => {
     try {
+      dispatch(deletePrivateMessage(selectedMessage));
+      setSelectedMessage(null);
       const res = await deleteMessage(selectedMessage.id, token);
       if (res.data.status === "success") {
         dispatch(deletePrivateMessage(res.data.data));

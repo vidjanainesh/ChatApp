@@ -348,8 +348,9 @@ export default function GroupChatbox() {
         if (editMode) {
             setEditMode(null);  // exit edit mode
             try {
-                const res = await editGroupMessage(editMode.id, input, token); // API Call
+                dispatch(editGroupMsgAction({ ...editMode, message: input }));
 
+                const res = await editGroupMessage(editMode.id, input, token); // API Call
                 if (res.data.status === "success") {
                     dispatch(editGroupMsgAction(res.data.data));
                     // setIsSubmitting(false);
@@ -415,6 +416,9 @@ export default function GroupChatbox() {
 
     const handleDeleteClick = async (id) => {
         try {
+            setSelectedMessage(null);
+            dispatch(deleteGroupMsgAction(id));
+
             const res = await deleteGroupMessage(id, token);
             if (res.data.status === "success") {
                 dispatch(deleteGroupMsgAction(res.data.data));

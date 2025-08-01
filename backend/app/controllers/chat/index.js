@@ -174,7 +174,7 @@ const deleteMessage = async (req, res) => {
         const senderRoom = `user_${message.sender_id}`;
 
         io.to(receiverRoom).emit("deleteMessage", camelCasedMessage);
-        io.to(senderRoom).emit("deleteMessage", camelCasedMessage);
+        // io.to(senderRoom).emit("deleteMessage", camelCasedMessage);
 
         return successResponse(res, camelCasedMessage, "Message deleted successfully")
     } catch (error) {
@@ -203,16 +203,22 @@ const editMessage = async (req, res) => {
         message.updatedAt = new Date();
         await message.save();
 
-        const rawMessage = message.toJSON(); // Convert Sequelize model to plain object
+        let rawMessage = message.toJSON(); // Convert Sequelize model to plain object
+
+        rawMessage = {
+            ...rawMessage,
+            message: decryptMessage(rawMessage.message, rawMessage.iv)
+        }
+        delete rawMessage.iv;
 
         const camelCasedMessage = toCamelCase(rawMessage);
 
         const io = req.app.get("io");
         const receiverRoom = `user_${message.receiver_id}`;
-        const senderRoom = `user_${message.sender_id}`;
+        // const senderRoom = `user_${message.sender_id}`;s
 
         io.to(receiverRoom).emit("editMessage", camelCasedMessage);
-        io.to(senderRoom).emit("editMessage", camelCasedMessage);
+        // io.to(senderRoom).emit("editMessage", camelCasedMessage);
 
         return successResponse(res, camelCasedMessage, "Message edited successfully");
     } catch (error) {
