@@ -30,7 +30,6 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
     });
 
     socket.on('currentOnlineUsers', (onlineUserIds) => {
-      console.log("Current Online users: ", onlineUserIds);
       onlineUserIds.forEach((id) => {
         dispatch(addOnlineFriends(id));
       });

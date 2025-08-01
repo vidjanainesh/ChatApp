@@ -1,16 +1,19 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { viewProfile, editProfile, forgetPassword } from "../../api";
 import { setUser } from "../../store/userSlice";
 import { toast } from "react-toastify";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import TextareaAutosize from 'react-textarea-autosize';
 
 export default function Profile() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const { id } = useParams();
     const user = useSelector((state) => state.user.user);
     const token = localStorage.getItem("jwt");
+    const isOwnProfile = !id || id === user?._id;
 
     const [form, setForm] = useState({
         name: "",
@@ -20,35 +23,45 @@ export default function Profile() {
         gender: "",
         file: null,
     });
+    const [profileUser, setProfileUser] = useState(null);
     const [editMode, setEditMode] = useState(false);
     const [profileLoading, setProfileLoading] = useState(false);
     const [loading, setLoading] = useState(false);
     const [changingPassword, setChangingPassword] = useState(false);
 
-    // useEffect(() => {
-    //     console.log(user);
-    // }, [user]);
+    const textareaRef = useRef(null);
+
+    const dataUser = isOwnProfile ? user : profileUser;
 
     useEffect(() => {
-        if (user) {
+        console.log("Profile: ", dataUser);
+    }, [dataUser]);
+
+    useEffect(() => {
+        if (dataUser) {
             setForm({
-                name: user.name || "",
-                phoneNo: user.phoneNo || "",
-                address: user.address || "",
-                dob: user.dob || "",
-                gender: user.gender || "",
-                file: user.profileImageUrl || null,
+                name: dataUser.name || "",
+                phoneNo: dataUser.phoneNo || "",
+                address: dataUser.address || "",
+                dob: dataUser.dob || "",
+                gender: dataUser.gender || "",
+                file: dataUser.profileImageUrl || null,
             });
         }
-    }, [user]);
+    }, [dataUser]);
 
     useEffect(() => {
         const getProfileData = async () => {
             setProfileLoading(true);
             try {
-                const res = await viewProfile(token);
+                // const res = await viewProfile(token);
+                const res = await viewProfile(token, id);
                 if (res.data.status === "success") {
-                    dispatch(setUser({ user: res.data.data, token }));
+                    if (isOwnProfile) {
+                        dispatch(setUser({ user: res.data.data, token }));
+                    } else {
+                        setProfileUser(res.data.data);
+                    }
                 }
             } catch (error) {
                 const errorMessage = error.response?.data?.message || "Something went wrong while fetching profile data";
@@ -61,6 +74,15 @@ export default function Profile() {
         getProfileData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dispatch]);
+
+    useEffect(() => {
+        if (textareaRef.current) {
+            // Reset height to shrink if content is short
+            textareaRef.current.style.height = 'auto';
+            // Set height to scrollHeight (actual content height)
+            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+        }
+    }, [form.name]);
 
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });
@@ -154,12 +176,12 @@ export default function Profile() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
                     <div className="flex items-center space-x-6">
                         <div className="relative w-24 h-24 rounded-full overflow-hidden border border-gray-300 group">
-                            {(form.file && typeof form.file === "object") || user?.profileImageUrl ? (
+                            {(form.file && typeof form.file === "object") || dataUser?.profileImageUrl ? (
                                 <img
                                     src={
                                         form.file && typeof form.file === "object"
                                             ? URL.createObjectURL(form.file)
-                                            : user?.profileImageUrl
+                                            : dataUser?.profileImageUrl
                                     }
                                     alt="Profile"
                                     className="w-full h-full object-cover"
@@ -167,7 +189,7 @@ export default function Profile() {
                             ) : (
                                 // <FaUserCircle className="w-full h-full text-gray-400 bg-gray-100 rounded-full p-4" />
                                 <div className="w-full h-full flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-bold text-3xl">
-                                    {user?.name?.charAt(0).toUpperCase()}
+                                    {dataUser?.name?.charAt(0).toUpperCase()}
                                 </div>
                             )}
 
@@ -190,9 +212,9 @@ export default function Profile() {
                             )}
                         </div>
                         <div>
-                            <p className="text-lg font-medium text-gray-800">{user?.name}</p>
+                            <p className="text-lg font-medium text-gray-800 max-w-full truncate">{dataUser?.name}</p>
                             {/* <p className="text-sm text-gray-500">{user?.email}</p> */}
-                            {!profileLoading && (
+                            {!profileLoading && isOwnProfile && (
                                 <>
                                     {/* <p className="text-sm text-gray-500">+91 {user?.phoneNo}</p> */}
                                     <button
@@ -205,8 +227,6 @@ export default function Profile() {
                             )}
                         </div>
                     </div>
-
-
                 </div>
 
                 <AnimatePresence mode="wait">
@@ -239,127 +259,149 @@ export default function Profile() {
                                     d="M4 12a8 8 0 018-8v8H4z"
                                 />
                             </svg>
-                            <p className="text-sm">Getting your profile ready...</p>
+                            <p className="text-sm">Getting profile ready...</p>
                         </motion.div>
                     ) : (
-                        <motion.div
-                            key="profile-content"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            transition={{ duration: 0.4 }}
-                        >
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-600 mb-1">Full Name</label>
-                                    <input
-                                        type="text"
-                                        name="name"
-                                        value={form.name}
-                                        onChange={handleChange}
-                                        disabled={!editMode || loading}
-                                        className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-600 mb-1">Email</label>
-                                    <input
-                                        type="email"
-                                        value={user?.email}
-                                        disabled
-                                        className="w-full px-4 py-2 border rounded-md bg-gray-100 cursor-not-allowed"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-600 mb-1">Phone Number</label>
-                                    <div className="flex">
-                                        <span className="flex items-center px-2 rounded-md rounded-r-none border border-r-0 text-gray-600 bg-gray-100 text-sm">
-                                            +91
-                                        </span>
-                                        <input
-                                            type="tel"
-                                            name="phoneNo"
-                                            value={form.phoneNo}
+                        dataUser && (
+
+                            < motion.div
+                                key="profile-content"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.4 }}
+                            >
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Full Name</label>
+                                        <TextareaAutosize
+                                            name="name"
+                                            value={form.name}
                                             onChange={handleChange}
                                             disabled={!editMode || loading}
-                                            className="w-full px-4 py-2 border rounded-md rounded-l-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                            maxLength={10}
+                                            className="w-full px-4 py-2 border resize-none rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Email</label>
+                                        <input
+                                            type="email"
+                                            value={dataUser?.email}
+                                            disabled
+                                            className={`w-full px-4 py-2 border rounded-md bg-gray-100 ${isOwnProfile && 'cursor-not-allowed'}`}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Phone Number</label>
+                                        <div className="flex">
+                                            <span className="flex items-center px-2 rounded-md rounded-r-none border border-r-0 text-gray-600 bg-gray-100 text-sm">
+                                                +91
+                                            </span>
+                                            <input
+                                                type="tel"
+                                                name="phoneNo"
+                                                value={form.phoneNo}
+                                                onChange={handleChange}
+                                                disabled={!editMode || loading}
+                                                className="w-full px-4 py-2 border rounded-md rounded-l-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                maxLength={10}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Date of Birth</label>
+                                        <input
+                                            type="date"
+                                            name="dob"
+                                            value={form.dob}
+                                            onChange={handleChange}
+                                            disabled={!editMode || loading}
+                                            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Gender</label>
+                                        {isOwnProfile ? (
+                                            <select
+                                                name="gender"
+                                                value={form.gender}
+                                                onChange={handleChange}
+                                                disabled={!editMode || loading}
+                                                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            >
+                                                <option value="" disabled>Select gender</option>
+                                                <option value="male">Male</option>
+                                                <option value="female">Female</option>
+                                                <option value="other">Other</option>
+                                            </select>
+                                        ) : (
+                                            <input
+                                                type="text"
+                                                name="gender"
+                                                value={form.gender.charAt(0).toUpperCase() + form.gender.slice(1).toLowerCase()}
+                                                onChange={handleChange}
+                                                disabled={!editMode || loading}
+                                                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            />
+                                        )}
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Address</label>
+                                        <textarea
+                                            type="text"
+                                            name="address"
+                                            value={form.address}
+                                            onChange={handleChange}
+                                            disabled={!editMode || loading}
+                                            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                         />
                                     </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-600 mb-1">Date of Birth</label>
-                                    <input
-                                        type="date"
-                                        name="dob"
-                                        value={form.dob}
-                                        onChange={handleChange}
-                                        disabled={!editMode || loading}
-                                        className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-600 mb-1">Gender</label>
-                                    <select
-                                        name="gender"
-                                        value={form.gender}
-                                        onChange={handleChange}
-                                        disabled={!editMode || loading}
-                                        className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    >
-                                        <option value="" disabled>Select gender</option>
-                                        <option value="male">Male</option>
-                                        <option value="female">Female</option>
-                                        <option value="other">Other</option>
-                                    </select>
-                                </div>
-                                <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-600 mb-1">Address</label>
-                                    <textarea
-                                        type="text"
-                                        name="address"
-                                        value={form.address}
-                                        onChange={handleChange}
-                                        disabled={!editMode || loading}
-                                        className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    />
-                                </div>
-                            </div>
 
-                            <div className="mt-6 text-right space-x-3">
-                                {editMode ? (
-                                    <>
-                                        {!loading && (
+                                <div className="mt-6 text-right space-x-3">
+                                    {isOwnProfile ? (
+                                        editMode ? (
+                                            <>
+                                                {!loading && (
+                                                    <button
+                                                        onClick={handleCancel}
+                                                        type="button"
+                                                        className="bg-gray-300 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-400 transition"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={editHandler}
+                                                    type="button"
+                                                    disabled={loading || loading}
+                                                    className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition"
+                                                >
+                                                    {loading ? "Saving..." : "Save"}
+                                                </button>
+                                            </>
+                                        ) : (
                                             <button
-                                                onClick={handleCancel}
-                                                type="button"
-                                                className="bg-gray-300 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-400 transition"
+                                                onClick={handleEditClick}
+                                                className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition"
                                             >
-                                                Cancel
+                                                Edit Profile
                                             </button>
-                                        )}
+                                        )
+                                    ) : (
                                         <button
-                                            onClick={editHandler}
-                                            type="button"
-                                            disabled={loading || loading}
-                                            className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition"
+                                            onClick={() => navigate(`/chatbox/${dataUser.id}?name=${encodeURIComponent(dataUser.name)}`)}
+                                            className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition"
                                         >
-                                            {loading ? "Saving..." : "Save"}
+                                            Send Message
                                         </button>
-                                    </>
-                                ) : (
-                                    <button
-                                        onClick={handleEditClick}
-                                        className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition"
-                                    >
-                                        Edit Profile
-                                    </button>
-                                )}
-                            </div>
-                        </motion.div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )
                     )}
                 </AnimatePresence>
-            </motion.div>
+            </motion.div >
             <input
                 type="file"
                 id="profileImageInput"
@@ -374,7 +416,7 @@ export default function Profile() {
                     }
                 }}
             />
-        </div>
+        </div >
 
     );
 }

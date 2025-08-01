@@ -36,6 +36,7 @@ function App() {
         <Route path='/find-people' element={<FindPeople />} />
         <Route path='/friend-requests' element={<FriendRequests />} />
         <Route path='/profile' element={<Profile />} />
+        <Route path='/profile/:id' element={<Profile />} />
       </Routes>
 
       <ToastContainer

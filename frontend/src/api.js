@@ -37,8 +37,8 @@ export const getDashboardData = (token) => {
     )
 }
 
-export const viewProfile = (token) => {
-    return axios.get(`${API_BASE}/dashboard/profile`,
+export const viewProfile = (token, id) => {
+    return axios.get(`${API_BASE}/dashboard/profile${id ? `/${id}` : ''}`,
         {
             headers: {
                 Authorization: `Bearer ${token}`

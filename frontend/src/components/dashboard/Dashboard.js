@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { HiOutlineUserCircle, HiOutlineLogout, HiOutlineStatusOnline } from "react-icons/hi";
+import { HiOutlineChatBubbleLeftRight, HiOutlineUserMinus } from "react-icons/hi2";
 import {
     getDashboardData,
     createGroup,
@@ -58,6 +59,7 @@ export default function Dashboard() {
     const [removingFriend, setRemovingFriend] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [isUserInitialized, setIsUserInitialized] = useState(false);
+    const [selectedFriendForModal, setSelectedFriendForModal] = useState(null);
 
     const groupRefs = useRef({});
     const friendRefs = useRef({});
@@ -79,10 +81,6 @@ export default function Dashboard() {
             }
         },
     });
-
-    useEffect(() => {
-        console.log("Online Friends: ", onlineFriends);
-    }, [onlineFriends])
 
     useEffect(() => {
         if (!token || isUserInitialized || user) return;
@@ -428,17 +426,24 @@ export default function Dashboard() {
                                     className="flex items-center space-x-4 cursor-pointer"
                                 >
                                     <div className="relative flex-shrink-0">
-                                        {user?.profileImageUrl ? (
-                                            <img
-                                                src={user.profileImageUrl}
-                                                alt="Avatar"
-                                                className="w-12 h-12 rounded-full object-cover border"
-                                            />
-                                        ) : (
-                                            <div className="w-12 h-12 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-bold text-lg">
-                                                {user.name?.charAt(0).toUpperCase()}
-                                            </div>
-                                        )}
+
+                                        {/* For clicking the avatar icon */}
+                                        <div onClick={(e) => {
+                                            e.stopPropagation(); // prevent triggering handleUserClick
+                                            setSelectedFriendForModal(user);
+                                        }}>
+                                            {user?.profileImageUrl ? (
+                                                <img
+                                                    src={user.profileImageUrl}
+                                                    alt="Avatar"
+                                                    className="w-12 h-12 rounded-full object-cover border"
+                                                />
+                                            ) : (
+                                                <div className="w-12 h-12 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-bold text-lg">
+                                                    {user.name?.charAt(0).toUpperCase()}
+                                                </div>
+                                            )}
+                                        </div>
 
                                         {onlineFriends.includes(user.id) && (
                                             <HiOutlineStatusOnline
@@ -575,8 +580,7 @@ export default function Dashboard() {
                 )}
             </div>
             {/* Floating + Button aligned to container but fixed on screen (Only show if atleast one friend exists)*/}
-            {
-                friends.length > 0 &&
+            {friends.length > 0 &&
                 <div className="fixed bottom-6 left-1/2 w-full max-w-4xl px-4 transform -translate-x-1/2 flex justify-end z-50">
                     <button
                         onClick={() => setShowCreateModal(true)}
@@ -626,166 +630,245 @@ export default function Dashboard() {
                 )}
             </AnimatePresence>
             {/* Create Group Modal */}
-            {
-                showCreateModal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-                            <h2 className="text-xl font-semibold mb-4 text-indigo-700">
-                                Create New Group
-                            </h2>
+            {showCreateModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+                        <h2 className="text-xl font-semibold mb-4 text-indigo-700">
+                            Create New Group
+                        </h2>
 
-                            <input
-                                type="text"
-                                placeholder="Group Name"
-                                className="w-full mb-4 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                                value={groupName}
-                                onChange={(e) => setGroupName(e.target.value)}
-                            />
+                        <input
+                            type="text"
+                            placeholder="Group Name"
+                            className="w-full mb-4 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                            value={groupName}
+                            onChange={(e) => setGroupName(e.target.value)}
+                        />
 
-                            <div className="mb-4 max-h-40 overflow-y-auto">
-                                <p className="mb-2 text-sm font-medium text-gray-700">
-                                    Select Friends:
-                                </p>
-                                {friends.map((f) => (
-                                    <label
-                                        key={f.id}
-                                        className="flex items-center space-x-2 mb-1 text-sm text-gray-800"
+                        <div className="mb-4 max-h-40 overflow-y-auto">
+                            <p className="mb-2 text-sm font-medium text-gray-700">
+                                Select Friends:
+                            </p>
+                            {friends.map((f) => (
+                                <label
+                                    key={f.id}
+                                    className="flex items-center space-x-2 mb-1 text-sm text-gray-800"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedFriendIds.includes(
+                                            f.id
+                                        )}
+                                        onChange={(e) =>
+                                            setSelectedFriendIds((prev) =>
+                                                e.target.checked
+                                                    ? [...prev, f.id]
+                                                    : prev.filter(
+                                                        (id) => id !== f.id
+                                                    )
+                                            )
+                                        }
+                                    />
+                                    <span>{f.name}</span>
+                                </label>
+                            ))}
+                        </div>
+
+                        <div className="flex justify-end space-x-3">
+
+                            {creatingGroup ? (
+                                <div className="flex flex-col items-center px-4 py-2">
+                                    <div className="flex space-x-1">
+                                        <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                        <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                        <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce"></span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={() => setShowCreateModal(false)}
+                                        className="px-4 py-2 text-sm rounded-md bg-gray-300 hover:bg-gray-400"
                                     >
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedFriendIds.includes(
-                                                f.id
-                                            )}
-                                            onChange={(e) =>
-                                                setSelectedFriendIds((prev) =>
-                                                    e.target.checked
-                                                        ? [...prev, f.id]
-                                                        : prev.filter(
-                                                            (id) => id !== f.id
-                                                        )
-                                                )
-                                            }
-                                        />
-                                        <span>{f.name}</span>
-                                    </label>
-                                ))}
-                            </div>
-
-                            <div className="flex justify-end space-x-3">
-
-                                {creatingGroup ? (
-                                    <div className="flex flex-col items-center px-4 py-2">
-                                        <div className="flex space-x-1">
-                                            <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                                            <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                                            <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce"></span>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <button
-                                            onClick={() => setShowCreateModal(false)}
-                                            className="px-4 py-2 text-sm rounded-md bg-gray-300 hover:bg-gray-400"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={handleCreateGroup}
-                                            className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
-                                        >
-                                            Create
-                                        </button>
-                                    </>
-                                )}
-                            </div>
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleCreateGroup}
+                                        className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+                                    >
+                                        Create
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
-                )
-            }
+                </div>
+            )}
 
-            {
-                confirmingDeleteId && (
-                    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-md p-5 shadow-lg max-w-sm w-full text-center">
-                            <p className="text-gray-800 font-medium mb-4">
-                                {leavingGroup ? "One moment... leaving the group" : "Are you sure you want to leave this group?"}
-                            </p>
-                            <div className="flex justify-center gap-4">
-                                {leavingGroup ? (
-                                    <div className="flex flex-col items-center px-4 py-2">
-                                        <div className="flex space-x-1">
-                                            <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                                            <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                                            <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce"></span>
-                                        </div>
+            {confirmingDeleteId && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-md p-5 shadow-lg max-w-sm w-full text-center">
+                        <p className="text-gray-800 font-medium mb-4">
+                            {leavingGroup ? "One moment... leaving the group" : "Are you sure you want to leave this group?"}
+                        </p>
+                        <div className="flex justify-center gap-4">
+                            {leavingGroup ? (
+                                <div className="flex flex-col items-center px-4 py-2">
+                                    <div className="flex space-x-1">
+                                        <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                        <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                        <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce"></span>
                                     </div>
-                                ) : (
-                                    <>
-                                        <button
-                                            onClick={() => {
-                                                setConfirmingDeleteId(false);
-                                                setActiveMenuGroupId(false);
-                                            }}
-                                            className="px-4 py-2 text-sm bg-gray-300 hover:bg-gray-400 rounded-md"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                handleLeaveGroup(confirmingDeleteId);
-                                            }}
-                                            className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md"
-                                        >
-                                            Yes
-                                        </button>
-                                    </>
-                                )}
-                            </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={() => {
+                                            setConfirmingDeleteId(false);
+                                            setActiveMenuGroupId(false);
+                                        }}
+                                        className="px-4 py-2 text-sm bg-gray-300 hover:bg-gray-400 rounded-md"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            handleLeaveGroup(confirmingDeleteId);
+                                        }}
+                                        className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md"
+                                    >
+                                        Yes
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
-                )
-            }
+                </div>
+            )}
 
-            {
-                confirmUnfriendId && (
-                    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-md p-5 shadow-lg max-w-sm w-full text-center">
-                            <p className="text-gray-800 font-medium mb-4">
-                                {removingFriend ? "One moment... Removing friend" : "Are you sure you want to unfriend this person?"}
-                            </p>
-                            <div className="flex justify-center gap-4">
-                                {removingFriend ? (
-                                    <div className="flex flex-col items-center px-4 py-2">
-                                        <div className="flex space-x-1">
-                                            <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                                            <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                                            <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce"></span>
-                                        </div>
+            {confirmUnfriendId && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-md p-5 shadow-lg max-w-sm w-full text-center">
+                        <p className="text-gray-800 font-medium mb-4">
+                            {removingFriend ? "One moment... Removing friend" : "Are you sure you want to unfriend this person?"}
+                        </p>
+                        <div className="flex justify-center gap-4">
+                            {removingFriend ? (
+                                <div className="flex flex-col items-center px-4 py-2">
+                                    <div className="flex space-x-1">
+                                        <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                        <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                        <span className="h-2 w-2 bg-red-600 rounded-full animate-bounce"></span>
                                     </div>
-                                ) : (
-                                    <>
-                                        <button
-                                            onClick={() => setConfirmUnfriendId(null)}
-                                            className="px-4 py-2 text-sm bg-gray-300 hover:bg-gray-400 rounded-md"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                handleUnfriend(confirmUnfriendId);
-                                            }}
-                                            className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md"
-                                        >
-                                            Unfriend
-                                        </button>
-                                    </>
-                                )}
+                                </div>
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={() => setConfirmUnfriendId(null)}
+                                        className="px-4 py-2 text-sm bg-gray-300 hover:bg-gray-400 rounded-md"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            handleUnfriend(confirmUnfriendId);
+                                        }}
+                                        className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-md"
+                                    >
+                                        Unfriend
+                                    </button>
+                                </>
+                            )}
 
-                            </div>
                         </div>
                     </div>
-                )
-            }
+                </div>
+            )}
+            <AnimatePresence>
+                {selectedFriendForModal && (
+                    <motion.div
+                        className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setSelectedFriendForModal(null)}
+                    >
+                        <motion.div
+                            className="bg-white rounded-xl shadow-xl w-80 relative overflow-hidden"
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Close Button */}
+                            <button
+                                className="absolute top-2 right-3 text-white text-xl z-10"
+                                onClick={() => setSelectedFriendForModal(null)}
+                            >
+                                ×
+                            </button>
+
+                            {/* Image Section */}
+                            <div className="relative h-72 bg-gray-200 flex justify-center">
+                                {selectedFriendForModal?.profileImageUrl ? (
+                                    <img
+                                        src={selectedFriendForModal.profileImageUrl}
+                                        alt="Profile"
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-indigo-100 text-indigo-600 text-5xl font-bold">
+                                        {selectedFriendForModal?.name?.charAt(0).toUpperCase()}
+                                    </div>
+                                )}
+                                <div className="absolute top-0 w-full px-6 truncate bg-black bg-opacity-40 text-white text-center py-2 text-lg font-semibold">
+                                    {selectedFriendForModal?.name}
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex justify-around py-4 px-2">
+                                {/* Chat */}
+                                <button
+                                    onClick={() => {
+                                        handleUserClick(selectedFriendForModal);
+                                        setSelectedFriendForModal(null);
+                                    }}
+                                    className="text-indigo-600 hover:text-indigo-800 text-2xl"
+                                    title="Chat"
+                                >
+                                    <HiOutlineChatBubbleLeftRight />
+                                </button>
+
+                                {/* View Profile */}
+                                <button
+                                    onClick={() => {
+                                        navigate(`/profile/${selectedFriendForModal?.id}`)
+                                    }}
+                                    className="text-gray-500 hover:text-gray-700 text-2xl"
+                                    title="View Profile"
+                                >
+                                    <HiOutlineUserCircle />
+                                </button>
+
+                                {/* Unfriend */}
+                                <button
+                                    onClick={() => {
+                                        setConfirmUnfriendId(selectedFriendForModal.id);
+                                        setSelectedFriendForModal(null);
+                                    }}
+                                    className="text-red-500 hover:text-red-700 text-2xl"
+                                    title="Unfriend"
+                                >
+                                    <HiOutlineUserMinus />
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
         </div >
     );
 }
