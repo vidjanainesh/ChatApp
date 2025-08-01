@@ -69,6 +69,10 @@ const Message = sequelize.define('messages', {
         type: DataTypes.DATE,
         allowNull: true,
     },
+    iv: {
+        type: DataTypes.STRING(32),
+        allowNull: true,
+    },
 });
 
 module.exports = Message;

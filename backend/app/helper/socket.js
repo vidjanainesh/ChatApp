@@ -61,8 +61,6 @@ function setupSocket(server) {
 
     // For online status
     socket.on("showOnline", () => {
-      console.log(`Backend ${userId}: joined and requesting online status sync`);
-
       // 1. Send current online users to the newly joined user
       const othersOnline = Array.from(onlineUsers).filter(id => id !== userId);
       socket.emit("currentOnlineUsers", othersOnline);

@@ -1,5 +1,5 @@
 const sequelize = require('./database');
-const {DataTypes} = require('sequelize');
+const { DataTypes } = require('sequelize');
 
 const GroupMessages = sequelize.define('group_messages', {
     group_id: {
@@ -49,6 +49,10 @@ const GroupMessages = sequelize.define('group_messages', {
     },
     file_blur_url: {
         type: DataTypes.TEXT,
+        allowNull: true,
+    },
+    iv: {
+        type: DataTypes.STRING(32),
         allowNull: true,
     },
 });
