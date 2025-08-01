@@ -337,7 +337,6 @@ export default function GroupChatbox() {
         // setIsSubmitting(true);
         setShowEmojiPicker(false);
         setInput("");
-        setReplyTo(null);
         setSelectedFile(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
         setTimeout(() => {
@@ -346,6 +345,7 @@ export default function GroupChatbox() {
 
         // Editing a message
         if (editMode) {
+            setReplyTo(null);
             setEditMode(null);  // exit edit mode
             try {
                 dispatch(editGroupMsgAction({ ...editMode, message: input }));
@@ -379,8 +379,16 @@ export default function GroupChatbox() {
                     senderId: loggedInUserId,
                     groupId: parseInt(id),
                     temp: true,
+                    repliedMessage: {
+                        id: replyTo.id,
+                        message: replyTo.message,
+                        sender: {
+                            id: replyTo.senderId,
+                            name: replyTo.sender.name
+                        }
+                    }
                 };
-
+                setReplyTo(null);
                 dispatch(addGroupMessage(message));
 
                 // For calling API and receiving the actual message object
@@ -414,12 +422,12 @@ export default function GroupChatbox() {
         }
     };
 
-    const handleDeleteClick = async (id) => {
+    const handleDeleteClick = async (msg) => {
         try {
             setSelectedMessage(null);
-            dispatch(deleteGroupMsgAction(id));
+            dispatch(deleteGroupMsgAction(msg));
 
-            const res = await deleteGroupMessage(id, token);
+            const res = await deleteGroupMessage(msg.id, token);
             if (res.data.status === "success") {
                 dispatch(deleteGroupMsgAction(res.data.data));
             }
@@ -1020,7 +1028,7 @@ export default function GroupChatbox() {
                                     Edit
                                 </button>
                                 <button
-                                    onClick={() => handleDeleteClick(selectedMessage.id)}
+                                    onClick={() => handleDeleteClick(selectedMessage)}
                                     className="w-14 text-red-500 text-sm bg-red-50 hover:bg-red-100 rounded-md py-1 transition"
                                 >
                                     Delete

@@ -318,7 +318,7 @@ export default function Chatbox() {
     // setIsSubmitting(true);
     setShowEmojiPicker(false);
     setInput("");       // clear input
-    setReplyTo(null);
+
     setSelectedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
     setTimeout(() => {
@@ -327,6 +327,7 @@ export default function Chatbox() {
 
     // Editing a message
     if (editMode) {
+      setReplyTo(null);
       setEditMode(null); // exit edit mode
       try {
         dispatch(editPrivateMessage({ ...editMode, message: input }));
@@ -358,8 +359,12 @@ export default function Chatbox() {
           senderId: loggedInUserId,
           receiverId: parseInt(id),
           temp: true,
+          repliedMessage: {
+            id: replyTo.id,
+            message: replyTo.message,
+          }
         };
-
+        setReplyTo(null);
         dispatch(addMessage(message));
 
         // For calling API and receiving the actual message object
