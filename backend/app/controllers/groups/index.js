@@ -16,6 +16,7 @@ const {
     GroupMembers,
     MessageReactions,
 } = require("../../models");
+const { encryptMessage, decryptMessage } = require("../../helper/encryption");
 
 const createGroup = async (req, res) => {
     try {
@@ -123,10 +124,18 @@ const sendGroupMessage = async (req, res) => {
             // });
         }
 
+        let encryptedData, iv;
+        if (msg) {
+            const encryption = encryptMessage(msg);
+            encryptedData = encryption.encryptedData;
+            iv = encryption.iv;
+        }
+
         const groupMessage = await GroupMessages.create({
             group_id: groupId,
             sender_id: user.id,
-            message: msg,
+            message: encryptedData,
+            iv,
             reply_to: replyTo,
             file_url: fileUrl,
             file_type: fileType,
@@ -163,9 +172,9 @@ const sendGroupMessage = async (req, res) => {
 
         })
 
-        const repliedMessage = await GroupMessages.findOne({
+        let repliedMessage = await GroupMessages.findOne({
             where: { id: replyTo },
-            attributes: ['id', 'message'],
+            attributes: ['id', 'message', 'iv'],
             include: [
                 {
                     model: User,
@@ -174,6 +183,13 @@ const sendGroupMessage = async (req, res) => {
                 }
             ]
         });
+
+        let decryptedMessage;
+        if (repliedMessage) {
+            decryptedMessage = decryptMessage(repliedMessage.message, repliedMessage.iv);
+            repliedMessage = repliedMessage.get({ plain: true });
+            delete repliedMessage.iv;
+        }
 
         const message = {
             id: groupMessage.id,
@@ -192,10 +208,14 @@ const sendGroupMessage = async (req, res) => {
                 name: user.name
             },
             reactions: [],
-            repliedMessage,
+            repliedMessage: repliedMessage ? {
+                ...repliedMessage,
+                message: decryptedMessage
+            } : null,
             reads,
             temp: false,
         };
+
         const io = req.app.get("io");
         io.to(`group_${groupId}`).emit("newGroupMessage", { message, groupId, groupName: group.name });
 
@@ -226,7 +246,7 @@ const deleteGroupMessage = async (req, res) => {
         const message = {
             id: groupMessage.id,
             senderId: user.id,
-            message: groupMessage.message,
+            message: decryptMessage(groupMessage.message, groupMessage.iv),
             createdAt: groupMessage.createdAt,
             type: groupMessage.type,
             isDeleted: groupMessage.is_deleted,
@@ -257,7 +277,10 @@ const editGroupMessage = async (req, res) => {
             return errorResponse(res, 'Invalid user');
         }
 
-        groupMessage.message = msg;
+        const { encryptedData, iv } = encryptMessage(msg);
+
+        groupMessage.message = encryptedData;
+        groupMessage.iv = iv;
         groupMessage.is_edited = true;
         groupMessage.updatedAt = new Date();
         await groupMessage.save();
@@ -265,7 +288,7 @@ const editGroupMessage = async (req, res) => {
         const message = {
             id: groupMessage.id,
             senderId: user.id,
-            message: groupMessage.message,
+            message: msg,
             createdAt: groupMessage.createdAt,
             type: groupMessage.type,
             isDeleted: groupMessage.is_deleted,
@@ -317,7 +340,8 @@ const getGroupData = async (req, res) => {
             attributes: [
                 "id",
                 ["sender_id", "senderId"],
-                "message",
+                'message',
+                'iv',
                 ['file_url', 'fileUrl'],
                 ['file_type', 'fileType'],
                 ['file_name', 'fileName'],
@@ -339,7 +363,7 @@ const getGroupData = async (req, res) => {
                 {
                     model: GroupMessages,
                     as: 'repliedMessage',
-                    attributes: ['id', 'message'],
+                    attributes: ['id', 'message', 'iv'],
                     include: [
                         {
                             model: User,
@@ -420,16 +444,32 @@ const getGroupData = async (req, res) => {
         ));
 
         const messagesWithReactions = plainGroupMessages.map((msg) => {
+
+            // To decrypt replied message and remove iv field
+            let repliedMessage;
+            if (msg.repliedMessage) {
+                repliedMessage = {
+                    ...msg.repliedMessage,
+                    message: decryptMessage(msg.repliedMessage.message, msg.repliedMessage.iv)
+                }
+                delete repliedMessage.iv;
+            }
+
+            // Message object that will be returned for the final message array
             const newMsg = ({
                 ...msg,
+                message: decryptMessage(msg.message, msg.iv),
                 temp: false,
                 isDeleted: Boolean(msg.isDeleted),
                 isEdited: Boolean(msg.isEdited),
                 reactions: [],
-            })
+                repliedMessage,
+            });
+            delete newMsg.iv;
             messageReactions.map((reaction) => {
                 if (msg.id === reaction.messageId) newMsg.reactions.push(reaction);
             });
+
             return newMsg;
         })
 

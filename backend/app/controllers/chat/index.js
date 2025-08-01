@@ -8,6 +8,7 @@ const {
 } = require("../../helper/response");
 const sequelize = require("../../models/database");
 const cloudinary = require('../../helper/cloudinary');
+const { encryptMessage, decryptMessage } = require("../../helper/encryption");
 
 const toCamelCase = (obj) => {
     const camelCaseObj = {};
@@ -37,6 +38,13 @@ const sendMessage = async (req, res) => {
 
         if (!receiverId) {
             return unAuthorizedResponse(res, "Receiver ID is required");
+        }
+
+        let encryptedData, iv;
+        if (message) {
+            const encryption = encryptMessage(message);
+            encryptedData = encryption.encryptedData;
+            iv = encryption.iv;
         }
 
         if (file) {
@@ -74,7 +82,8 @@ const sendMessage = async (req, res) => {
         const sentMessage = await Message.create({
             sender_id: parseInt(user.id),
             receiver_id: parseInt(receiverId),
-            message: message || null,
+            message: encryptedData,
+            iv,
             reply_to: replyTo,
             file_url: fileUrl,
             file_type: fileType,
@@ -83,13 +92,25 @@ const sendMessage = async (req, res) => {
             // file_blur_url: fileBlurUrl
         });
 
-        const repliedMessage = await Message.findOne({ where: { id: replyTo }, attributes: ['id', 'message'], raw: true });
+        const repliedMessage = await Message.findOne({ where: { id: replyTo }, attributes: ['id', 'message', 'iv'], raw: true });
+        let decryptedMessage;
+        if (repliedMessage) {
+            decryptedMessage = decryptMessage(repliedMessage.message, repliedMessage.iv);
+            delete repliedMessage.iv;
+        }
 
         const io = req.app.get("io");
         const receiverRoom = `user_${receiverId}`;
         const senderRoom = `user_${user.id}`;
 
-        const rawMessage = sentMessage.toJSON(); // Convert Sequelize model to plain object
+        let rawMessage = sentMessage.toJSON(); // Convert Sequelize model to plain object
+
+        rawMessage = {
+            ...rawMessage,
+            message: message,
+        }
+        delete rawMessage.iv;
+
         const camelCasedMessage = toCamelCase(rawMessage); // Convert keys to camelCase
 
         // Final object
@@ -101,7 +122,10 @@ const sendMessage = async (req, res) => {
             isRead: false,
             readAt: null,
             reactions: [],
-            repliedMessage,
+            repliedMessage: {
+                ...repliedMessage,
+                message: decryptedMessage,
+            },
             senderName: user.name || user.email || "Unknown",
         };
 
@@ -136,7 +160,13 @@ const deleteMessage = async (req, res) => {
             where: { target_id: id, target_type: 'private' }
         })
 
-        const rawMessage = message.toJSON(); // Convert Sequelize model to plain object
+        let rawMessage = message.toJSON(); // Convert Sequelize model to plain object
+        rawMessage = {
+            ...rawMessage,
+            message: decryptMessage(rawMessage.message, rawMessage.iv),
+        }
+        delete rawMessage.iv;
+
         const camelCasedMessage = toCamelCase(rawMessage);
 
         const io = req.app.get("io");
@@ -144,7 +174,7 @@ const deleteMessage = async (req, res) => {
         const senderRoom = `user_${message.sender_id}`;
 
         io.to(receiverRoom).emit("deleteMessage", camelCasedMessage);
-        io.to(senderRoom).emit("deleteMessage", camelCasedMessage);
+        // io.to(senderRoom).emit("deleteMessage", camelCasedMessage);
 
         return successResponse(res, camelCasedMessage, "Message deleted successfully")
     } catch (error) {
@@ -165,20 +195,30 @@ const editMessage = async (req, res) => {
             return errorResponse(res, 'Invalid user');
         }
 
-        message.message = msg;
+        const { encryptedData, iv } = encryptMessage(msg); // Encryption
+
+        message.message = encryptedData;
+        message.iv = iv;
         message.is_edited = true;
         message.updatedAt = new Date();
         await message.save();
 
-        const rawMessage = message.toJSON(); // Convert Sequelize model to plain object
+        let rawMessage = message.toJSON(); // Convert Sequelize model to plain object
+
+        rawMessage = {
+            ...rawMessage,
+            message: decryptMessage(rawMessage.message, rawMessage.iv)
+        }
+        delete rawMessage.iv;
+
         const camelCasedMessage = toCamelCase(rawMessage);
 
         const io = req.app.get("io");
         const receiverRoom = `user_${message.receiver_id}`;
-        const senderRoom = `user_${message.sender_id}`;
+        // const senderRoom = `user_${message.sender_id}`;s
 
         io.to(receiverRoom).emit("editMessage", camelCasedMessage);
-        io.to(senderRoom).emit("editMessage", camelCasedMessage);
+        // io.to(senderRoom).emit("editMessage", camelCasedMessage);
 
         return successResponse(res, camelCasedMessage, "Message edited successfully");
     } catch (error) {
@@ -249,7 +289,7 @@ const getMessages = async (req, res) => {
                 {
                     model: Message,
                     as: 'repliedMessage',
-                    attributes: ['id', 'message'],
+                    attributes: ['id', 'message', 'iv'],
                     // where: {is_deleted: false},
                 }
             ],
@@ -259,6 +299,7 @@ const getMessages = async (req, res) => {
                 ['sender_id', 'senderId'],
                 ['receiver_id', 'receiverId'],
                 'message',
+                'iv',
                 ['file_url', 'fileUrl'],
                 ['file_type', 'fileType'],
                 ['file_name', 'fileName'],
@@ -274,7 +315,20 @@ const getMessages = async (req, res) => {
             limit: 9
         });
 
-        const allMessages = messages.map(msg => msg.toJSON());
+        let allMessages = messages.map(msg => msg.toJSON());
+
+        allMessages = allMessages.map((msg) => {
+            let decryptedRepliedMessage;
+            if (msg.repliedMessage) {
+                decryptedRepliedMessage = decryptMessage(msg.repliedMessage.message, msg.repliedMessage.iv);
+                msg.repliedMessage = {
+                    ...msg.repliedMessage,
+                    message: decryptedRepliedMessage,
+                }
+                delete msg.repliedMessage.iv; // No need to send iv to frontend
+            }
+            return msg;
+        })
 
         // Get message reactions for each message
         const messageIds = allMessages.map((msg) => msg.id);
@@ -315,12 +369,15 @@ const getMessages = async (req, res) => {
         let response = allMessages.map((msg) => {
             const newMsg = ({
                 ...msg,
+                message: decryptMessage(msg.message, msg.iv),
                 isRead: Boolean(msg.isRead),
                 isEdited: Boolean(msg.isEdited),
                 isDeleted: Boolean(msg.isDeleted),
                 temp: false,
                 reactions: [],
             })
+            delete newMsg.iv; // No need to send iv to frontend
+
             messageReactions.map((reaction) => {
                 if (msg.id === reaction.messageId) newMsg.reactions.push(reaction);
             });

@@ -13,6 +13,7 @@ const upload = require('../app/helper/upload.js');
 router.get('/', authMiddleware, getDashboardData);
 
 router.get('/profile', authMiddleware, viewProfile);
+router.get('/profile/:id', authMiddleware, viewProfile);
 router.patch('/profile', authMiddleware, (req, res, next) => { req.uploadType = 'profile'; next(); }, upload.single('file'), dashboardValidationRules.editProfile, handleValidation, editProfile);
 
 module.exports = router;

@@ -1,10 +1,26 @@
-const { User } = require("../../models");
+const { User, Friends } = require("../../models");
 const { errorResponse, successResponse, errorThrowResponse } = require("../../helper/response");
 const jwt = require('jsonwebtoken');
+const { Op } = require("sequelize");
 
 const viewProfile = async (req, res) => {
     try {
-        const id = req.user.id;
+        const id = req.params.id || req.user.id;
+
+        if (req.params.id) {
+            let frndId = req.params.id;
+            const isFriend = await Friends.findOne({
+                where: {
+                    status: 'accepted',
+                    [Op.or]: [
+                        { sender_id: req.user.id, receiver_id: frndId },
+                        { sender_id: frndId, receiver_id: req.user.id },
+                    ]
+                }
+            });
+
+            if (!isFriend) return errorResponse(res, "User is not your friend");
+        }
 
         const userDetails = await User.findOne({
             where: { id },
