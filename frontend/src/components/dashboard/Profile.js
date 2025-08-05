@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { viewProfile, editProfile, forgetPassword } from "../../api";
-import { setUser } from "../../store/userSlice";
+import { clearUnreadPrivateMapEntry, setUser } from "../../store/userSlice";
 import { toast } from "react-toastify";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import TextareaAutosize from 'react-textarea-autosize';
+import { HiOutlineChatBubbleLeftRight } from "react-icons/hi2";
+import { setCurrentChat } from "../../store/chatSlice";
 
 export default function Profile() {
     const dispatch = useDispatch();
@@ -32,10 +34,6 @@ export default function Profile() {
     const textareaRef = useRef(null);
 
     const dataUser = isOwnProfile ? user : profileUser;
-
-    useEffect(() => {
-        console.log("Profile: ", dataUser);
-    }, [dataUser]);
 
     useEffect(() => {
         if (dataUser) {
@@ -154,6 +152,12 @@ export default function Profile() {
         }
     }
 
+    const handleChatClick = (user) => {
+        dispatch(clearUnreadPrivateMapEntry(user?.id));
+        dispatch(setCurrentChat({ data: user, type: "private" }));
+        navigate(`/chat/${user?.id}?name=${encodeURIComponent(user?.name)}`);
+    }
+
     return (
         <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4">
             <motion.div
@@ -174,7 +178,7 @@ export default function Profile() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
-                    <div className="flex items-center space-x-6">
+                    <div className="flex items-center space-x-6 w-full">
                         <div className="relative w-24 h-24 rounded-full overflow-hidden border border-gray-300 group">
                             {(form.file && typeof form.file === "object") || dataUser?.profileImageUrl ? (
                                 <img
@@ -184,7 +188,8 @@ export default function Profile() {
                                             : dataUser?.profileImageUrl
                                     }
                                     alt="Profile"
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-cover cursor-pointer"
+                                    onClick={() => dataUser?.profileImageUrl && window.open(dataUser?.profileImageUrl, "_blank")}
                                 />
                             ) : (
                                 // <FaUserCircle className="w-full h-full text-gray-400 bg-gray-100 rounded-full p-4" />
@@ -225,6 +230,15 @@ export default function Profile() {
                                     </button>
                                 </>
                             )}
+                        </div>
+                        <div className="">
+                            <button
+                                onClick={() => handleChatClick(dataUser)}
+                                className="text-indigo-600 hover:text-indigo-800 text-xl py-2 -left-2"
+                                title="Chat"
+                            >
+                                <HiOutlineChatBubbleLeftRight className="w-5 h-5" />
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -359,13 +373,14 @@ export default function Profile() {
                                 </div>
 
                                 <div className="mt-6 text-right space-x-3">
-                                    {isOwnProfile ? (
+                                    {isOwnProfile && (
                                         editMode ? (
                                             <>
                                                 {!loading && (
                                                     <button
                                                         onClick={handleCancel}
                                                         type="button"
+                                                        disabled={loading}
                                                         className="bg-gray-300 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-400 transition"
                                                     >
                                                         Cancel
@@ -374,7 +389,7 @@ export default function Profile() {
                                                 <button
                                                     onClick={editHandler}
                                                     type="button"
-                                                    disabled={loading || loading}
+                                                    disabled={loading}
                                                     className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition"
                                                 >
                                                     {loading ? "Saving..." : "Save"}
@@ -388,13 +403,6 @@ export default function Profile() {
                                                 Edit Profile
                                             </button>
                                         )
-                                    ) : (
-                                        <button
-                                            onClick={() => navigate(`/chatbox/${dataUser.id}?name=${encodeURIComponent(dataUser.name)}`)}
-                                            className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition"
-                                        >
-                                            Send Message
-                                        </button>
                                     )}
                                 </div>
                             </motion.div>

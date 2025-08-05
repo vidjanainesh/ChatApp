@@ -43,7 +43,7 @@ const createGroup = async (req, res) => {
 
         const group = await Groups.create({
             name,
-            created_by: user.id,
+            super_admin: user.id,
         });
 
         // "Group was created"
@@ -316,7 +316,15 @@ const getGroupData = async (req, res) => {
         const group = await Groups.findOne({ where: { id: groupId } });
         if (!group) notFoundResponse(res, "Group not found");
 
-        const admin = group.created_by;
+        const groupObj = {
+            id: group.id,
+            name: group.name,
+            superAdmin: group.super_admin,
+            admin: group.admin,
+            groupImageUrl: group.group_image_url,
+        }
+        const superAdmin = group.super_admin;
+        const admin = group.admin;
 
         const users = await group.getGroupMembers({ where: { status: 'active' }, attributes: ["user_id"] }); //Magic method to get all the group member ids
         let userIds = users.map((curr) => curr.user_id);
@@ -489,7 +497,7 @@ const getGroupData = async (req, res) => {
 
         // Find friends that are not members
         let nonMemberFriends = [];
-        if (admin === user.id) {
+        if (superAdmin === user.id || admin === user.id) {
             let memberIds = members.members.map((mem) => mem.id);
 
             const friends = await Friends.findAll({
@@ -525,9 +533,9 @@ const getGroupData = async (req, res) => {
         }
 
 
-        const result = { messages: messagesWithReactions.reverse(), members: members.toJSON(), nonMemberFriends, admin }
+        const result = { group: groupObj, messages: messagesWithReactions.reverse(), members: members.toJSON(), nonMemberFriends }
 
-        return successResponse(res, result, "Fetched all messages");
+        return successResponse(res, result, "Fetched group data");
     } catch (error) {
         return errorThrowResponse(res, `${error.message}`, error);
     }
@@ -543,7 +551,7 @@ const getGroups = async (req, res) => {
                 {
                     model: Groups,
                     as: 'group',
-                    attributes: ['name', ['created_by', 'admin']]
+                    attributes: ['name', 'super_admin', 'admin']
                 }
             ],
         });
@@ -553,6 +561,7 @@ const getGroups = async (req, res) => {
             return ({
                 id: curr.id,
                 name: curr.group.name,
+                superAdmin: curr.group.super_admin,
                 admin: curr.group.admin,
             })
         })
@@ -614,10 +623,11 @@ const leaveGroup = async (req, res) => {
             attributes: [
                 'id',
                 'name',
-                ['created_by', 'admin']
+                ['super_admin', 'superAdmin'],
+                'admin'
             ]
         });
-        if (group.admin === user.id) return errorResponse(res, "Admin cannot leave the group");
+        if (group.superAdmin === user.id) return errorResponse(res, "Super Admin cannot leave the group");
 
         const partOfGroup = await GroupMembers.findOne({
             where: {
@@ -633,6 +643,11 @@ const leaveGroup = async (req, res) => {
             { where: { group_id: groupId, user_id: user.id } }
         );
         await GroupMessageRead.destroy({ where: { user_id: user.id, group_message_id: groupMessageIds } });
+
+        // Update admin to null if admin left
+        if (user.id === group.admin) {
+            await Groups.update({ admin: null }, { where: { id: groupId } })
+        }
 
         const systemMessage = await GroupMessages.create({
             group_id: groupId,
@@ -676,10 +691,11 @@ const inviteToGroup = async (req, res) => {
             attributes: [
                 'id',
                 'name',
-                ['created_by', 'admin']
+                ['super_admin', 'superAdmin'],
+                'admin'
             ]
         });
-        if (group.admin === user.id) return errorResponse(res, "Admin cannot leave the group");
+        if (group.superAdmin === user.id || group.admin === user.id) return errorResponse(res, "Only super admin or admin can invite others");
 
         const existingMembers = await GroupMembers.findAll({ where: { group_id: groupId, user_id: friendIds } });
 
@@ -760,10 +776,14 @@ const removeFromGroup = async (req, res) => {
             attributes: [
                 'id',
                 'name',
-                ['created_by', 'admin']
-            ]
+                ['super_admin', 'superAdmin'],
+                'admin'
+            ],
+            raw: true,
         });
-        if (group.admin === user.id) return errorResponse(res, "Admin cannot leave the group");
+
+        if (group.superAdmin !== user.id && group.admin !== user.id) return errorResponse(res, "Only super admin or admin can remove members");
+        if (memberId === group.admin && user.id !== group.superAdmin) return errorResponse("Only super admin can remove the admin");
 
         const userPartOfGroup = await GroupMembers.findOne({ where: { group_id: groupId, user_id: user.id, status: 'active' } });
         if (!userPartOfGroup) return errorResponse(res, "User not part of the group");
@@ -789,6 +809,10 @@ const removeFromGroup = async (req, res) => {
             { status: 'left' },
             { where: { group_id: groupId, user_id: memberId } }
         );
+
+        if (memberId === group.admin) {
+            await Groups.update({ admin: null }, { where: { id: groupId } })
+        }
 
         // For system messages in groups
         const systemMessage = await GroupMessages.create({
@@ -820,6 +844,223 @@ const removeFromGroup = async (req, res) => {
     }
 }
 
+const setAdmin = async (req, res) => {
+    try {
+        const groupId = req.params.id;
+        const { memberId } = req.body;
+        const user = req.user;
+
+        const group = await Groups.findOne({
+            where: {
+                id: groupId,
+            },
+            attributes: [
+                'id',
+                'name',
+                ['super_admin', 'superAdmin'],
+                'admin',
+            ],
+            raw: true
+        });
+
+        if (group.superAdmin !== user.id) return errorResponse(res, "Only Super Admin can set admins");
+        if (group.admin) return errorResponse(res, "Admin already set, remove admin to set a new admin")
+        if (group.superAdmin === memberId) return errorResponse(res, "Cannot set self to admin");
+
+        const member = await GroupMembers.findOne({ where: { group_id: groupId, user_id: memberId, status: 'active' } });
+        if (!member) return errorResponse(res, "User not part of the group");
+
+        await Groups.update(
+            { admin: memberId },
+            { where: { id: groupId } }
+        );
+
+        return successResponse(res, {}, "Admin successfully set");
+    } catch (error) {
+        return errorThrowResponse(res, error.message, error);
+    }
+}
+
+const removeAdmin = async (req, res) => {
+    try {
+        const groupId = req.params.id;
+        // const { adminId } = req.body;
+        const user = req.user;
+
+        const group = await Groups.findOne({
+            where: {
+                id: groupId,
+            },
+            attributes: [
+                'id',
+                'name',
+                ['super_admin', 'superAdmin'],
+                'admin'
+            ],
+            raw: true,
+        });
+        if (group.superAdmin !== user.id) return errorResponse(res, "Only Super Admin can remove admins");
+        if (group.admin === null) return errorResponse(res, "No admin to remove")
+
+        // const member = await GroupMembers.findOne({ where: { group_id: groupId, user_id: adminId, status: 'active' } });
+        // if (!member) return errorResponse(res, "User not part of the group");
+
+        await Groups.update(
+            { admin: null },
+            { where: { id: groupId } }
+        );
+
+        return successResponse(res, {}, "Admin successfully removed");
+    } catch (error) {
+        return errorThrowResponse(res, error.message, error);
+    }
+}
+
+const getGroupInfo = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const user = req.user;
+
+        let group = await Groups.findOne({
+            where: { id },
+            attributes: ['id', 'name', 'super_admin', 'admin', 'createdAt', 'group_image_url'],
+            include: [
+                {
+                    model: User,
+                    as: "members",
+                    attributes: ["id", "name", "email", ["profile_image_url", "profileImageUrl"]],
+                    through: { where: { status: 'active' }, attributes: [] },
+                },
+            ],
+        });
+
+        group = group.get({ plain: true });
+
+        const groupObj = {
+            id: group.id,
+            name: group.name,
+            superAdmin: group.super_admin,
+            admin: group.admin,
+            groupImageUrl: group.group_image_url,
+            createdAt: group.createdAt,
+        }
+
+        const superAdmin = group.super_admin;
+        const admin = group.admin;
+        const members = group.members;
+
+        // Find friends that are not members
+        let nonMemberFriends = [];
+        console.log(superAdmin, user.id, admin);
+        if (superAdmin === user.id || admin === user.id) {
+            let memberIds = members.map((mem) => mem.id);
+
+            const friends = await Friends.findAll({
+                where: {
+                    status: 'accepted',
+                    [Op.or]: [
+                        { sender_id: user.id },
+                        { receiver_id: user.id },
+                    ]
+                }
+            });
+
+            let friendIds = friends.map((frnd) => {
+                let id;
+                if (frnd.receiver_id === user.id) id = frnd.sender_id;
+                else id = frnd.receiver_id;
+                return id;
+            });
+
+            const inviteFriendIds = [];
+            friendIds.map((id) => {
+                if (!memberIds.includes(id)) inviteFriendIds.push(id);
+            });
+
+            // console.log(inviteFriendIds);
+            nonMemberFriends = await User.findAll({
+                where: {
+                    id: inviteFriendIds
+                },
+                attributes: ['id', 'name', 'email', ["profile_image_url", "profileImageUrl"]],
+                raw: true
+            });
+
+        }
+
+        const data = {
+            group: groupObj,
+            members,
+            nonMemberFriends,
+        }
+
+        return successResponse(res, data, "Fetched group information");
+    } catch (error) {
+        return errorThrowResponse(res, error.message, error);
+    }
+}
+
+const editGroupInfo = async (req, res) => {
+    try {
+        try {
+            // console.log(req.body);
+            const user = req.user;
+            const groupId = req.params.id;
+
+            const name = req.body?.name;
+            const file = req?.file;
+
+            const group = await Groups.findOne({ where: { id: groupId } });
+            if (!group) return errorResponse(res, "Group not found");
+
+            if (group.super_admin !== user.id && group.admin !== user.id) return errorResponse(res, "Only admins can update group details")
+
+            if (name) group.name = name;
+            if (file) group.group_image_url = file.path;
+
+            await group.save();
+
+            const groupObj = {
+                id: group.id,
+                name: group.name,
+                superAdmin: group.super_admin,
+                admin: group.admin,
+                groupImageUrl: group.group_image_url,
+                createdAt: group.createdAt,
+            }
+
+            const systemMessage = await GroupMessages.create({
+                group_id: groupId,
+                sender_id: null,
+                message: `${user.name?.split(' ')[0]} updated the group details`,
+                type: 'system',
+            });
+
+            const io = req.app.get('io');
+
+            const message = {
+                id: systemMessage.id,
+                senderId: null,
+                message: systemMessage.message,
+                createdAt: systemMessage.createdAt,
+                type: systemMessage.type,
+                sender: {
+                    name: null,
+                },
+            };
+
+            io.to(`group_${groupId}`).emit("newGroupMessage", { message, groupId, groupName: group?.name });
+
+            return successResponse(res, groupObj, 'Successfully updated the group details');
+
+        } catch (error) {
+            return errorThrowResponse(res, error.message, error);
+        }
+    } catch (error) {
+
+    }
+}
+
 module.exports = {
     createGroup,
     sendGroupMessage,
@@ -830,5 +1071,9 @@ module.exports = {
     deleteGroup,
     leaveGroup,
     inviteToGroup,
-    removeFromGroup
+    removeFromGroup,
+    setAdmin,
+    removeAdmin,
+    getGroupInfo,
+    editGroupInfo,
 };

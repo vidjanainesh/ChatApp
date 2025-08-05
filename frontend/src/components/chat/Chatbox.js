@@ -9,7 +9,7 @@ import useSocket from "../../hooks/useSocket";
 import EmojiPicker from "emoji-picker-react";
 import { useDispatch, useSelector } from "react-redux";
 import { setMessages, updateMessageId, editPrivateMessage, deletePrivateMessage, clearMessages, clearChatState, addReactionToPrivateMessage, prependMessages, addMessage } from "../../store/chatSlice";
-import { HiOutlineChat, HiPaperClip, HiPhotograph, HiVideoCamera, HiChevronDown } from "react-icons/hi";
+import { HiOutlineChat, HiPaperClip, HiPhotograph, HiVideoCamera, HiChevronDown, HiArrowLeft } from "react-icons/hi";
 import { BsCheck, BsCheckAll, BsBellSlashFill, BsBellFill } from "react-icons/bs";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -38,6 +38,7 @@ export default function Chatbox() {
 
   const dispatch = useDispatch();
   const messages = useSelector((state) => state.chat.messages);
+  const currentChat = useSelector((state) => state.chat.currentChat);
 
   let msgCount = -1;
   let loggedInUserId = null;
@@ -51,7 +52,7 @@ export default function Chatbox() {
     navigate("/");
   }
 
-  const [friend, setFriend] = useState({});
+  const [friend, setFriend] = useState(currentChat);
   const [input, setInput] = useState("");
   const [editMode, setEditMode] = useState(null);
   // const [isSubmitting, setIsSubmitting] = useState(false);
@@ -551,35 +552,54 @@ export default function Chatbox() {
   return (
     <div className="min-h-screen bg-gradient-to-tr from-white to-indigo-50 p-4">
       <div className="relative w-full max-w-md mx-auto flex flex-col h-[86vh] sm:h-[95vh] px-2 sm:px-4 rounded-lg shadow-md">
-        <div className="flex items-center justify-between mb-4">
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="text-indigo-600 hover:underline text-sm"
-          >
-            ← Back
-          </button>
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-800 max-w-[12rem] truncate">
-            {name?.split(' ')[0]}
-          </h2>
-          {loadingWANoti === "idle" ? (
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
             <button
-              onClick={handleWhatsappNotify}
-              title="Notify via WhatsApp"
-              className="text-gray-500 hover:text-green-600 transition p-1 rounded-full"
+              onClick={() => navigate("/dashboard")}
+              className="flex items-center gap-0.5 text-indigo-600"
             >
-              <BsBellFill className="w-5 h-5" />
+              <HiArrowLeft className="text-sm" />
+              {friend?.profileImageUrl ? (
+                <img
+                  src={friend?.profileImageUrl}
+                  alt="Avatar"
+                  className="w-9 h-9 rounded-full object-cover border"
+                />
+              ) : (
+                <div className="w-9 h-9 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-bold text-lg">
+                  {friend?.name?.charAt(0).toUpperCase()}
+                </div>
+              )}
             </button>
-          ) : loadingWANoti === "loading" ? (
-            <div
-              className="w-5 h-5 border-2 border-t-2 border-green-500 border-t-transparent rounded-full animate-spin"
-              title="Sending WhatsApp notification..."
-            />
-          ) : (
-            <BsBellSlashFill
-              className="w-5 h-5 text-gray-500"
-              title="Notification disabled"
-            />
-          )}
+            <h2
+              className="text-lg sm:text-xl font-semibold text-gray-800 max-w-[16rem] truncate cursor-pointer"
+              onClick={() => navigate(`/profile/${friend.id}`)}
+              title="Visit Profile"
+            >
+              {name?.split(' ')[0]}
+            </h2>
+          </div>
+          <div className="flex items-center justify-items-end">
+            {loadingWANoti === "idle" ? (
+              <button
+                onClick={handleWhatsappNotify}
+                title="Notify via WhatsApp"
+                className="text-gray-500 hover:text-green-600 transition p-1 rounded-full"
+              >
+                <BsBellFill className="w-5 h-5" />
+              </button>
+            ) : loadingWANoti === "loading" ? (
+              <div
+                className="w-5 h-5 border-2 border-t-2 border-green-500 border-t-transparent rounded-full animate-spin"
+                title="Sending WhatsApp notification..."
+              />
+            ) : (
+              <BsBellSlashFill
+                className="w-5 h-5 text-gray-500"
+                title="Notification disabled"
+              />
+            )}
+          </div>
         </div>
 
         <div

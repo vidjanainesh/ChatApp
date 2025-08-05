@@ -35,6 +35,7 @@ const userSlice = createSlice({
         },
         setFriends: (state, action) => {
             state.friends = action.payload;
+            // console.log('Friends (Set):', JSON.parse(JSON.stringify(state.friends)));
         },
         addFriend: (state, action) => {
             state.friends.push(action.payload);

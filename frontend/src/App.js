@@ -13,6 +13,7 @@ import FriendRequests from './components/dashboard/FriendRequests';
 import Chatbox from './components/chat/Chatbox';
 import GroupChatbox from './components/chat/GroupChatbox';
 import Profile from './components/dashboard/Profile';
+import GroupInfo from './components/chat/GroupInfo';
 
 function App() {
 
@@ -31,12 +32,13 @@ function App() {
         <Route path='/forgot-password' element={<ForgotPassword />} />
         <Route path='/verify-token' element={<VerifyToken />} />
         <Route path='/reset-password' element={<ResetPassword />} />
-        <Route path='/chatbox/:id' element={<Chatbox />} />
-        <Route path='/groupchatbox/:id' element={<GroupChatbox />} />
+        <Route path='/chat/:id' element={<Chatbox />} />
+        <Route path='/groupchat/:id' element={<GroupChatbox />} />
         <Route path='/find-people' element={<FindPeople />} />
         <Route path='/friend-requests' element={<FriendRequests />} />
         <Route path='/profile' element={<Profile />} />
         <Route path='/profile/:id' element={<Profile />} />
+        <Route path='/group/:id' element={<GroupInfo />} />
       </Routes>
 
       <ToastContainer

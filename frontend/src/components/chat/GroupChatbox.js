@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
-import { getGroupData, sendGroupMessage, inviteToGroup, leaveGroup, removeFromGroup, deleteGroupMessage, editGroupMessage, deleteReactions, reactMessage, whatsappNotify } from "../../api";
+import { getGroupData, sendGroupMessage, inviteToGroup, leaveGroup, removeFromGroup, deleteGroupMessage, editGroupMessage, deleteReactions, reactMessage, whatsappNotify, setAdminAPI, removeAdmin } from "../../api";
 import { toast } from "react-toastify";
 import { motion } from 'framer-motion';
 import { jwtDecode } from "jwt-decode";
@@ -9,8 +9,8 @@ import { useDispatch, useSelector } from "react-redux";
 import GroupChatMessage from "./GroupChatMessage";
 import { setGroupMessages, addGroupMessage, updateGroupMessageId, setGroupMembers, setNonMemberFriends, deleteGroupMsgAction, editGroupMsgAction, clearGroupMessages, clearChatState, addReactionToGroupMessage, setCurrentChat, prependGroupMessages, addGroupMembers, removeNonMemberFriends } from "../../store/chatSlice";
 import EmojiPicker from "emoji-picker-react";
-import { HiOutlineLogout, HiUserAdd, HiOutlineUsers, HiOutlineChat, HiPaperClip, HiPhotograph, HiVideoCamera, HiChevronDown, HiUserRemove } from "react-icons/hi";
-import { GrUserAdmin } from "react-icons/gr";
+import { HiOutlineLogout, HiUserAdd, HiOutlineUsers, HiOutlineChat, HiPaperClip, HiPhotograph, HiVideoCamera, HiChevronDown, HiUserRemove, HiShieldCheck, HiArrowLeft } from "react-icons/hi";
+import { FaMinusCircle, FaPlusCircle, FaUserTie } from 'react-icons/fa';
 import { BsBellFill, BsBellSlashFill, BsCheck, BsCheckAll } from "react-icons/bs";
 import { setGroups } from "../../store/userSlice";
 import { v4 as uuidv4 } from 'uuid';
@@ -29,16 +29,22 @@ export default function GroupChatbox() {
     const messages = useSelector((state) => state.chat.groupMessages);
     const members = useSelector((state) => state.chat.groupMembers);
     const nonMemberFriends = useSelector((state) => state.chat.nonMemberFriends);
+    const currentChat = useSelector((state) => state.chat.currentChat);
     const groups = useSelector((state) => state.user.groups);
 
+    const [group, setGroup] = useState(currentChat);
     const [input, setInput] = useState("");
     // const [isSubmitting, setIsSubmitting] = useState(false);
     const [editMode, setEditMode] = useState(null);
     const [replyTo, setReplyTo] = useState(null);
     const [isTyping, setIsTyping] = useState(false);
     const [messageLoading, setMessageLoading] = useState(true);
-    const [admin, setAdmin] = useState();
+    const [admin, setAdmin] = useState(null);
     const [isAdmin, setIsAdmin] = useState(null);
+    const [superAdmin, setSuperAdmin] = useState();
+    const [isSuperAdmin, setIsSuperAdmin] = useState(null);
+    const [adminprocessing, setAdminProcessing] = useState(false);
+    const [pendingAction, setPendingAction] = useState(null);
     const [showMembers, setShowMembers] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -100,10 +106,11 @@ export default function GroupChatbox() {
         setIsTyping,
     });
 
-    // To set group admin
+    // To set group admins
     useEffect(() => {
-        setIsAdmin(admin === loggedInUserId)
-    }, [admin, loggedInUserId]);
+        setIsAdmin(admin === loggedInUserId);
+        setIsSuperAdmin(superAdmin === loggedInUserId);
+    }, [admin, superAdmin, loggedInUserId]);
 
     // Callback function to fetch group messages
     const fetchGroupMessages = useCallback(async (beforeId = null) => {
@@ -117,9 +124,13 @@ export default function GroupChatbox() {
         try {
             const res = await getGroupData(id, token, beforeId);
             if (res.data.status === "success") {
-                const newMessages = res.data.data.messages;
-                setAdmin(res.data.data.admin);
+
+                setGroup(res.data.data.group);
+                setSuperAdmin(res.data.data.group.superAdmin);
+                setAdmin(res.data.data.group.admin);
                 dispatch(setNonMemberFriends(res.data.data.nonMemberFriends));
+
+                const newMessages = res.data.data.messages;
 
                 if (beforeId) {
                     if (newMessages.length < 9) setHasMore(false);
@@ -609,6 +620,38 @@ export default function GroupChatbox() {
         }
     };
 
+    const setAdminHandler = async (memberId) => {
+        setAdminProcessing(true);
+        try {
+            const res = await setAdminAPI(id, memberId, token);
+            if (res.data.status === 'success') {
+                setAdmin(memberId);
+            }
+        } catch (error) {
+            const msg = error.response?.data?.message || "Error setting admin";
+            toast.error(msg);
+        } finally {
+            setPendingAction(null);
+            setAdminProcessing(false);
+        }
+    }
+
+    const removeAdminHandler = async (memberId) => {
+        setAdminProcessing(true);
+        try {
+            const res = await removeAdmin(id, token);
+            if (res.data.status === 'success') {
+                setAdmin(null);
+            }
+        } catch (error) {
+            const msg = error.response?.data?.message || "Error removing admin";
+            toast.error(msg);
+        } finally {
+            setPendingAction(null);
+            setAdminProcessing(false);
+        }
+    }
+
     const handleWhatsappNotify = async (id) => {
         setNotifyingMembers((prev) => [...prev, id]);
         try {
@@ -695,24 +738,40 @@ export default function GroupChatbox() {
         <div className="min-h-screen bg-gradient-to-tr from-white to-indigo-50 p-4">
             <div className="relative w-full max-w-md mx-auto flex flex-col h-[86vh] sm:h-[95vh] px-2 sm:px-4 rounded-lg shadow-md">
                 <div className="flex items-center justify-between mb-4 relative">
-                    <button
-                        onClick={() => navigate("/dashboard")}
-                        className="text-indigo-600 hover:underline text-sm"
-                    >
-                        ← Back
-                    </button>
-
-                    <h2 className="text-lg sm:text-xl font-semibold text-gray-800 truncate max-w-[12rem] text-center mx-auto" title={name}>
-                        {name}
-                    </h2>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => navigate("/dashboard")}
+                            className="flex items-center gap-0.5 text-indigo-600"
+                        >
+                            <HiArrowLeft className="text-sm" />
+                            {group?.groupImageUrl ? (
+                                <img
+                                    src={group?.groupImageUrl}
+                                    alt="Avatar"
+                                    className="w-9 h-9 rounded-full object-cover border"
+                                />
+                            ) : (
+                                <div className="w-9 h-9 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-bold text-lg">
+                                    {group?.name?.charAt(0).toUpperCase()}
+                                </div>
+                            )}
+                        </button>
+                        <h2
+                            className="text-lg sm:text-xl font-semibold text-gray-800 max-w-[16rem] truncate cursor-pointer"
+                            onClick={() => navigate(`/group/${group?.id}`)}
+                            title="View info"
+                        >
+                            {name}
+                        </h2>
+                    </div>
 
                     <div className="flex items-center gap">
                         {/* Leave Button */}
                         <button
                             onClick={() => setShowLeaveModal(true)}
-                            disabled={isAdmin}
-                            className={`p-1.5 rounded  text-red-500  ${isAdmin ? 'cursor-not-allowed' : 'hover:bg-red-100 hover:text-red-600'}`}
-                            title={isAdmin ? "Admin cannot leave group" : "Leave Group"}
+                            disabled={isSuperAdmin}
+                            className={`p-1.5 rounded  text-red-500  ${isSuperAdmin ? 'cursor-not-allowed' : 'hover:bg-red-100 hover:text-red-600'}`}
+                            title={isSuperAdmin ? "Super Admin cannot leave group" : "Leave Group"}
                         >
                             <HiOutlineLogout className="w-5 h-5" />
                         </button>
@@ -727,10 +786,10 @@ export default function GroupChatbox() {
                             </button>
 
                             {showMembers && (
-                                <div className="absolute right-0 mt-2 w-auto bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                                <div className="absolute right-0 mt-2 min-w-[20rem] max-w-[30rem] bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                                     <div className="flex items-center justify-between px-4 py-2 font-semibold text-gray-700 border-b">
                                         <span>Group Members</span>
-                                        {isAdmin && (
+                                        {(isSuperAdmin || isAdmin) && (
                                             <button
                                                 onClick={() => {
                                                     setShowInviteModal(true);
@@ -746,36 +805,80 @@ export default function GroupChatbox() {
                                     <ul className="max-h-50 overflow-y-auto divide-y divide-gray-100">
                                         {members.map((member) => {
                                             const isCurrentUser = member.id === loggedInUserId;
+                                            const isSuperAdminUser = member.id === superAdmin;
                                             const isAdminUser = member.id === admin;
                                             const isRemoved = removedMembers.includes(member.id);
 
                                             return (
                                                 <li key={member.id}>
                                                     <div
-                                                        className={`flex items-center justify-between gap-3 ${isCurrentUser ? 'cursor-default bg-gray-50' : ''
-                                                            }`}
+                                                        className={`flex items-center justify-between gap-3 ${isCurrentUser ? 'cursor-default bg-gray-50' : 'cursor-pointer hover:bg-indigo-50'}`}
                                                     >
                                                         {/* LEFT CLICKABLE PART */}
                                                         <div
-                                                            className={`flex items-center gap-3 flex-1 px-4 py-3 w-full rounded-md transition ${!isCurrentUser && !isRemoved && 'cursor-pointer hover:bg-indigo-50'
-                                                                }`}
+                                                            className={`flex items-center gap-3 flex-1 px-4 py-3 w-full rounded-md transition group`}
                                                             onClick={() => {
                                                                 if (!isCurrentUser && !isRemoved) {
-                                                                    navigate(`/chatbox/${member.id}?name=${encodeURIComponent(member.name)}`);
+                                                                    navigate(`/chat/${member.id}?name=${encodeURIComponent(member.name)}`);
                                                                 }
                                                             }}
                                                         >
-                                                            {member?.profileImageUrl ? (
-                                                                <img
-                                                                    src={member.profileImageUrl}
-                                                                    alt="Avatar"
-                                                                    className="w-10 h-10 rounded-full object-cover border"
-                                                                />
-                                                            ) : (
-                                                                <div className="w-10 h-10 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-bold text-lg">
-                                                                    {member.name?.charAt(0).toUpperCase()}
-                                                                </div>
-                                                            )}
+                                                            <div className="relative w-10 h-10">
+                                                                {/* Avatar */}
+                                                                {member?.profileImageUrl ? (
+                                                                    <img
+                                                                        src={member.profileImageUrl}
+                                                                        alt="Avatar"
+                                                                        className="w-10 h-10 rounded-full object-cover border"
+                                                                    />
+                                                                ) : (
+                                                                    <div className="w-10 h-10 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-bold text-lg">
+                                                                        {member.name?.charAt(0).toUpperCase()}
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Admin Badge (top-right corner) */}
+                                                                {(isSuperAdminUser || isAdminUser) ? (
+                                                                    <div
+                                                                        className="absolute -top-2 -right-2 bg-white border rounded-full p-[2px] shadow-sm"
+                                                                        title={isSuperAdminUser ? "Super Admin" : "Admin"}
+                                                                    >
+                                                                        {isSuperAdminUser ? (
+                                                                            <HiShieldCheck className="text-blue-600 w-3.5 h-3.5" />
+                                                                        ) : (
+                                                                            <FaUserTie className="text-gray-600 w-3.5 h-3.5" />
+                                                                        )}
+                                                                    </div>
+                                                                ) : (
+                                                                    // If superadmin hovering & this user is not admin/superadmin
+                                                                    isSuperAdmin && !admin && (
+                                                                        <button
+                                                                            className="absolute -top-1 -right-1 bg-white border rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition"
+                                                                            title="Make Admin"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setPendingAction({ type: 'set', member }); // opens modal
+                                                                            }}
+                                                                        >
+                                                                            <FaPlusCircle className="text-gray-600 w-3.5 h-3.5" />
+                                                                        </button>
+                                                                    )
+                                                                )}
+
+                                                                {/* If this member IS admin, show remove icon on hover (only superadmin sees this) */}
+                                                                {isSuperAdmin && member.id === admin && (
+                                                                    <button
+                                                                        className="absolute -top-2 -right-2 bg-white border rounded-full p-[2px] shadow-sm opacity-0 group-hover:opacity-100 transition"
+                                                                        title="Remove Admin"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setPendingAction({ type: 'remove', member }); // opens modal
+                                                                        }}
+                                                                    >
+                                                                        <FaMinusCircle className="text-red-500 w-3.5 h-3.5" />
+                                                                    </button>
+                                                                )}
+                                                            </div>
 
                                                             <div className="flex flex-col max-w-[12rem] truncate">
                                                                 <p
@@ -791,6 +894,7 @@ export default function GroupChatbox() {
                                                                     {isCurrentUser ? '' : member.email}
                                                                 </p>
                                                             </div>
+
                                                         </div>
 
                                                         {/* RIGHT SIDE ICONS or REMOVED BADGE */}
@@ -804,13 +908,27 @@ export default function GroupChatbox() {
                                                                 </span>
                                                             ) : (
                                                                 <>
-                                                                    {isAdminUser && (
-                                                                        <GrUserAdmin
-                                                                            className={`text-indigo-500 w-5 h-5 ${isCurrentUser && "mr-2 w-5.5 h-5.5"}`}
-                                                                            title="Group Admin"
-                                                                        />
+                                                                    {(isSuperAdmin || isAdmin) && !isCurrentUser && !isSuperAdminUser && (
+                                                                        <>
+                                                                            {!removingFromGroup.includes(member.id) ? (
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        setConfirmRemoveMember(member);
+                                                                                    }}
+                                                                                    title="Remove from group"
+                                                                                    className="text-gray-500 hover:text-red-600 transition rounded-full"
+                                                                                >
+                                                                                    <HiUserRemove className="w-5 h-5" />
+                                                                                </button>
+                                                                            ) : (
+                                                                                <div
+                                                                                    className="w-5 h-5 border-2 border-t-2 border-red-500 border-t-transparent rounded-full animate-spin"
+                                                                                    title="Removing from group..."
+                                                                                />
+                                                                            )}
+                                                                        </>
                                                                     )}
-
                                                                     {!isCurrentUser && (
                                                                         !notifyingMembers.includes(member?.id) &&
                                                                             !notifiedMembers.includes(member?.id) ? (
@@ -832,28 +950,6 @@ export default function GroupChatbox() {
                                                                         ) : (
                                                                             <BsBellSlashFill className="w-5 h-5 text-gray-500" title="Notification disabled" />
                                                                         )
-                                                                    )}
-
-                                                                    {loggedInUserId === admin && !isCurrentUser && (
-                                                                        <>
-                                                                            {!removingFromGroup.includes(member.id) ? (
-                                                                                <button
-                                                                                    onClick={(e) => {
-                                                                                        e.stopPropagation();
-                                                                                        setConfirmRemoveMember(member);
-                                                                                    }}
-                                                                                    title="Remove from group"
-                                                                                    className="text-gray-500 hover:text-red-600 transition rounded-full"
-                                                                                >
-                                                                                    <HiUserRemove className="w-5 h-5" />
-                                                                                </button>
-                                                                            ) : (
-                                                                                <div
-                                                                                    className="w-5 h-5 border-2 border-t-2 border-red-500 border-t-transparent rounded-full animate-spin"
-                                                                                    title="Removing from group..."
-                                                                                />
-                                                                            )}
-                                                                        </>
                                                                     )}
                                                                 </>
                                                             )}
@@ -1370,6 +1466,53 @@ export default function GroupChatbox() {
                     </div>
                 )}
 
+                {pendingAction && (
+                    <div className="fixed inset-0 z-50 bg-black bg-opacity-30 flex items-center justify-center break-words">
+                        <div className="bg-white rounded-xl shadow-xl p-6 w-[90%] max-w-sm">
+                            <h2 className="text-lg font-semibold text-gray-800 mb-3">
+                                {pendingAction.type === 'set' ? "Make Admin?" : "Remove Admin?"}
+                            </h2>
+                            <p className="text-sm text-gray-600 mb-5">
+                                {pendingAction.type === 'set'
+                                    ? `Do you want to make ${pendingAction.member.name} the group admin?`
+                                    : `Are you sure you want to remove ${pendingAction.member.name}'s admin privileges?`}
+                            </p>
+                            <div className="flex justify-end gap-3">
+                                {adminprocessing ? (
+                                    <div className="flex flex-col items-center px-4 py-2">
+                                        <div className="flex space-x-1">
+                                            <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                            <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                            <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce"></span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={() => setPendingAction(null)}
+                                            className="px-4 py-2 text-sm border rounded-md text-gray-700 hover:bg-gray-100 transition"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (pendingAction.type === 'set') {
+                                                    setAdminHandler(pendingAction.member.id);
+                                                } else {
+                                                    removeAdminHandler(pendingAction.member.id);
+                                                }
+
+                                            }}
+                                            className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition"
+                                        >
+                                            Confirm
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Seen by modal */}
                 {seenModalData && (

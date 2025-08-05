@@ -49,11 +49,12 @@ export const viewProfile = (token, id) => {
 
 export const editProfile = (data, token) => {
     return axios.patch(`${API_BASE}/dashboard/profile`,
-        data, {
-        headers: {
-            Authorization: `Bearer ${token}`
+        data,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
         }
-    }
     )
 }
 
@@ -244,7 +245,7 @@ export const editGroupMessage = (id, msg, token) => {
 
 export const getGroupData = (id, token, beforeMessageId) => {
     const params = beforeMessageId ? `?beforeMessageId=${beforeMessageId}` : '';
-    return axios.get(`${API_BASE}/group/data/${id}${params}`,
+    return axios.get(`${API_BASE}/group/${id}${params}`,
         {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -276,6 +277,49 @@ export const getGroups = (token) => {
 
 export const deleteGroup = (id, token) => {
     return axios.delete(`${API_BASE}/group/${id}`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    )
+}
+
+export const setAdminAPI = (id, memberId, token) => {
+    return axios.post(`${API_BASE}/group/admin/${id}`,
+        { memberId },
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    )
+}
+
+export const removeAdmin = (id, token) => {
+    return axios.patch(`${API_BASE}/group/admin/${id}`,
+        {},
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
+
+export const getGroupInfo = (id, token) => {
+    return axios.get(`${API_BASE}/group/info/${id}`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    )
+}
+
+export const editGroupInfo = (id, data, token) => {
+    return axios.patch(`${API_BASE}/group/info/${id}`,
+        data,
         {
             headers: {
                 Authorization: `Bearer ${token}`

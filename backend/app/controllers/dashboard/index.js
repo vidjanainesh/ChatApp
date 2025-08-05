@@ -95,7 +95,7 @@ const getDashboardData = async (req, res) => {
                 {
                     model: Groups,
                     as: 'group',
-                    attributes: ['name', ['created_by', 'admin']]
+                    attributes: ['name', 'super_admin', 'admin', 'group_image_url']
                 }
             ]
         });
@@ -105,7 +105,9 @@ const getDashboardData = async (req, res) => {
             return ({
                 id: curr.id,
                 name: curr.group.name,
+                superAdmin: curr.group.super_admin,
                 admin: curr.group.admin,
+                groupImageUrl: curr.group.group_image_url,
             })
         })
 
