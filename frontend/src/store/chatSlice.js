@@ -131,7 +131,7 @@ const chatSlice = createSlice({
       });
     },
     setCurrentChat: (state, action) => {
-      state.currentChat = action.payload.id;
+      state.currentChat = action.payload.data;
       state.chatType = action.payload.type;
     },
     clearChatState: (state) => {

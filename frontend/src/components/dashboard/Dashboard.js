@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { HiOutlineUserCircle, HiOutlineLogout, HiOutlineStatusOnline } from "react-icons/hi";
+import { HiOutlineUserCircle, HiOutlineLogout, HiOutlineStatusOnline, HiOutlineInformationCircle } from "react-icons/hi";
 import { HiOutlineChatBubbleLeftRight, HiOutlineUserMinus } from "react-icons/hi2";
+import { FiLogOut } from "react-icons/fi";
 import {
     getDashboardData,
     createGroup,
@@ -60,6 +61,7 @@ export default function Dashboard() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [isUserInitialized, setIsUserInitialized] = useState(false);
     const [selectedFriendForModal, setSelectedFriendForModal] = useState(null);
+    const [selectedGroupForModal, setSelectedGroupForModal] = useState(null);
 
     const groupRefs = useRef({});
     const friendRefs = useRef({});
@@ -81,6 +83,10 @@ export default function Dashboard() {
             }
         },
     });
+
+    useEffect(() => {
+        console.log(groups);
+    }, [groups])
 
     useEffect(() => {
         if (!token || isUserInitialized || user) return;
@@ -155,15 +161,15 @@ export default function Dashboard() {
 
     const handleUserClick = (user) => {
         dispatch(clearUnreadPrivateMapEntry(user.id));
-        dispatch(setCurrentChat({ id: user.id, type: "private" }));
-        navigate(`/chatbox/${user.id}?name=${encodeURIComponent(user.name)}`);
+        dispatch(setCurrentChat({ data: user, type: "private" }));
+        navigate(`/chat/${user.id}?name=${encodeURIComponent(user.name)}`);
     };
 
     const handleGroupClick = (group) => {
         dispatch(clearUnreadGroupMapEntry(group.id));
-        dispatch(setCurrentChat({ id: group.id, type: "group" }));
+        dispatch(setCurrentChat({ data: group, type: "group" }));
         navigate(
-            `/groupchatbox/${group.id}?name=${encodeURIComponent(group.name)}`
+            `/groupchat/${group.id}?name=${encodeURIComponent(group.name)}`
         );
     };
 
@@ -290,10 +296,10 @@ export default function Dashboard() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                     <div className="max-w-full">
-                        <div className="max-w-[90vw] sm:max-w-[60vw] md:max-w-[50vw] lg:max-w-[40vw] truncate">
+                        <div className="max-w-[90vw] sm:max-w-[60vw] md:max-w-[40vw] lg:max-w-[28vw] break-words">
                             <h1
-                                className="text-3xl font-bold text-indigo-700 truncate"
-                                title={user ? `Welcome ${user?.name.trim().split(" ")[0]}!` : "Welcome!"}
+                                className="text-3xl font-bold text-indigo-700"
+                                title={user?.name.trim().split(" ")[0]}
                             >
                                 {user ? `Welcome ${user?.name.trim().split(" ")[0]}!` : "Welcome!"}
                             </h1>
@@ -306,14 +312,14 @@ export default function Dashboard() {
                     <div className="flex flex-wrap gap-2">
                         <button
                             onClick={goToFindPeople}
-                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition duration-300 text-sm sm:text-base"
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition duration-300 text-sm sm:text-lg"
                         >
                             🔍 Find People
                         </button>
                         <motion.div className="relative inline-block">
                             <button
                                 onClick={goToFriendRequests}
-                                className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition duration-300 text-sm sm:text-base"
+                                className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition duration-300 text-sm sm:text-lg"
                             >
                                 📨 Friend Requests
                             </button>
@@ -334,7 +340,7 @@ export default function Dashboard() {
                                     <img
                                         src={user.profileImageUrl}
                                         alt="Avatar"
-                                        className="w-8 h-8 rounded-full object-cover border"
+                                        className="w-9 h-9 rounded-full object-cover border"
                                     />
                                 ) : (
                                     // <FaUserCircle className="w-8 h-8 text-gray-500 border rounded-full bg-white" />
@@ -353,7 +359,7 @@ export default function Dashboard() {
                             </button>
 
                             {dropdownOpen && (
-                                <div className="absolute right-0 mt-2 w-40 bg-white border rounded-md shadow-lg z-50">
+                                <div className="absolute right-0 mt-1.5 w-40 bg-white border rounded-md shadow-lg z-50">
                                     <button
                                         onClick={() => {
                                             navigate("/profile");
@@ -507,7 +513,7 @@ export default function Dashboard() {
                         <h2 className="text-xl font-semibold text-gray-700 mb-4">Your Groups:</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 items-start">
                             {groups.map((group, index) => {
-                                const isAdmin = group.admin === user?.id;
+                                const isSuperAdmin = group.superAdmin === user?.id;
                                 return (
                                     < motion.div
                                         key={group.id}
@@ -521,8 +527,24 @@ export default function Dashboard() {
                                             className="cursor-pointer flex items-center space-x-4"
                                             title={`Enter group ${group.name}`}
                                         >
-                                            <div className="w-12 h-12 flex items-center justify-center rounded-full bg-green-100 text-green-600 font-bold text-lg">
+                                            {/* <div className="w-12 h-12 flex items-center justify-center rounded-full bg-green-100 text-green-600 font-bold text-lg">
                                                 {group.name?.charAt(0).toUpperCase()}
+                                            </div> */}
+                                            <div onClick={(e) => {
+                                                e.stopPropagation(); // prevent triggering handleUserClick
+                                                setSelectedGroupForModal(group);
+                                            }}>
+                                                {group?.groupImageUrl ? (
+                                                    <img
+                                                        src={group.groupImageUrl}
+                                                        alt="Avatar"
+                                                        className="w-12 h-12 rounded-full object-cover border"
+                                                    />
+                                                ) : (
+                                                    <div className="w-12 h-12 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-bold text-lg">
+                                                        {group.name?.charAt(0).toUpperCase()}
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="max-w-[10rem]">
                                                 <p className="font-medium text-gray-800 break-words leading-snug">
@@ -558,9 +580,9 @@ export default function Dashboard() {
                                                             setConfirmingDeleteId(group.id);
                                                             setActiveMenuGroupId(null);
                                                         }}
-                                                        className={`w-full text-left px-4 py-2 text-sm text-red-600 ${isAdmin ? 'cursor-not-allowed' : 'hover:bg-red-50'}`}
-                                                        disabled={isAdmin}
-                                                        title={isAdmin ? "Admin cannot leave group" : "Leave group"}
+                                                        className={`w-full text-left px-4 py-2 text-sm text-red-600 ${isSuperAdmin ? 'cursor-not-allowed' : 'hover:bg-red-50'}`}
+                                                        disabled={isSuperAdmin}
+                                                        title={isSuperAdmin ? "Admin cannot leave group" : "Leave group"}
                                                     >
                                                         Leave
                                                     </button>
@@ -867,6 +889,95 @@ export default function Dashboard() {
                         </motion.div>
                     </motion.div>
                 )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {selectedGroupForModal && (() => {
+                    const isSuperAdmin = selectedGroupForModal.superAdmin === user?.id;
+                    return (
+                        <motion.div
+                            className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSelectedGroupForModal(null)}
+                        >
+                            <motion.div
+                                className="bg-white rounded-xl shadow-xl w-80 relative overflow-hidden"
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {/* Close Button */}
+                                <button
+                                    className="absolute top-2 right-3 text-white text-xl z-10"
+                                    onClick={() => setSelectedGroupForModal(null)}
+                                >
+                                    ×
+                                </button>
+
+                                {/* Image Section */}
+                                <div className="relative h-72 bg-gray-200 flex justify-center">
+                                    {selectedGroupForModal?.groupImageUrl ? (
+                                        <img
+                                            src={selectedGroupForModal.groupImageUrl}
+                                            alt="Profile"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center bg-indigo-100 text-indigo-600 text-5xl font-bold">
+                                            {selectedGroupForModal?.name?.charAt(0).toUpperCase()}
+                                        </div>
+                                    )}
+                                    <div className="absolute top-0 w-full px-6 truncate bg-black bg-opacity-40 text-white text-center py-2 text-lg font-semibold">
+                                        {selectedGroupForModal?.name}
+                                    </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex justify-around py-4 px-2">
+                                    {/* Chat */}
+                                    <button
+                                        onClick={() => {
+                                            handleGroupClick(selectedGroupForModal);
+                                            setSelectedGroupForModal(null);
+                                        }}
+                                        className="text-indigo-600 hover:text-indigo-800 text-2xl"
+                                        title="Chat"
+                                    >
+                                        <HiOutlineChatBubbleLeftRight />
+                                    </button>
+
+                                    {/* View Group */}
+                                    <button
+                                        onClick={() => {
+                                            navigate(`/group/${selectedGroupForModal.id}`)
+                                        }}
+                                        className="text-gray-500 hover:text-gray-700 text-2xl"
+                                        title="View group info"
+                                    >
+                                        <HiOutlineInformationCircle />
+                                    </button>
+
+                                    {/* Leave */}
+                                    <button
+                                        onClick={() => {
+                                            setConfirmingDeleteId(selectedGroupForModal.id);
+                                            setSelectedGroupForModal(null);
+                                        }}
+                                        className={`text-red-500  text-2xl ${isSuperAdmin ? 'cursor-not-allowed' : 'hover:text-red-700'}`}
+                                        title="Leave group"
+                                        disabled={isSuperAdmin}
+                                    >
+                                        <FiLogOut />
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    );
+                })()}
             </AnimatePresence>
 
         </div >

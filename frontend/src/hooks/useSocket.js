@@ -142,7 +142,7 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
 
         notif.onclick = () => {
           window.focus();
-          navigate(`/chatbox/${message.senderId}?name=${encodeURIComponent(message.senderName || "User")}`);
+          navigate(`/chat/${message.senderId}?name=${encodeURIComponent(message.senderName)}`);
         };
       }
     });
@@ -256,7 +256,8 @@ export default function useSocket({ token, chatUserId, groupId, loggedInUserId, 
 
         notif.onclick = () => {
           window.focus();
-          navigate(`/groupchat/${msgGroupId}`);
+          // navigate(`/chatbox/${message.senderId}?name=${encodeURIComponent(message.senderName)}`);
+          navigate(`/groupchat/${msgGroupId}?name=${encodeURIComponent(groupName)}`);
         };
       }
     });
