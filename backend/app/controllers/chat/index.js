@@ -122,10 +122,10 @@ const sendMessage = async (req, res) => {
             isRead: false,
             readAt: null,
             reactions: [],
-            repliedMessage: {
+            repliedMessage: repliedMessage ? {
                 ...repliedMessage,
                 message: decryptedMessage,
-            },
+            } : null,
             senderName: user.name || user.email || "Unknown",
         };
 
@@ -312,7 +312,7 @@ const getMessages = async (req, res) => {
                 'createdAt',
                 'updatedAt'
             ],
-            limit: 9
+            limit: 15
         });
 
         let allMessages = messages.map(msg => msg.toJSON());

@@ -85,10 +85,6 @@ export default function Dashboard() {
     });
 
     useEffect(() => {
-        console.log(groups);
-    }, [groups])
-
-    useEffect(() => {
         if (!token || isUserInitialized || user) return;
 
         try {

@@ -4,6 +4,7 @@ const { GroupMembers, Message, GroupMessageRead, GroupMessages } = require("../m
 
 const allowedOrigins = [
   "http://localhost:3001",
+  "http://192.168.1.53:3000",
   "https://chatapp-frontend-llqt.onrender.com",
 ];
 
@@ -13,12 +14,28 @@ function setupSocket(server) {
   const io = new Server(server, {
     cors: {
       origin: function (origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
-          callback(null, true);
-        } else {
-          callback(new Error("Not allowed by Socket.IO CORS"));
+        // Allow requests with no origin (React Native, Postman, etc.)
+        if (origin === undefined || origin === null) {
+          return callback(null, true);
         }
+
+        // Allow web clients from allowed origins
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+
+        // Block everything else
+        console.warn("Blocked socket connection from unknown origin:", origin);
+        return callback(new Error("Not allowed by CORS"));
       },
+
+      // origin: function (origin, callback) {
+      //   if (!origin || allowedOrigins.includes(origin)) {
+      //     callback(null, true);
+      //   } else {
+      //     callback(new Error("Not allowed by Socket.IO CORS"));
+      //   }
+      // },
       methods: ["GET", "POST"],
       credentials: true,
     },
@@ -34,6 +51,7 @@ function setupSocket(server) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       userId = decoded.id;
       socket.userId = userId;
+      console.log(`User: ${userId} connected`);
       onlineUsers.add(userId);
     } catch (err) {
       return socket.disconnect();
