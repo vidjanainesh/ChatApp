@@ -14,7 +14,8 @@ const whatsappNotify = async (req, res) => {
         // For whatsapp
         const receiver = await User.findOne({
             where: { id: receiverId },
-            attributes: ['id', 'name', 'phone_no']
+            attributes: ['id', 'name', ['phone_no', 'phoneNo']],
+            raw: true
         });
 
         if (!receiver) return errorResponse(res, "Receiver not found");
@@ -26,18 +27,46 @@ const whatsappNotify = async (req, res) => {
         //     chatLink: `https://chatapp-frontend-llqt.onrender.com`
         // }
 
-        const fromName = user.name;
-        const toName = receiver.name;
-        const toPhoneNo = `91` + receiver.phone_no;
-        const chatLink = `https://chatapp-frontend-llqt.onrender.com`;
+        const fromName = user.name?.split(' ')[0] || user.name;
+        const toName = receiver.name?.split(' ')[0] || user.name;
+        const toPhoneNo = `91` + receiver.phoneNo;
+        // const chatLink = `https://chatapp-frontend-llqt.onrender.com`;
+        const chatPath = `chat/${user.id}?name=${encodeURIComponent(user.name)}`;
+
+        // const payload = {
+        //     messaging_product: 'whatsapp',
+        //     to: toPhoneNo,
+        //     type: "template",
+        //     template: {
+        //         name: "hello_world",
+        //         language: { code: "en_US" },
+        //     }
+        // };
 
         const payload = {
-            messaging_product: 'whatsapp',
+            messaging_product: "whatsapp",
             to: toPhoneNo,
             type: "template",
             template: {
-                name: "hello_world",
-                language: { code: "en_US" },
+                name: "notifications_private_messages",
+                language: { code: "en" },
+                components: [
+                    {
+                        type: "body",
+                        parameters: [
+                            { type: "text", text: toName },     // {{1}} -> receiver’s name
+                            { type: "text", text: fromName }    // {{2}} -> sender’s name
+                        ]
+                    },
+                    {
+                        type: "button",                         // View Messages - button
+                        sub_type: "url",
+                        index: "0",
+                        parameters: [
+                            { type: "text", text: chatPath }    // dynamic link
+                        ]
+                    }
+                ]
             }
         };
 
