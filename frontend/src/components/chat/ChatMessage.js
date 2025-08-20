@@ -48,7 +48,7 @@ const ChatMessage = ({
                 </div>
             )}
 
-            <div className={`flex ${isSender ? "justify-end" : "justify-start"} relative group`}>
+            <div className={`flex ${isSender ? "justify-end" : "justify-start"} relative`}>
                 <motion.div
                     {...tempMotionProps}
                     className={`group mb-3.5 p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap relative ${isSender ? "bg-indigo-100 self-end" : "bg-white self-start"} ${msgCount === 0 && "mt-2"}`}
