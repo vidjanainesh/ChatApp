@@ -10,12 +10,14 @@ const sequelize = require('./app/models/database');
 const indexRoutes = require('./routes/index');
 const setupSocket = require('./app/helper/socket');
 
+const PORT = process.env.PORT || 3000;
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const allowedOrigins = [
-  "http://localhost:3001", 
-  "https://chatapp-frontend-llqt.onrender.com", 
+  "http://localhost:3001",
+  "https://chatapp-frontend-llqt.onrender.com",
 ];
 
 const corsOptions = {
@@ -44,6 +46,6 @@ app.set('io', io);
 sequelize.authenticate()
   .then(() => {
     console.log('Connected to the Database');
-    server.listen(3000, () => console.log('Server Listening on PORT 3000'));
+    server.listen(PORT, () => console.log(`Server Listening on PORT ${PORT} `));
   })
   .catch((e) => console.log(e));
