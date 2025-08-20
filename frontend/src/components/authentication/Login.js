@@ -12,6 +12,8 @@ import { jwtDecode } from 'jwt-decode';
 export default function Login() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const params = new URLSearchParams(window.location.search);
+  const redirect = params.get("redirect") || "/dashboard";
 
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
@@ -20,9 +22,10 @@ export default function Login() {
   useEffect(() => {
     const token = localStorage.getItem('jwt');
     if (token) {
-      navigate('/dashboard')
+      navigate(redirect)
     }
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleChange = (e) =>
     setLoginForm({ ...loginForm, [e.target.name]: e.target.value });
@@ -38,7 +41,7 @@ export default function Login() {
 
         const token = response.data.data;
         localStorage.setItem("jwt", token);
-        navigate("/dashboard");
+        navigate(redirect, { replace: true });
       } else {
         toast.error(response.data.message || "Login failed", {
           autoClose: 3000,
@@ -69,7 +72,7 @@ export default function Login() {
         const decodedUser = jwtDecode(token);
         localStorage.setItem("jwt", response.data.data);
         dispatch(setUser({ user: decodedUser, token }));
-        navigate("/dashboard");
+        navigate(redirect, { replace: true });
       } else {
         toast.error(response.data.message || "Google login failed", { autoClose: 3000 });
       }

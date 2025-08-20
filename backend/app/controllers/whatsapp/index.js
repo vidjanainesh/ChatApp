@@ -31,7 +31,8 @@ const whatsappNotify = async (req, res) => {
         const toName = receiver.name?.split(' ')[0] || user.name;
         const toPhoneNo = `91` + receiver.phoneNo;
         // const chatLink = `https://chatapp-frontend-llqt.onrender.com`;
-        const chatPath = `chat/${user.id}?name=${encodeURIComponent(user.name)}`;
+        // const chatPath = `chat/${user.id}?name=${encodeURIComponent(user.name)}`;
+        const chatPath = `?redirect=${encodeURIComponent(`/chat/${user.id}?name=${user.name}`)}`;
 
         // const payload = {
         //     messaging_product: 'whatsapp',
