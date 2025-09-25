@@ -3,6 +3,7 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
   messages: [], // messages for current chat
   groupMessages: [], // for group chat
+  botMessages: [],
   currentChat: null, // friend user ID or group ID
   chatType: "private", // "private" or "group"
   groupMembers: [],
@@ -134,6 +135,30 @@ const chatSlice = createSlice({
       state.currentChat = action.payload.data;
       state.chatType = action.payload.type;
     },
+    addBotMessage: (state, action) => {
+      state.botMessages.push(action.payload);
+      // console.log('Messages (Send):', JSON.parse(JSON.stringify(state.messages)));
+    },
+    setBotMessages: (state, action) => {
+      state.botMessages = action.payload;
+    },
+    // updateBoxMessageId: (state, action) => {
+    //   const { tempId, newMessage } = action.payload;
+    //   state.messages = state.messages.map((msg) =>
+    //     msg.id === tempId ? newMessage : msg
+    //   );
+    // },
+    prependBotMessages: (state, action) => {
+      state.botMessages = [...action.payload, ...state.botMessages];
+    },
+    updateBotMessageId: (state, action) => {
+      const { tempId, newMessage } = action.payload;
+      console.log(newMessage);
+      state.botMessages = state.botMessages.map((msg) =>
+        msg.id === tempId ? newMessage : msg
+      )
+
+    },
     clearChatState: (state) => {
       state.messages = [];
       state.groupMessages = [];
@@ -210,6 +235,10 @@ export const {
   deleteGroupMsgAction,
   markGroupMessagesAsSeen,
   setCurrentChat,
+  addBotMessage,
+  setBotMessages,
+  prependBotMessages,
+  updateBotMessageId,
   clearChatState,
   setGroupMembers,
   addGroupMembers,

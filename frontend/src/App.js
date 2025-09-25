@@ -14,6 +14,7 @@ import Chatbox from './components/chat/Chatbox';
 import GroupChatbox from './components/chat/GroupChatbox';
 import Profile from './components/dashboard/Profile';
 import GroupInfo from './components/chat/GroupInfo';
+import ChatBot from './components/chat/ChatBot';
 
 function App() {
 
@@ -34,6 +35,7 @@ function App() {
         <Route path='/reset-password' element={<ResetPassword />} />
         <Route path='/chat/:id' element={<Chatbox />} />
         <Route path='/groupchat/:id' element={<GroupChatbox />} />
+        <Route path='/chatbot' element={<ChatBot />} />
         <Route path='/find-people' element={<FindPeople />} />
         <Route path='/friend-requests' element={<FriendRequests />} />
         <Route path='/profile' element={<Profile />} />
