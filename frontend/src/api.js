@@ -362,3 +362,27 @@ export const whatsappNotify = (receiverId, token) => {
     }
     )
 }
+
+// -------------------------------------------------------------------
+
+export const sendMessageBot = (formData, token) => {
+    return axios.post(`${API_BASE}/chatbot`,
+        formData,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}
+
+export const getMessagesBot = (beforeId, token) => {
+    const params = beforeId ? `?beforeId=${beforeId}` : '';
+    return axios.get(`${API_BASE}/chatbot${params}`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+}

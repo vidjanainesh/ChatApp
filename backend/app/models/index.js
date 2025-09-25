@@ -8,6 +8,7 @@ const GroupMembers = require('./groupMembers');
 const GroupMessages = require('./groupMessages');
 const GroupMessageRead = require('./groupMessageRead');
 const MessageReactions = require('./messageReactions');
+const ChatbotMessages = require('./chatbotMessages');
 
 // -----------------------------------------
 
@@ -132,6 +133,19 @@ GroupMessages.hasMany(GroupMessages, {
   foreignKey: 'reply_to',
   as: 'replies'
 });
+
+// --------------------------------------------------------------------------------------------------
+// User–ChatbotMessage
+User.hasMany(ChatbotMessages, {
+  foreignKey: 'sender_id',
+  as: 'chatbotMessages',
+});
+
+ChatbotMessages.belongsTo(User, {
+  foreignKey: 'sender_id',
+  as: 'sender',
+});
+
 
 module.exports = {
   User,

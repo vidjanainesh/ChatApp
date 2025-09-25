@@ -169,6 +169,11 @@ export default function Dashboard() {
         );
     };
 
+    const handleBotClick = (group) => {
+        dispatch(setCurrentChat({ data: null, type: "bot" }));
+        navigate(`/chatbot`);
+    };
+
     const goToFindPeople = () => {
         navigate("/find-people");
     };
@@ -381,7 +386,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Friends List */}
-                <h2 className="text-xl font-semibold text-gray-700 mb-4">Your Friends:</h2>
+                <h2 className="text-xl font-semibold text-gray-700 mb-4">Friends:</h2>
                 {loading ? (
                     <div className="flex flex-col items-center justify-center text-gray-500 mt-6 h-[20vh]">
                         <svg
@@ -506,7 +511,19 @@ export default function Dashboard() {
                 {/* Group List - Only show if friends exist */}
                 {!loading && groups.length > 0 && (
                     <>
-                        <h2 className="text-xl font-semibold text-gray-700 mb-4">Your Groups:</h2>
+                        <div className="w-full flex flex-row justify-between mb-3">
+                            <h2 className="text-xl font-semibold text-gray-700 mb-4">Groups:</h2>
+                            {/* Only show if atleast one friend exists */}
+                            {friends.length > 0 && (
+                                <button
+                                    onClick={() => setShowCreateModal(true)}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-xl w-9 h-9 rounded-full shadow-lg transition duration-300"
+                                    title="Create Group"
+                                >
+                                    +
+                                </button>
+                            )}
+                        </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 items-start">
                             {groups.map((group, index) => {
                                 const isSuperAdmin = group.superAdmin === user?.id;
@@ -597,18 +614,19 @@ export default function Dashboard() {
                     </>
                 )}
             </div>
-            {/* Floating + Button aligned to container but fixed on screen (Only show if atleast one friend exists)*/}
-            {friends.length > 0 &&
-                <div className="fixed bottom-6 left-1/2 w-full max-w-4xl px-4 transform -translate-x-1/2 flex justify-end z-50">
-                    <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-2xl w-14 h-14 rounded-full shadow-lg transition duration-300"
-                        title="Create Group"
-                    >
-                        +
-                    </button>
-                </div>
-            }
+            {/* Floating Chatbot Button aligned to container but fixed on screen*/}
+            <div className="fixed bottom-6 left-1/2 w-full max-w-4xl px-4 transform -translate-x-1/2 flex justify-end z-50">
+                <button
+                    onClick={handleBotClick}
+                    className="w-10 h-10 transition duration-300 animate-bounce [animation-duration:1.5s] ease-in-out"
+                    title="Chat with Dioc"
+                >
+                    <img
+                        src='/chatbot.png'
+                        alt="Avatar"
+                    />
+                </button>
+            </div>
             <AnimatePresence>
                 {showLogoutModal && (
                     <motion.div
