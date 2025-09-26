@@ -347,7 +347,7 @@ export default function ChatBot() {
 
     return (
         <div className="min-h-screen bg-gradient-to-tr from-white to-indigo-50 p-4">
-            <div className="relative w-full max-w-md mx-auto flex flex-col h-[86vh] sm:h-[95vh] px-2 sm:px-4 rounded-lg shadow-md">
+            <div className="relative w-full max-w-xl mx-auto flex flex-col h-[86vh] sm:h-[95vh] px-2 sm:px-4 rounded-lg shadow-md">
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                         <button
