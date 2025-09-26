@@ -10,16 +10,55 @@ const sendChatbotMessage = async (req, res) => {
     try {
         const { msg } = req.body;
         const user = req.user;
+
+        const history = await ChatbotMessages.findAll({
+            where: { sender_id: user.id },
+            attributes: ['id', 'sender_id', 'sender_message', 'chatbot_reply'],
+            order: [['id', 'DESC']],
+            limit: 3,
+        });
+
+        const messages = [];
+
+        messages.push({
+            role: "system",
+            content: `
+You are Dioc, a helpful AI assistant for ChatApp, a modern real-time messaging platform.
+
+ChatApp features (for users):
+- Manage friends: send, accept, reject requests, or unfriend.
+- Chat privately or in groups; groups can have roles (Super Admin, Admin, Member).
+- Live messaging: see messages instantly, edit/delete, react with emojis, typing indicators, and unread counts.
+- Profile: set a picture, customize your profile.
+- Login easily via email/password or Google.
+- Optional WhatsApp notifications for alerts.
+
+Instructions:
+- Use a friendly and approachable tone. Use emojis and humor fairly often.
+- Prefer concise answers.
+- Base your reply on past messages if provided.
+- Explain features and guide users without including technical or backend details.
+- Answer general knowledge questions if asked.
+- Introduce yourself if this is the user's first interaction.
+`
+        });
+
+
+        history.reverse().map((h) => {
+            messages.push(
+                { role: 'user', content: h.sender_message },
+                { role: 'assistant', content: h.chatbot_reply }
+            );
+        })
+
+        messages.push({ role: 'user', content: msg });
+
         const response = await axios.post(
             'https://router.huggingface.co/v1/chat/completions',
             {
-                messages: [
-                    {
-                        role: "user",
-                        content: msg,
-                    },
-                ],
+                messages,
                 model: "openai/gpt-oss-120b:sambanova",
+                temperature: 0.9
             },
             {
                 headers: {
@@ -53,7 +92,7 @@ const sendChatbotMessage = async (req, res) => {
             createdAt: chatbotMessage.createdAt,
         }
 
-        return successResponse(res, successObj, 'Received reply from Chatbot')
+        return successResponse(res, successObj, 'Received reply from Chatbot');
 
     } catch (error) {
         return errorThrowResponse(res, error.message, error);

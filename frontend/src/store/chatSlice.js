@@ -153,9 +153,8 @@ const chatSlice = createSlice({
     },
     updateBotMessageId: (state, action) => {
       const { tempId, newMessage } = action.payload;
-      console.log(newMessage);
       state.botMessages = state.botMessages.map((msg) =>
-        msg.id === tempId ? newMessage : msg
+        msg.id === tempId ? { ...msg, chatbotReply: newMessage.chatbotReply } : msg
       )
 
     },

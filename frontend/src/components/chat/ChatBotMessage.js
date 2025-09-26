@@ -3,6 +3,9 @@ import { motion } from "framer-motion";
 import { BsCheckAll } from "react-icons/bs";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
+
 
 const ChatBotMessage = ({
     msg,
@@ -70,7 +73,7 @@ const ChatBotMessage = ({
                             initial={{ opacity: 0, x: -50 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ duration: 0.2 }}
-                            className={`group mb-3.5 p-3 rounded-xl text-sm shadow-md w-fit max-w-[75%] break-words whitespace-pre-wrap relative bg-white self-start`}
+                            className={`group mb-3.5 p-3 rounded-xl text-sm shadow-md w-fit max-w-full break-words whitespace-pre-wrap relative bg-white self-start`}
                         >
                             <div className="text-left">
                                 {/* {msg?.repliedMessage && (
@@ -90,9 +93,34 @@ const ChatBotMessage = ({
 
 
                                 {/* text message */}
-                                <div className="mt-0.5"><ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                    {msg?.chatbotReply || ""}
-                                </ReactMarkdown></div>
+                                <div className="mt-0.5">
+
+                                    <ReactMarkdown
+                                        remarkPlugins={[remarkGfm]}
+                                        components={{
+                                            code({ node, inline, className, children, ...props }) {
+                                                const match = /language-(\w+)/.exec(className || "")
+                                                return !inline && match ? (
+                                                    <SyntaxHighlighter
+                                                        style={oneLight}
+                                                        language={match[1]}
+                                                        PreTag="div"
+                                                        className="rounded-md max-w-full overflow-x-auto text-xs scrollbar-thin scrollbar-thumb-indigo-400 scrollbar-track-transparent"
+                                                    >
+                                                        {children}
+                                                    </SyntaxHighlighter>
+                                                ) : (
+                                                    <code className="bg-gray-200 px-1 py-0.5 rounded text-sm break-words" {...props}>
+                                                        {children}
+                                                    </code>
+                                                )
+                                            }
+                                        }}
+                                    >
+                                        {msg?.chatbotReply || ""}
+                                    </ReactMarkdown>
+
+                                </div>
                             </div>
                             {/* {!msg?.isDeleted && ( */}
                             <div className={`text-[10px] flex items-center gap-1 pr-0 text-gray-400 justify-end`}>
