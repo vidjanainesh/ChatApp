@@ -34,42 +34,42 @@ const whatsappNotify = async (req, res) => {
         // const chatPath = `chat/${user.id}?name=${encodeURIComponent(user.name)}`;
         const chatPath = `?redirect=${encodeURIComponent(`/chat/${user.id}?name=${user.name}`)}`;
 
-        // const payload = {
-        //     messaging_product: 'whatsapp',
-        //     to: toPhoneNo,
-        //     type: "template",
-        //     template: {
-        //         name: "hello_world",
-        //         language: { code: "en_US" },
-        //     }
-        // };
-
         const payload = {
-            messaging_product: "whatsapp",
+            messaging_product: 'whatsapp',
             to: toPhoneNo,
             type: "template",
             template: {
-                name: "notifications_private_messages",
-                language: { code: "en" },
-                components: [
-                    {
-                        type: "body",
-                        parameters: [
-                            { type: "text", text: toName },     // {{1}} -> receiver’s name
-                            { type: "text", text: fromName }    // {{2}} -> sender’s name
-                        ]
-                    },
-                    {
-                        type: "button",                         // View Messages - button
-                        sub_type: "url",
-                        index: "0",
-                        parameters: [
-                            { type: "text", text: chatPath }    // dynamic link
-                        ]
-                    }
-                ]
+                name: "hello_world",
+                language: { code: "en_US" },
             }
         };
+
+        // const payload = {
+        //     messaging_product: "whatsapp",
+        //     to: toPhoneNo,
+        //     type: "template",
+        //     template: {
+        //         name: "notifications_private_messages",
+        //         language: { code: "en" },
+        //         components: [
+        //             {
+        //                 type: "body",
+        //                 parameters: [
+        //                     { type: "text", text: toName },     // {{1}} -> receiver’s name
+        //                     { type: "text", text: fromName }    // {{2}} -> sender’s name
+        //                 ]
+        //             },
+        //             {
+        //                 type: "button",                         // View Messages - button
+        //                 sub_type: "url",
+        //                 index: "0",
+        //                 parameters: [
+        //                     { type: "text", text: chatPath }    // dynamic link
+        //                 ]
+        //             }
+        //         ]
+        //     }
+        // };
 
         const headers = {
             Authorization: `Bearer ${token}`,
