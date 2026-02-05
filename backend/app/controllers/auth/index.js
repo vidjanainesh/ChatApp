@@ -48,7 +48,7 @@ const register = async (req, res) => {
                     subject: 'Verify Your Email - Complete Your Registration',
                     html: `
                         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9;">
-                            <h2 style="color: #333;">Welcome to Pavans Team!</h2>
+                            <h2 style="color: #333;">Welcome to ChatApp Team!</h2>
                             <p>Hello,</p>
                             <p>To complete your registration and activate your account, please verify your email using the code below.</p>
                             
@@ -86,7 +86,7 @@ const register = async (req, res) => {
             subject: 'Verify Your Email - Complete Your Registration',
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9;">
-                    <h2 style="color: #333;">Welcome to Pavans Team!</h2>
+                    <h2 style="color: #333;">Welcome to ChatApp Team!</h2>
                     <p>Hello,</p>
                     <p>Thank you for registering with us. To complete your registration and activate your account, please verify your email using the code below.</p>
                     
@@ -193,10 +193,10 @@ const googleLogin = async (req, res) => {
 
                     <p>If you did not request this password reset, please contact our support team immediately.</p>
 
-                    <p>Thank you,<br>The Pavans Team</p>
+                    <p>Thank you,<br>The ChatApp Team</p>
 
                     <div style="text-align: center; margin-top: 30px; font-size: 12px; color: #888;">
-                        &copy; ${new Date().getFullYear()} Pavans. All rights reserved.
+                        &copy; ${new Date().getFullYear()} ChatApp. All rights reserved.
                     </div>
                 </div>
             `
