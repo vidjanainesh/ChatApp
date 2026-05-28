@@ -64,7 +64,7 @@ Instructions:
             'https://router.huggingface.co/v1/chat/completions',
             {
                 messages,
-                model: "openai/gpt-oss-120b:sambanova",
+                model: "meta-llama/Llama-3.1-8B-Instruct",
                 temperature: 0.9
             },
             {
@@ -102,6 +102,7 @@ Instructions:
         return successResponse(res, successObj, 'Received reply from Chatbot');
 
     } catch (error) {
+        console.log("Error: ", error?.response?.data);
         return errorThrowResponse(res, error.message, error);
     }
 }
