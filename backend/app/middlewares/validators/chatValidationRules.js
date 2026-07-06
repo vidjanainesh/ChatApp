@@ -4,8 +4,8 @@ const chatValidationRules = {
   sendMessage: [
     body("message")
       .optional()
-      .isLength({ min: 1, max: 1000 })
-      .withMessage("Message must be between 1 and 1000 characters"),
+      .isLength({ min: 1, max: 10000 })
+      .withMessage("Message must be between 1 and 10000 characters"),
 
     body("receiverId")
       .notEmpty().withMessage("Receiver ID is required")
@@ -33,7 +33,7 @@ const chatValidationRules = {
   editMessage: [
     body("msg")
       .notEmpty().withMessage("Message content is required")
-      .isLength({ min: 1, max: 1000 }).withMessage("Message must be between 1 and 1000 characters"),
+      .isLength({ min: 1, max: 10000 }).withMessage("Message must be between 1 and 10000 characters"),
 
     param("id")
       .notEmpty().withMessage("Message ID is required in URL")
