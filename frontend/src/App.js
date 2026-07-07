@@ -25,7 +25,7 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen w-full bg-white text-gray-800">
+    <div className="min-h-96 sm:h-[calc(100vh-10px)] h-[calc(100vh-100px)] w-full bg-white text-gray-800">
       <Routes>
         <Route path='/' element={<Login />} />
         <Route path='/register' element={<Register />} />

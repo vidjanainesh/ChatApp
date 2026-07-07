@@ -556,7 +556,7 @@ export default function Chatbox() {
 
 
   return (
-    <div className="min-h-96 h-[calc(100vh-10px)] bg-gradient-to-tr from-white to-indigo-50 p-4">
+    <div className="h-full bg-gradient-to-tr from-white to-indigo-50 p-4">
       <div className="relative w-full h-full max-w-md mx-auto flex flex-col px-2 rounded-lg shadow-md">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
