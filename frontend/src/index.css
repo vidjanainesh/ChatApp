@@ -16,3 +16,18 @@ body,
 html {
   scroll-behavior: smooth;
 }
+
+/* Chrome, Edge, Safari */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Firefox */
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+
+/* IE and old Edge */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+}

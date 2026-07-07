@@ -10,6 +10,7 @@ import EmojiPicker from "emoji-picker-react";
 import { useDispatch, useSelector } from "react-redux";
 import { setMessages, updateMessageId, editPrivateMessage, deletePrivateMessage, clearMessages, clearChatState, addReactionToPrivateMessage, prependMessages, addMessage } from "../../store/chatSlice";
 import { HiOutlineChat, HiPaperClip, HiPhotograph, HiVideoCamera, HiChevronDown, HiArrowLeft } from "react-icons/hi";
+import { RiExpandDiagonalLine, RiCollapseDiagonalLine } from "react-icons/ri";
 import { BsCheck, BsCheckAll, BsBellSlashFill, BsBellFill } from "react-icons/bs";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -54,6 +55,7 @@ export default function Chatbox() {
 
   const [friend, setFriend] = useState(currentChat);
   const [input, setInput] = useState("");
+  const [expandedInput, setExpandedInput] = useState(false);
   const [editMode, setEditMode] = useState(null);
   // const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -291,6 +293,10 @@ export default function Chatbox() {
   }, [messageLoading, messages, loggedInUserId, firstUnreadMessageId]);
 
   const handleInputChange = (e) => {
+    if (e.target.value?.length >= 9999) {
+      toast.info("Message too long");
+      return;
+    }
     setInput(e.target.value);
     if (socketRef) {
       socketRef.emit("typing", {
@@ -550,8 +556,8 @@ export default function Chatbox() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-tr from-white to-indigo-50 p-4">
-      <div className="relative w-full max-w-md mx-auto flex flex-col h-[86vh] sm:h-[95vh] px-2 sm:px-4 rounded-lg shadow-md">
+    <div className="min-h-96 h-[calc(100vh-10px)] bg-gradient-to-tr from-white to-indigo-50 p-4">
+      <div className="relative w-full h-full max-w-md mx-auto flex flex-col px-2 rounded-lg shadow-md">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <button
@@ -945,7 +951,7 @@ export default function Chatbox() {
             )}
             <form
               onSubmit={handleSubmit}
-              className="relative flex items-center gap-2 bg-white p-2 mb-2.5 rounded-lg shadow-sm"
+              className={`relative flex items-center gap-2 bg-white p-2 mb-2.5 rounded-lg shadow-sm transition-all duration-300 max-h-[3.8rem]`}
             >
 
               {/* Emoji Button */}
@@ -974,23 +980,43 @@ export default function Chatbox() {
                 </svg>
               </button>
               {/* Textarea */}
-              <textarea
-                // disabled={notFriend || isSubmitting}
-                disabled={notFriend}
-                ref={inputRef}
-                value={input}
-                onChange={handleInputChange}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit(e);
-                  }
-                }}
-                placeholder="Type a message..."
-                className="flex-1 px-3 py-1.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-400 resize-none min-h-[2.5rem] max-h-[5rem] overflow-y-auto"
-                autoComplete="off"
-                rows={1}
-              />
+              <div className="relative flex-1 z-20">
+                <textarea
+                  // disabled={notFriend || isSubmitting}
+                  disabled={notFriend}
+                  ref={inputRef}
+                  value={input}
+                  onChange={handleInputChange}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit(e);
+                    }
+                  }}
+                  placeholder="Type a message..."
+                  className={`w-full px-3 py-1.5 pr-10 z-50 rounded-lg border border-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-400 resize-none overflow-y-auto transition-all duration-300 hide-scrollbar ${expandedInput
+                    ? "min-h-[12rem] max-h-[18rem] mb-[9rem]"
+                    : "min-h-[2.5rem] max-h-[5rem]"
+                    }`}
+                  autoComplete="off"
+                  rows={1}
+                  maxLength={9999}
+                />
+
+                <button
+                  type="button"
+                  disabled={notFriend}
+                  onClick={() => setExpandedInput(prev => !prev)}
+                  className="absolute top-2 right-2 text-gray-400 hover:text-indigo-500 transition"
+                  title={expandedInput ? "Collapse" : "Expand"}
+                >
+                  {expandedInput ? (
+                    <RiCollapseDiagonalLine className="w-3 h-3" />
+                  ) : (
+                    <RiExpandDiagonalLine className="w-3 h-3" />
+                  )}
+                </button>
+              </div>
 
               {/* File attachment */}
               {!editMode && (
