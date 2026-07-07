@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const { GroupMembers, Message, GroupMessageRead, GroupMessages } = require("../models"); // adjust path as needed
 
 const allowedOrigins = [
+  "http://localhost:3000",
   "http://localhost:3001",
   "http://192.168.1.53:3000",
   "https://chatapp-frontend-llqt.onrender.com",

@@ -16,8 +16,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const allowedOrigins = [
-  "http://localhost:3001",
   "http://localhost:3000",
+  "http://localhost:3001",
+  "http://192.168.1.53:3000",
   "https://chatapp-frontend-llqt.onrender.com",
 ];
 
