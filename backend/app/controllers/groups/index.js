@@ -17,65 +17,33 @@ const {
     MessageReactions,
 } = require("../../models");
 const { encryptMessage, decryptMessage } = require("../../helper/encryption");
+const GroupService = require("../../services/GroupService");
+const FriendService = require("../../services/FriendService");
 
 const createGroup = async (req, res) => {
     try {
         const { name, memberIds } = req.body;
         const user = req.user;
 
-        const friends = await Friends.findAll({
-            where: {
-                status: "accepted",
-                [Op.or]: [{ sender_id: user.id }, { receiver_id: user.id }],
-            },
-            attributes: ["sender_id", "receiver_id"],
-        });
-        const friendIds = friends.map((curr) => {
-            if (curr.sender_id === user.id) return curr.receiver_id;
-            else return curr.sender_id;
-        });
-        // console.log(friendIds);
-        for (const id of memberIds) {
-            if (!friendIds.includes(id)) {
-                return notFoundResponse(res, "Not a friend");
-            }
+        const members = memberIds.map(id => ({ id }));
+
+        const validation = await FriendService.validateFriends(user.id, members);
+
+        if (!validation.valid) {
+            return notFoundResponse(res, `You can only add users who are already your friends`);
         }
 
-        const group = await Groups.create({
+        const group = await GroupService.createGroup({
             name,
-            super_admin: user.id,
+            memberIds,
+            creator: user,
+            io: req.app.get("io"),
         });
 
-        // "Group was created"
-        const systemMessage = await GroupMessages.create({
-            group_id: group.id,
-            sender_id: null,
-            message: `Group: ${name} created by ${user.name?.split(' ')[0]}!`,
-            type: 'system'
-        });
+        return successPostResponse(res, { group }, "Group created successfully.");
 
-        const message = {
-            id: systemMessage.id,
-            senderId: null,
-            message: systemMessage.message,
-            createdAt: systemMessage.createdAt,
-            type: systemMessage.type,
-            sender: {
-                name: null,
-            }
-        };
-
-        memberIds.push(user.id);
-        const io = req.app.get('io');
-        // Emit new group created event to all the members (including self)
-        memberIds.map((id) => io.to(`user_${id}`).emit("groupCreated", { userId: user.id, group: { id: group.id, name: group.name } }));
-        io.to(`group_${group.id}`).emit("newGroupMessage", { message, groupId: group.id });
-
-        await group.addMembers(memberIds); //Magic method
-
-        return successPostResponse(res, { group: { id: group.id, name: group.name } }, "Group generated");
     } catch (error) {
-        return errorThrowResponse(res, error.message);
+        return errorThrowResponse(res, error.message, error);
     }
 };
 

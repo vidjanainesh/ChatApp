@@ -5,15 +5,7 @@ const {
     errorThrowResponse,
 } = require("../../helper/response");
 const { Message, MessageReactions, GroupMessages, GroupMembers } = require("../../models");
-
-const toCamelCase = (obj) => {
-    const camelCaseObj = {};
-    for (const key in obj) {
-        const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
-        camelCaseObj[camelKey] = obj[key];
-    }
-    return camelCaseObj;
-};
+const { toCamelCase } = require("../../helper/helper");
 
 const reactMessage = async (req, res) => {
     try {

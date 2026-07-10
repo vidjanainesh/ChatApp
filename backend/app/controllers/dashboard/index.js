@@ -1,6 +1,8 @@
 const { Op, Sequelize } = require("sequelize");
 const { successResponse, errorThrowResponse } = require("../../helper/response");
 const { Friends, GroupMembers, GroupMessageRead, GroupMessages, Groups, Message, User } = require("../../models");
+const FriendService = require("../../services/FriendService");
+const GroupService = require("../../services/GroupService");
 
 const getDashboardData = async (req, res) => {
     try {
@@ -28,36 +30,7 @@ const getDashboardData = async (req, res) => {
         if (!userObj) return errorResponse(res, "User not found");
 
         // Get Friends ---------------------------------------------------------
-        const friends = await Friends.findAll({
-            where: {
-                status: "accepted",
-                [Op.or]: [{ sender_id: user.id }, { receiver_id: user.id }],
-            },
-            include: [
-                {
-                    model: User,
-                    as: "sender",
-                    attributes: ["id", "name", "email", "profile_image_url"],
-                },
-                {
-                    model: User,
-                    as: "receiver",
-                    attributes: ["id", "name", "email", "profile_image_url"],
-                },
-            ],
-            attributes: ["id", "sender_id", "receiver_id", "status"],
-        });
-
-        const friendList = friends.map((friend) => {
-            const isSender = friend.sender_id === user.id;
-            const otherUser = isSender ? friend.receiver : friend.sender;
-            return {
-                id: otherUser.id,
-                name: otherUser.name,
-                email: otherUser.email,
-                profileImageUrl: otherUser.profile_image_url,
-            };
-        });
+        const friendList = await FriendService.getFriends(user.id);
 
         // Get friend req count ----------------------------------------------------------------
         const friendReqs = await Friends.findAll({
@@ -88,28 +61,7 @@ const getDashboardData = async (req, res) => {
         });
 
         // Get Groups ----------------------------------------------------------------------------
-        let groups = await GroupMembers.findAll({
-            where: { user_id: user.id, status: 'active' },
-            attributes: [['group_id', 'id']],
-            include: [
-                {
-                    model: Groups,
-                    as: 'group',
-                    attributes: ['name', 'super_admin', 'admin', 'group_image_url']
-                }
-            ]
-        });
-
-        groups = groups.map((curr) => {
-            curr = curr.toJSON();
-            return ({
-                id: curr.id,
-                name: curr.group.name,
-                superAdmin: curr.group.super_admin,
-                admin: curr.group.admin,
-                groupImageUrl: curr.group.group_image_url,
-            })
-        })
+        const groups = await GroupService.getGroups(user.id);
 
         // Get unread group messages --------------------------------------------------------------
 
