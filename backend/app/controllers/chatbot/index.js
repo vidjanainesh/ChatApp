@@ -3,6 +3,10 @@ const { errorThrowResponse, successResponse, errorResponse } = require("../../he
 const axios = require('axios');
 const ChatbotMessages = require("../../models/chatbotMessages");
 const { Op, where } = require("sequelize");
+const tools = require("../../ai/helper/toolRegistry");
+const executeTool = require("../../ai/helper/toolExecutor");
+const buildInternalContext = require("../../ai/helper/buildInternalContext");
+const routeTool = require("../../ai/helper/toolRouter");
 
 const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
 
@@ -11,18 +15,44 @@ const sendChatbotMessage = async (req, res) => {
         const { msg } = req.body;
         const user = req.user;
 
-        const history = await ChatbotMessages.findAll({
+        const historyData = await ChatbotMessages.findAll({
             where: { sender_id: user.id },
             attributes: ['id', 'sender_id', 'sender_message', 'chatbot_reply'],
             order: [['id', 'DESC']],
-            limit: 3,
+            limit: 5,
         });
+
+        const history = historyData.reverse().flatMap((h) => [
+            { role: 'user', content: h.sender_message },
+            { role: 'assistant', content: h.chatbot_reply }
+        ])
 
         const messages = [];
 
-        messages.push({
-            role: "system",
-            content: `
+        // ========== Agentic AI flow =============
+
+        // Use toolRouter
+        const routing = await routeTool(msg, history);
+        console.log("Routing: ", routing);
+
+        // The tool's actual result
+        let toolResult = null;
+
+        // Match tool from registry
+        const toolExists = tools[routing.tool];
+
+        // Execute the actual tool
+        if (toolExists && routing.confidence >= 0.8) {
+            toolResult = await executeTool(routing.tool, {
+                user,
+                io: req.app.get("io"),
+                ...routing.arguments,
+            });
+        }
+        // =========================================
+
+        console.log("ToolResult: ", toolResult)
+        const systemPrompt = `
 You are Dioc, a helpful AI assistant for ChatApp, a modern real-time messaging platform.
 
 ChatApp features:
@@ -34,13 +64,20 @@ ChatApp features:
 - Optional WhatsApp notifications for alerts.
 
 Instructions:
-- Feel free to greet the user by name sometimes: ${user.name?.split(' ')[0]}.
+- Feel free to greet the user by name sometimes: ${user.name?.split(' ')[0]}. Avoid calling them by name in consecutive replies.
 - Use a friendly and approachable tone. Use emojis and humor fairly often.
 - Prefer concise answers.
 - Base your reply on past messages if provided.
 - Explain features and guide users without including technical or backend details.
 - Answer general knowledge questions if asked.
-`
+
+${toolResult ? buildInternalContext(toolResult) : ""}
+
+`;
+
+        messages.push({
+            role: "system",
+            content: systemPrompt
         });
 
         // messages.push({
@@ -51,13 +88,7 @@ Instructions:
         //     }
         // });
 
-        history.reverse().map((h) => {
-            messages.push(
-                { role: 'user', content: h.sender_message },
-                { role: 'assistant', content: h.chatbot_reply }
-            );
-        })
-
+        messages.push(...history);
         messages.push({ role: 'user', content: msg });
 
         const response = await axios.post(
@@ -65,7 +96,7 @@ Instructions:
             {
                 messages,
                 model: "meta-llama/Llama-3.1-8B-Instruct",
-                temperature: 0.9
+                temperature: 0.4
             },
             {
                 headers: {

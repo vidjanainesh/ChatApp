@@ -9,28 +9,18 @@ const {
 const sequelize = require("../../models/database");
 const cloudinary = require('../../helper/cloudinary');
 const { encryptMessage, decryptMessage } = require("../../helper/encryption");
-
-const toCamelCase = (obj) => {
-    const camelCaseObj = {};
-    for (const key in obj) {
-        const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
-        camelCaseObj[camelKey] = obj[key];
-    }
-    return camelCaseObj;
-};
+const { toCamelCase } = require("../../helper/helper");
+const FriendService = require("../../services/FriendService");
+const MessageService = require("../../services/MessageService");
 
 const sendMessage = async (req, res) => {
     try {
         const { message, receiverId } = req.body;
         const replyTo = req.body.replyTo || null;
         const user = req.user;
-        const file = req?.file;
+        const file = req?.file || null;
+        const io = req.app.get("io");
         // console.log(message, receiverId, user);
-        let fileUrl = null;
-        // let fileBlurUrl = null;
-        let fileType = null;
-        let fileName = null;
-        let fileSize = null;
 
         if (!message && !file) {
             return unAuthorizedResponse(res, "Message content or File is required");
@@ -40,101 +30,19 @@ const sendMessage = async (req, res) => {
             return unAuthorizedResponse(res, "Receiver ID is required");
         }
 
-        let encryptedData, iv;
-        if (message) {
-            const encryption = encryptMessage(message);
-            encryptedData = encryption.encryptedData;
-            iv = encryption.iv;
-        }
-
-        if (file) {
-            fileUrl = file.path;
-            fileType = file.mimetype.startsWith("image") ? "image" : file.mimetype.startsWith("video") ? "video" : "file";
-            fileName = file.originalname;
-            fileSize = file.size;
-
-            // // generate blur url using public_id
-            // const publicId = `${file.filename}`; // 'chatapp_uploads/...'
-            // fileBlurUrl = cloudinary.url(publicId, {
-            //     transformation: [
-            //         { width: 20, quality: "auto" },
-            //         { effect: "blur:500" }
-            //     ],
-            //     format: "jpg",
-            //     secure: true,
-            // });
-        }
-
-        const friendship = await Friends.findOne({
-            where: {
-                status: "accepted",
-                [Op.or]: [
-                    { sender_id: user.id, receiver_id: receiverId },
-                    { sender_id: receiverId, receiver_id: user.id }
-                ]
-            }
-        });
-
+        const friendship = await FriendService.getFriendship(req.user.id, receiverId);
         if (!friendship) {
             return errorResponse(res, "Not friends with this user");
         }
 
-        const sentMessage = await Message.create({
-            sender_id: parseInt(user.id),
-            receiver_id: parseInt(receiverId),
-            message: encryptedData,
-            iv,
-            reply_to: replyTo,
-            file_url: fileUrl,
-            file_type: fileType,
-            file_name: fileName,
-            file_size: fileSize,
-            // file_blur_url: fileBlurUrl
+        const payload = await MessageService.sendMessage({
+            sender: req.user,
+            receiverId,
+            message,
+            replyTo,
+            file: req.file || null,
+            io: req.app.get("io"),
         });
-
-        const repliedMessage = await Message.findOne({ where: { id: replyTo }, attributes: ['id', 'message', 'iv'], raw: true });
-        let decryptedMessage;
-        if (repliedMessage) {
-            decryptedMessage = decryptMessage(repliedMessage.message, repliedMessage.iv);
-            delete repliedMessage.iv;
-        }
-
-        const io = req.app.get("io");
-        const receiverRoom = `user_${receiverId}`;
-        const senderRoom = `user_${user.id}`;
-
-        let rawMessage = sentMessage.toJSON(); // Convert Sequelize model to plain object
-
-        rawMessage = {
-            ...rawMessage,
-            message: message,
-        }
-        delete rawMessage.iv;
-
-        const camelCasedMessage = toCamelCase(rawMessage); // Convert keys to camelCase
-
-        // Final object
-        const messageWithSender = {
-            ...camelCasedMessage,
-            temp: false,
-            isDeleted: false,
-            isEdited: false,
-            isRead: false,
-            readAt: null,
-            reactions: [],
-            repliedMessage: repliedMessage ? {
-                ...repliedMessage,
-                message: decryptedMessage,
-            } : null,
-            senderName: user.name || user.email || "Unknown",
-        };
-
-        const payload = {
-            message: messageWithSender,
-        };
-
-        io.to(receiverRoom).emit("newMessage", payload);
-        // io.to(senderRoom).emit("newMessage", payload);
 
         return successResponse(res, payload, "Message sent");
     } catch (error) {

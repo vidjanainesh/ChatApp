@@ -6,6 +6,8 @@ const {
     errorThrowResponse,
     notFoundResponse,
 } = require("../../helper/response");
+const FriendService = require("../../services/FriendService");
+const UserService = require("../../services/UserService");
 
 const sendFriendReq = async (req, res) => {
     try {
@@ -16,35 +18,26 @@ const sendFriendReq = async (req, res) => {
             return errorResponse(res, "You can't send a friend request to yourself.");
         }
 
-        const userExists = await User.findOne({
-            where: { id: id, is_verified: true },
-            raw: true
-        });
+        // Check for user exists
+        const userExists = await UserService.findUserById(id);
         if (!userExists) throw new Error('User not verified!');
 
-        const existing = await Friends.findOne({
-            where: {
-                [Op.or]: [
-                    { sender_id: user.id, receiver_id: id },
-                    { sender_id: id, receiver_id: user.id },
-                ],
-                status: { [Op.in]: ["pending", "accepted"] },
-            },
-        });
-
-        if (existing) {
-            return errorResponse(res, "Friend request already exists or you are already friends.");
+        // Check for friendship
+        const relationship = await FriendService.findRelationship(user.id, id);
+        if (relationship) {
+            switch (relationship.status) {
+                case "accepted": return errorResponse(res, "You are already friends.");
+                case "pending": return errorResponse(res, "Friend request already pending.");
+                case "rejected": return errorResponse(res, "Friend request was previously rejected.");
+            }
         }
 
-        const obj = {
-            sender_id: user.id,
-            receiver_id: id,
-        };
-
-        await Friends.create(obj);
-
-        const io = req.app.get('io');
-        io.to(`user_${id}`).emit('newFriendReqSent');
+        // Send actual friend request to user
+        await FriendService.sendFriendRequest({
+            senderId: user.id,
+            receiverId: id,
+            io: req.app.get("io"),
+        });
 
         return successResponse(res, {}, "Friend request sent");
     } catch (error) {
@@ -89,7 +82,7 @@ const manageFriendReq = async (req, res) => {
         const user = req.user;
 
         // status = status == '1' ? 'accepted' : 'rejected';
-        if(status === 'accepted') {
+        if (status === 'accepted') {
             const result = await Friends.update(
                 { status },
                 {
@@ -100,10 +93,10 @@ const manageFriendReq = async (req, res) => {
                 }
             );
             if (result[0] === 0) {
-            return notFoundResponse(res, "Friend request not found");
+                return notFoundResponse(res, "Friend request not found");
             }
         }
-        else if(status === 'rejected'){
+        else if (status === 'rejected') {
             await Friends.destroy({
                 where: {
                     sender_id: id,
@@ -112,11 +105,11 @@ const manageFriendReq = async (req, res) => {
             })
         }
 
-        if(status === 'accepted'){
-            const friend = await User.findOne({where: {id: user.id}, attributes: ['id', 'name', 'email']});
+        if (status === 'accepted') {
+            const friend = await User.findOne({ where: { id: user.id }, attributes: ['id', 'name', 'email'] });
 
             const io = req.app.get('io');
-            io.to(`user_${id}`).emit('friendAccepted', {friend});
+            io.to(`user_${id}`).emit('friendAccepted', { friend });
         }
 
         return successResponse(res, {}, "Friend request status updated");
