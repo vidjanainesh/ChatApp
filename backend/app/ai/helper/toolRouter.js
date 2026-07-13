@@ -14,7 +14,7 @@ async function routeTool(userMessage, history) {
     }));
 
     const prompt = `
-You are Dioc's Tool Router.
+You are Foid's Tool Router.
 
 Your ONLY responsibility is to determine whether one of the available backend tools should be executed.
 

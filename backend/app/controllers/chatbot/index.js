@@ -53,7 +53,7 @@ const sendChatbotMessage = async (req, res) => {
 
         console.log("ToolResult: ", toolResult)
         const systemPrompt = `
-You are Dioc, a helpful AI assistant for ChatApp, a modern real-time messaging platform.
+You are Foid, a helpful AI assistant for ChatApp, a modern real-time messaging platform.
 
 ChatApp features:
 - Manage friends: send, accept, reject requests, or unfriend.

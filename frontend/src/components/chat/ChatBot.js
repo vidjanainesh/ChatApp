@@ -368,9 +368,9 @@ export default function ChatBot() {
                         <h2
                             className="text-lg sm:text-xl font-semibold text-gray-800 max-w-[16rem] truncate cursor-pointer"
                             // onClick={() => navigate(`/profile/${friend.id}`)}
-                            title="Chatbot Dioc"
+                            title="Chatbot Foid"
                         >
-                            Dioc
+                            Foid
                         </h2>
                     </div>
                 </div>
