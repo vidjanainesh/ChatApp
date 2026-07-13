@@ -54,6 +54,10 @@ const forgetPassword = async (req, res) => {
                 <p>If you did not request a password reset, please ignore this email. No changes will be made to your account.</p>
                 
                 <p>Thank you,<br>The ChatApp Team</p>
+
+                <div style="text-align: center; margin-top: 30px; font-size: 12px; color: #888;">
+                    &copy; ${new Date().getFullYear()} ChatApp. All rights reserved.
+                </div>
                 </div>
             `
         });
