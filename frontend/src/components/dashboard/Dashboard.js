@@ -619,7 +619,7 @@ export default function Dashboard() {
                 <button
                     onClick={handleBotClick}
                     className="w-10 h-10 transition duration-300 animate-bounce [animation-duration:1.5s] ease-in-out"
-                    title="Chat with Dioc"
+                    title="Chat with Foid"
                 >
                     <img
                         src='/chatbot.png'
